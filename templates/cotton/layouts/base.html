@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="{{ LANGUAGE_CODE|default:'en' }}">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Track your FPL rivals like never before. See transfers, captain picks, chip usage, and live points."
+    />
+
+    <title>{% block title %}RivalSpy{% endblock %}</title>
+
+    <link rel="stylesheet" href="{% static 'css/output.css' %}" />
+    <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.7/dist/htmx.min.js"></script>
+    {% block extra_head %}{% endblock %}
+  </head>
+  <body class="antialiased bg-gray-100 text-gray-900">
+    {% block extra_scripts %}{% endblock %}
+
+    <div class="min-h-screen flex flex-col">
+      <c-components.header />
+
+      <main class="flex-grow">{{ slot }}</main>
+
+      <c-components.footer />
+    </div>
+
+    {% block extra_body_end %}{% endblock %}
+  </body>
+</html>

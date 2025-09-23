@@ -1,0 +1,193 @@
+<div
+  class="mb-8"
+  data-team-id="{{ team.id }}"
+  data-last-gameweek="{% if team.get_available_gameweeks %}{{ team.get_available_gameweeks|last }}{% endif %}"
+>
+  <p>{{ team.name }}</p>
+  <div
+    class="bg-gradient-to-r from-green-700 to-emerald-800 rounded-xl shadow-lg p-6 text-white"
+  >
+    <h2 class="text-2xl font-bold mb-4">Squad History</h2>
+
+    <div class="relative">
+      <div class="flex space-x-2 mb-4 overflow-x-auto pb-2">
+        {% for gw in available_gameweeks %}
+        <button
+          onclick="showSquad({{ gw }})"
+          class="gameweek-btn flex-shrink-0 px-4 py-2 rounded-lg border border-white/30 text-sm font-medium transition-colors hover:bg-white/20"
+          data-gameweek="{{ gw }}"
+        >
+          GW {{ gw }}
+        </button>
+        {% endfor %}
+      </div>
+
+      <div id="squad-container" class="min-h-[500px]">
+        <div class="flex items-center justify-center h-32">
+          <p class="text-blue-100">Select a gameweek to view the squad</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let currentGameweek = null;
+
+  function showSquad(gameweek) {
+    if (currentGameweek === gameweek) return;
+
+    currentGameweek = gameweek;
+
+    document.querySelectorAll(".gameweek-btn").forEach((btn) => {
+      btn.classList.remove("bg-white/30");
+      if (btn.getAttribute("data-gameweek") == gameweek) {
+        btn.classList.add("bg-white/30");
+      }
+    });
+
+    // Show loading
+    document.getElementById("squad-container").innerHTML = `
+        <div class="flex items-center justify-center h-32">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+            <span class="ml-3 text-blue-100">Loading squad...</span>
+        </div>
+    `;
+
+    const teamId = document
+      .querySelector("[data-team-id]")
+      .getAttribute("data-team-id");
+    fetch(`/dashboard/teams/${teamId}/squad-history/${gameweek}`)
+      .then((response) => response.json())
+      .then((data) => {
+        displaySquad(data, gameweek);
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        document.getElementById("squad-container").innerHTML = `
+                <div class="flex items-center justify-center h-32">
+                    <p class="text-red-200">Error loading squad data</p>
+                </div>
+            `;
+      });
+  }
+
+  function displaySquad(squadData, gameweek) {
+    const startingXI = squadData.filter((player) => player.position <= 11);
+    const bench = squadData.filter((player) => player.position > 11);
+
+    const html = `
+        <div class="space-y-6">
+            <!-- Squad Header -->
+            <div class="text-center">
+                <h3 class="text-xl font-bold">Gameweek ${gameweek} Squad</h3>
+                <p class="text-blue-100 text-sm mt-1">Formation & Squad Selection</p>
+            </div>
+            
+            <!-- Starting XI -->
+            <div class="bg-white/10 rounded-lg p-4">
+                <h4 class="font-semibold mb-3 text-green-200">Starting XI</h4>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                    ${startingXI
+                      .map((player) => createPlayerCard(player))
+                      .join("")}
+                </div>
+            </div>
+            
+            <!-- Bench -->
+            <div class="bg-white/5 rounded-lg p-4">
+                <h4 class="font-semibold mb-3 text-yellow-200">Bench</h4>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    ${bench.map((player) => createPlayerCard(player)).join("")}
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.getElementById("squad-container").innerHTML = html;
+  }
+
+  function createPlayerCard(player) {
+    const captainBadge = player.is_captain
+      ? '<span class="absolute -top-1 -right-1 bg-yellow-500 text-black text-xs px-1.5 py-0.5 rounded-full font-bold">C</span>'
+      : "";
+    const viceCaptainBadge = player.is_vice_captain
+      ? '<span class="absolute -top-1 -right-1 bg-gray-400 text-black text-xs px-1.5 py-0.5 rounded-full font-bold">V</span>'
+      : "";
+
+    const positionColors = {
+      GKP: "from-yellow-400 to-yellow-600",
+      DEF: "from-blue-400 to-blue-600",
+      MID: "from-green-400 to-green-600",
+      FWD: "from-red-400 to-red-600",
+    };
+
+    return `
+        <div class="relative bg-white/10 rounded-lg p-3 border border-white/20 hover:bg-white/20 transition-colors">
+            ${captainBadge}${viceCaptainBadge}
+            
+            <div class="flex items-start space-x-3">
+                <div class="flex-shrink-0">
+                    <div class="w-10 h-10 bg-gradient-to-br ${
+                      positionColors[player.position_type] ||
+                      "from-gray-400 to-gray-600"
+                    } rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg">
+                        ${player.position_type}
+                    </div>
+                </div>
+                
+                <div class="flex-1 min-w-0">
+                    <p class="font-medium text-white text-sm truncate">${
+                      player.player_name
+                    }</p>
+                    <div class="flex items-center space-x-2 text-xs text-blue-100 mt-1">
+                        <span class="font-medium">${
+                          player.formatted_cost
+                        }</span>
+                        ${
+                          player.form ? `<span>Form: ${player.form}</span>` : ""
+                        }
+                    </div>
+                    
+                    <!-- Additional Stats -->
+                    <div class="mt-2 flex flex-wrap gap-1 text-xs text-blue-100">
+                        ${
+                          player.expected_goals &&
+                          parseFloat(player.expected_goals) > 0
+                            ? `<span class="bg-white/10 px-2 py-1 rounded">xG: ${parseFloat(
+                                player.expected_goals
+                              ).toFixed(1)}</span>`
+                            : ""
+                        }
+                        ${
+                          player.expected_assists &&
+                          parseFloat(player.expected_assists) > 0
+                            ? `<span class="bg-white/10 px-2 py-1 rounded">xA: ${parseFloat(
+                                player.expected_assists
+                              ).toFixed(1)}</span>`
+                            : ""
+                        }
+                        ${
+                          player.selected_by_percent
+                            ? `<span class="bg-white/10 px-2 py-1 rounded">${parseFloat(
+                                player.selected_by_percent
+                              ).toFixed(1)}% owned</span>`
+                            : ""
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    const lastGameweek = document
+      .querySelector("[data-last-gameweek]")
+      ?.getAttribute("data-last-gameweek");
+    console.log("last gameweek: ", lastGameweek);
+    if (lastGameweek) {
+      showSquad(parseInt(lastGameweek));
+    }
+  });
+</script>

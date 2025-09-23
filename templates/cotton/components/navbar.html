@@ -1,0 +1,17 @@
+<nav class="space-x-4">
+  {% if user.is_authenticated %}
+  <a href="{% url 'rivals:dashboard' %}" class="hover:underline">Dashboard</a>
+  {% if user.team %}
+  <a href="{% url 'rivals:teams.show' user.team.id %}" class="hover:underline"
+    >My Team</a
+  >
+  {% endif %}
+  <form action="{% url 'accounts:logout' %}" method="POST" class="inline">
+    {% csrf_token %}
+    <button type="submit" class="hover:underline">Logout</button>
+  </form>
+  {% else %}
+  <a href="{% url 'accounts:login' %}" class="hover:underline">Login</a>
+  <a href="{% url 'accounts:signup' %}" class="hover:underline">Register</a>
+  {% endif %}
+</nav>

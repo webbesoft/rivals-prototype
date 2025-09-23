@@ -1,0 +1,5 @@
+<button
+  class="{% if variant == 'primary' %} bg-blue-600 hover:bg-blue-700 text-white {% elif variant == 'secondary' %} bg-gray-200 hover:bg-gray-300 text-gray-900 {% endif %} {% if size == 'sm' %} px-3 py-1.5 text-sm {% elif size == 'md' %} px-4 py-2 text-base {% elif size == 'lg' %} px-6 py-3 text-lg {% endif %} rounded-md font-medium transition-colors duration-200"
+>
+  {{ text }}
+</button>

@@ -1,0 +1,138 @@
+<c-layouts.base title="{{ mini_league.name }} - Mini League">
+  {% load math_filters %}
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div
+      class="flex flex-col md:flex-row md:items-center md:justify-between mb-6"
+    >
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900">{{ mini_league.name }}</h1>
+        <p class="text-gray-600 text-sm">
+          Last synced: {{ mini_league.last_synced_at|timesince }} ago{% if not
+          mini_league.last_synced_at %}Never{% endif %}
+        </p>
+      </div>
+
+      <div class="mt-4 md:mt-0 flex space-x-3">
+        <form
+          action="{% url 'rivals:minileagues.sync' mini_league.id %}"
+          method="POST"
+        >
+          {% csrf_token %}
+          <button
+            type="submit"
+            class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm font-medium"
+            onsubmit="this.querySelector('button').disabled=true; this.querySelector('button').innerText='Loading...';"
+          >
+            Sync Now
+          </button>
+        </form>
+        <a
+          href="{% url 'rivals:dashboard' %}"
+          class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 text-sm font-medium"
+        >
+          Back to Dashboard
+        </a>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h2 class="text-lg font-semibold text-gray-900">Current Standings</h2>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 text-sm">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-4 py-3 text-left font-medium text-gray-600">
+                Rank
+              </th>
+              <th class="px-4 py-3 text-left font-medium text-gray-600">
+                Team
+              </th>
+              <th class="px-4 py-3 text-left font-medium text-gray-600">
+                Manager
+              </th>
+              <th class="px-4 py-3 text-left font-medium text-gray-600">
+                Points
+              </th>
+              <th class="px-4 py-3 text-left font-medium text-gray-600">
+                Change
+              </th>
+              <th class="px-4 py-3 text-left font-medium text-gray-600">
+                Actions
+              </th>
+              <th class="px-4 py-3 text-left font-medium text-gray-600"></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200">
+            {% for standing in standings %}
+            <tr
+              class="hover:bg-gray-50{% if user.team and user.team.id == standing.team.id %} bg-green-50{% endif %}"
+            >
+              <td class="px-4 py-3 font-medium text-gray-900">
+                {{ standing.current_rank }}
+              </td>
+              <td class="px-4 py-3">
+                <a
+                  href="{% url 'rivals:teams.show' standing.team.id %}"
+                  class="text-green-700 font-medium hover:underline"
+                >
+                  {{ standing.team.team_name }}
+                </a>
+              </td>
+              <td class="px-4 py-3 text-gray-700">
+                {{ standing.team.manager_name }}
+              </td>
+              <td class="px-4 py-3 font-semibold">
+                {{ standing.total_points|floatformat:0 }}
+              </td>
+              <td class="px-4 py-3">
+                {% if standing.previous_rank %} {% with
+                change=standing.previous_rank|sub:standing.current_rank %} {% if
+                change > 0 %}
+                <span class="text-green-600">↑ +{{ change }}</span>
+                {% elif change < 0 %}
+                <span class="text-red-600">↓ {{ change }}</span>
+                {% else %}
+                <span class="text-gray-500">-</span>
+                {% endif %} {% endwith %} {% else %}
+                <span class="text-gray-500">-</span>
+                {% endif %}
+              </td>
+              <td class="px-4 py-3 text-s">
+                {% if user.team and user.team.id == standing.team.id %}
+                <span class="text-xs font-medium">-</span>
+                {% elif standing.team.id in user.tracked_teams %}
+                <span class="text-green-600 text-xs font-medium">Tracking</span>
+                {% else %}
+                <form
+                  action="{% url 'rivals:teams.track' standing.team.id %}"
+                  method="POST"
+                  onsubmit="this.querySelector('button').disabled=true; this.querySelector('button').innerText='Tracking...';"
+                >
+                  {% csrf_token %}
+                  <button
+                    type="submit"
+                    class="text-green-700 text-xs hover:underline"
+                  >
+                    Track
+                  </button>
+                </form>
+                {% endif %}
+              </td>
+              {% if user.team and user.team.id == standing.team.id %}
+              <td>
+                <span class="rounded-sm bg-green-200 p-2 text-xs font-medium"
+                  >You</span
+                >
+              </td>
+              {% endif %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</c-layouts.base>

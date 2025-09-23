@@ -1,0 +1,150 @@
+<c-layouts.base title="Dashboard - RivalSpy">
+  {% load humanize %}
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="mb-8 text-center">
+      <h1 class="text-3xl sm:text-4xl font-extrabold text-gray-900">
+        Your Dashboard
+      </h1>
+      <p class="text-gray-600 mt-2">
+        Track your rivals, mini-leagues, and teams all in one place.
+      </p>
+    </div>
+
+    {% if messages %}
+    <div class="mb-6 space-y-4">
+      {% for message in messages %}
+      <div
+        class="p-4 rounded-lg border text-sm {% if message.tags == 'error' %} bg-red-100 text-red-700 border-red-300 {% endif %} {% if message.tags == 'success' %} bg-green-100 text-green-700 border-green-300 {% endif %}"
+      >
+        {{ message }}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="mb-10">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-bold text-gray-900">Mini-Leagues</h2>
+        <a
+          href="{% url 'rivals:minileagues.create' %}"
+          class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm font-medium"
+        >
+          + Add League
+        </a>
+      </div>
+
+      {% if not mini_leagues %}
+      <p class="text-gray-500">No mini-leagues yet. Add one to get started.</p>
+      {% else %}
+      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {% for league in mini_leagues %}
+        <a
+          href="{% url 'rivals:minileagues.show' league.id %}"
+          class="bg-white rounded-lg shadow p-4 hover:shadow-md transition"
+        >
+          <h3 class="font-semibold text-gray-900 truncate">
+            {{ league.mini_league.name }}
+          </h3>
+          <p class="text-sm text-gray-600">
+            Teams: {{ league.mini_league_teams.count }}
+          </p>
+          <p class="text-xs text-gray-400 mt-2">
+            Last synced: {% if league.last_synced_at %}{{
+            league.last_synced_at|timesince }} ago{% else %}Never{% endif %}
+          </p>
+        </a>
+        {% endfor %}
+      </div>
+
+      {% endif %}
+    </div>
+
+    <div>
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-bold text-gray-900">Tracked Teams</h2>
+        {#
+        <a
+          href="{% url 'rivals:teams.index' %}"
+          class="text-sm text-green-700 font-medium hover:underline"
+        >
+          View All
+        </a>
+        #}
+      </div>
+
+      {% if not tracked_teams %}
+      <p class="text-gray-500">
+        You’re not tracking any teams yet. Start from a mini-league or search
+        directly.
+      </p>
+      {% else %}
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 text-sm">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-4 py-2 text-left font-medium text-gray-600">
+                Team
+              </th>
+              <th class="px-4 py-2 text-left font-medium text-gray-600">
+                Manager
+              </th>
+              <th class="px-4 py-2 text-left font-medium text-gray-600">
+                Points
+              </th>
+              <th class="px-4 py-2 text-left font-medium text-gray-600">
+                Rank
+              </th>
+              <th class="px-4 py-2"></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200 bg-white">
+            {% for team in tracked_teams %}
+            <tr class="hover:bg-gray-50">
+              <td class="px-4 py-2 font-medium text-gray-900">
+                <a
+                  href="{% url 'rivals:teams.show' team.team.id %}"
+                  class="hover:text-green-700"
+                >
+                  {{ team.team.team_name }}
+                </a>
+              </td>
+              <td class="px-4 py-2">{{ team.team.manager_name }}</td>
+              {# The `intcomma` filter adds thousand separators #}
+              <td class="px-4 py-2 font-semibold">
+                {{ team.team.current_total_points|intcomma }}
+              </td>
+              <td class="px-4 py-2">
+                {% if team.team.current_overall_rank %} #{{
+                team.team.current_overall_rank|intcomma }} {% else %}
+                <span class="text-gray-400">N/A</span>
+                {% endif %}
+              </td>
+              <td class="px-4 py-2 text-right">
+                <form
+                  method="POST"
+                  action="{% url 'rivals:teams.untrack' team.team.id %}"
+                >
+                  {% csrf_token %} {# In Django, forms for deletion are
+                  typically POST requests handled by the view #}
+                  <button
+                    type="submit"
+                    class="text-red-600 text-xs hover:underline"
+                  >
+                    Untrack
+                  </button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="mt-4">
+        <c-components.pagination paginator="tracked_teams" />
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</c-layouts.base>

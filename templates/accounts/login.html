@@ -1,0 +1,76 @@
+<c-layouts.base>
+  <div
+    class="min-h-screen bg-gradient-to-br from-green-700 via-emerald-800 to-green-900 flex items-center justify-center px-4"
+  >
+    <div class="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
+      <h2 class="text-2xl font-bold text-center mb-6 text-gray-900">
+        Login to RivalSpy
+      </h2>
+
+      {% if messages %} {% for message in messages %} {% if message.tags ==
+      "error" %}
+      <div
+        class="mb-4 p-3 rounded-lg bg-red-100 text-red-700 border border-red-300 text-sm"
+      >
+        {{ message }}
+      </div>
+      {% endif %} {% endfor %} {% endif %}
+
+      <form
+        method="POST"
+        action="{% url 'accounts:login' %}"
+        class="space-y-5"
+        onsubmit="this.querySelector('button').disabled=true; this.querySelector('button').innerText='Loading...';"
+      >
+        {% csrf_token %}
+
+        <div>
+          <label for="username" class="block text-sm font-medium text-gray-700"
+            >Email</label
+          >
+          <input
+            type="email"
+            id="username"
+            name="username"
+            value="{{ form.username.value|default:'' }}"
+            class="mt-1 block w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+          />
+          {% if form.username.errors %}
+          <p class="text-sm text-red-600 mt-1">{{ form.username.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div>
+          <label for="password" class="block text-sm font-medium text-gray-700"
+            >Password</label
+          >
+          <input
+            type="password"
+            id="password"
+            name="password"
+            class="mt-1 block w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+          />
+          {% if form.password.errors %}
+          <p class="text-sm text-red-600 mt-1">{{ form.password.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <button
+          type="submit"
+          class="w-full bg-green-600 text-white font-semibold py-3 rounded-lg hover:bg-green-700 transition-colors"
+        >
+          Login
+        </button>
+      </form>
+
+      <div class="mt-6 text-sm text-gray-600 text-center">
+        Don’t have an account?
+        <a
+          href="{% url 'accounts:signup' %}"
+          class="font-medium text-green-700 hover:underline"
+          >Register</a
+        >
+      </div>
+    </div>
+  </div>
+</c-layouts.base>

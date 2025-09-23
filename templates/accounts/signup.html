@@ -1,0 +1,119 @@
+<c-layouts.base>
+  <div
+    class="min-h-screen bg-gradient-to-br from-green-700 via-emerald-800 to-green-900 flex flex-col items-center justify-center px-4"
+  >
+    <div class="text-center mb-10">
+      <h1 class="text-5xl font-extrabold text-white mb-4 tracking-tight">
+        RivalSpy
+      </h1>
+      <p class="text-lg text-green-100 max-w-lg mx-auto">
+        Track your FPL rivals like never before. See transfers, captain picks,
+        chip usage, and live points.
+      </p>
+    </div>
+
+    <div class="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
+      {# Flash errors #} {% if messages %} {% for message in messages %} {% if
+      message.tags == "error" %}
+      <div
+        class="mb-4 p-3 rounded-lg bg-red-100 text-red-700 border border-red-300 text-sm"
+      >
+        {{ message }}
+      </div>
+      {% endif %} {% endfor %} {% endif %}
+
+      <form
+        method="POST"
+        action="{% url 'accounts:signup' %}"
+        class="space-y-5"
+        onsubmit="this.querySelector('button').disabled=true; this.querySelector('button').innerText='Loading...';"
+      >
+        {% csrf_token %}
+
+        <div>
+          <label for="fpl_id" class="block text-sm font-medium text-gray-700"
+            >Your FPL Team ID</label
+          >
+          <input
+            type="text"
+            id="fpl_id"
+            name="fpl_id"
+            value="{{ form.fpl_id.value|default:'' }}"
+            placeholder="e.g. 1234567"
+            class="mt-1 block w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+          />
+          {% if form.fpl_id.errors %}
+          <p class="text-sm text-red-600 mt-1">{{ form.fpl_id.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div>
+          <label for="email" class="block text-sm font-medium text-gray-700"
+            >Email</label
+          >
+          <input
+            type="email"
+            id="email"
+            name="email"
+            value="{{ form.email.value|default:'' }}"
+            class="mt-1 block w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+          />
+          {% if form.email.errors %}
+          <p class="text-sm text-red-600 mt-1">{{ form.email.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div>
+          <label for="password1" class="block text-sm font-medium text-gray-700"
+            >Password</label
+          >
+          <input
+            type="password"
+            id="password1"
+            name="password1"
+            class="mt-1 block w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+          />
+          {% if form.password1.errors %}
+          <p class="text-sm text-red-600 mt-1">{{ form.password1.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div>
+          <label for="password2" class="block text-sm font-medium text-gray-700"
+            >Confirm password</label
+          >
+          <input
+            type="password"
+            id="password2"
+            name="password2"
+            class="mt-1 block w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+          />
+          {% if form.password2.errors %}
+          <p class="text-sm text-red-600 mt-1">{{ form.password2.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <button
+          type="submit"
+          class="w-full bg-green-600 text-white font-semibold py-3 rounded-lg hover:bg-green-700 transition-colors"
+        >
+          Start Tracking Rivals
+        </button>
+      </form>
+
+      <div class="mt-6 text-sm text-gray-600 text-center">
+        Already have an account?
+        <a
+          href="{% url 'accounts:login' %}"
+          class="font-medium text-green-700 hover:underline"
+          >Login</a
+        >
+      </div>
+      <div class="mt-3 text-sm text-gray-600 text-center">
+        <a href="/guides/getting-team-id" class="hover:underline"
+          >How to find your FPL Team ID</a
+        >
+      </div>
+    </div>
+  </div>
+</c-layouts.base>
