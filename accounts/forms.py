@@ -1,7 +1,13 @@
 from django import forms
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
+from django.contrib.auth.tokens import default_token_generator
 from django.core.exceptions import ValidationError
+from django.core.mail import send_mail
+from django.urls import reverse
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
 
 from rivals.services.fpl_api_service import FplApiService
 from rivals.services.init_user_service import InitUserService
@@ -58,6 +64,33 @@ class SignUpForm(UserCreationForm):
             user.save()
             user_init_service = InitUserService(user)
             user_init_service.save_user_info(basic_info=basic_info)
+
+            # Send verification email
+            try:
+                token = default_token_generator.make_token(user)
+                uid = urlsafe_base64_encode(force_bytes(user.pk))
+                verify_path = reverse("accounts:verify_email", args=[uid, token])
+                verify_url = f"{settings.SITE_URL.rstrip('/')}{verify_path}"
+
+                subject = "Verify your email"
+                message = (
+                    f"Hi {user.manager_name or user.email},\n\n"
+                    "Thanks for registering. Please verify your email by clicking the link below:\n\n"
+                    f"{verify_url}\n\n"
+                    "If you didn't sign up, you can ignore this email.\n\n"
+                    "Cheers,\nThe Team"
+                )
+
+                send_mail(
+                    subject,
+                    message,
+                    settings.DEFAULT_FROM_EMAIL,
+                    [user.email],
+                    fail_silently=False,
+                )
+            except Exception:
+                # Do not block user creation on email sending failure
+                pass
 
         return user
 

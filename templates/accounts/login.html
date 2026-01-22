@@ -1,76 +1,82 @@
-<c-layouts.base>
-  <div
-    class="min-h-screen bg-gradient-to-br from-green-700 via-emerald-800 to-green-900 flex items-center justify-center px-4"
-  >
-    <div class="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
-      <h2 class="text-2xl font-bold text-center mb-6 text-gray-900">
-        Login to RivalSpy
-      </h2>
+<c-layouts.guest>
+  <div class="min-h-screen relative flex flex-col items-center justify-center p-6 overflow-hidden bg-pitch">
+    <!-- Ambient Background -->
+    <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20 pointer-events-none"></div>
+    <div class="absolute inset-0 bg-gradient-to-b from-pitch via-pitch/90 to-black/80 pointer-events-none"></div>
+    <div class="absolute top-0 right-0 p-[30rem] bg-accent/5 blur-[100px] rounded-full pointer-events-none animate-pulse"></div>
 
-      {% if messages %} {% for message in messages %} {% if message.tags ==
-      "error" %}
-      <div
-        class="mb-4 p-3 rounded-lg bg-red-100 text-red-700 border border-red-300 text-sm"
-      >
-        {{ message }}
+    <div class="w-full max-w-md bg-surface rounded-2xl shadow-xl border border-white/10 relative z-10 p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div class="text-center mb-8">
+        <h2 class="text-3xl font-black italic uppercase tracking-tighter text-white mb-2">
+          Enter war room
+        </h2>
+        <p class="text-muted text-sm uppercase tracking-wider font-bold">Sign in to access your dashboard</p>
       </div>
-      {% endif %} {% endfor %} {% endif %}
+
+      {% if messages %} 
+        {% for message in messages %} 
+          {% if message.tags == "error" %}
+            <div class="mb-6 p-4 rounded-xl bg-danger/10 text-danger border border-danger/20 text-sm font-bold flex items-center gap-2">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              {{ message }}
+            </div>
+          {% endif %} 
+        {% endfor %} 
+      {% endif %}
 
       <form
         method="POST"
         action="{% url 'accounts:login' %}"
-        class="space-y-5"
-        onsubmit="this.querySelector('button').disabled=true; this.querySelector('button').innerText='Loading...';"
+        class="space-y-6"
+        onsubmit="this.querySelector('button').disabled=true; this.querySelector('button').innerText='Authenticating...';"
       >
         {% csrf_token %}
 
         <div>
-          <label for="username" class="block text-sm font-medium text-gray-700"
-            >Email</label
-          >
+          <label for="username" class="block text-xs font-bold uppercase tracking-wide text-muted mb-2">Email Identity</label>
           <input
             type="email"
             id="username"
             name="username"
             value="{{ form.username.value|default:'' }}"
-            class="mt-1 block w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+            class="block w-full px-4 py-3 rounded-xl bg-surface-alt border border-white/10 text-text-main focus:ring-2 focus:ring-accent focus:border-accent transition-all placeholder-gray-500"
+            placeholder="tactician@example.com"
           />
           {% if form.username.errors %}
-          <p class="text-sm text-red-600 mt-1">{{ form.username.errors.0 }}</p>
+          <p class="text-xs text-danger font-bold mt-1 uppercase">{{ form.username.errors.0 }}</p>
           {% endif %}
         </div>
 
         <div>
-          <label for="password" class="block text-sm font-medium text-gray-700"
-            >Password</label
-          >
+          <label for="password" class="block text-xs font-bold uppercase tracking-wide text-muted mb-2">Security Clearance</label>
           <input
             type="password"
             id="password"
             name="password"
-            class="mt-1 block w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+            class="block w-full px-4 py-3 rounded-xl bg-surface-alt border border-white/10 text-text-main focus:ring-2 focus:ring-accent focus:border-accent transition-all placeholder-gray-500"
+            placeholder="••••••••"
           />
           {% if form.password.errors %}
-          <p class="text-sm text-red-600 mt-1">{{ form.password.errors.0 }}</p>
+          <p class="text-xs text-danger font-bold mt-1 uppercase">{{ form.password.errors.0 }}</p>
           {% endif %}
         </div>
 
         <button
           type="submit"
-          class="w-full bg-green-600 text-white font-semibold py-3 rounded-lg hover:bg-green-700 transition-colors"
+          class="w-full bg-accent text-pitch font-black uppercase tracking-wide py-4 rounded-xl hover:bg-white transition-all shadow-lg shadow-accent/20 hover:scale-[1.02] active:scale-[0.98]"
         >
-          Login
+          Initialize Session
         </button>
       </form>
 
-      <div class="mt-6 text-sm text-gray-600 text-center">
-        Don’t have an account?
+      <div class="mt-8 pt-6 border-t border-white/5 text-sm text-center">
+        <span class="text-muted">No clearance?</span>
         <a
           href="{% url 'accounts:signup' %}"
-          class="font-medium text-green-700 hover:underline"
-          >Register</a
+          class="font-bold text-accent hover:text-white uppercase tracking-wide ml-1 transition-colors"
+          >Register New Account</a
         >
       </div>
     </div>
   </div>
-</c-layouts.base>
+</c-layouts.guest>

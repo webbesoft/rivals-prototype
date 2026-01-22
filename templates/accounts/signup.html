@@ -1,119 +1,128 @@
-<c-layouts.base>
-  <div
-    class="min-h-screen bg-gradient-to-br from-green-700 via-emerald-800 to-green-900 flex flex-col items-center justify-center px-4"
-  >
-    <div class="text-center mb-10">
-      <h1 class="text-5xl font-extrabold text-white mb-4 tracking-tight">
-        RivalSpy
-      </h1>
-      <p class="text-lg text-green-100 max-w-lg mx-auto">
-        Track your FPL rivals like never before. See transfers, captain picks,
-        chip usage, and live points.
-      </p>
-    </div>
+<c-layouts.guest>
+  <div class="min-h-screen relative flex flex-col items-center justify-center p-6 overflow-hidden bg-pitch">
+    <!-- Ambient Background -->
+    <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20 pointer-events-none"></div>
+    <div class="absolute inset-0 bg-gradient-to-b from-pitch via-pitch/90 to-black/80 pointer-events-none"></div>
+    <div class="absolute top-0 right-0 p-[30rem] bg-accent/5 blur-[100px] rounded-full pointer-events-none animate-pulse"></div>
+    <div class="absolute bottom-0 left-0 p-[20rem] bg-highlight/5 blur-[80px] rounded-full pointer-events-none"></div>
 
-    <div class="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
-      {# Flash errors #} {% if messages %} {% for message in messages %} {% if
-      message.tags == "error" %}
-      <div
-        class="mb-4 p-3 rounded-lg bg-red-100 text-red-700 border border-red-300 text-sm"
-      >
-        {{ message }}
+    <div class="relative z-10 w-full max-w-md animate-in fade-in slide-in-from-bottom-8 duration-700">
+      <div class="text-center mb-10">
+        <h1 class="text-4xl md:text-5xl font-black italic uppercase tracking-tighter text-white mb-4 drop-shadow-lg">
+          Join the <span class="text-transparent text-stroke-accent">Ranks</span>
+        </h1>
+        <p class="text-lg text-gray-300 font-medium max-w-xs mx-auto leading-relaxed">
+          Start tracking your rivals and get the edge you need.
+        </p>
       </div>
-      {% endif %} {% endfor %} {% endif %}
 
-      <form
-        method="POST"
-        action="{% url 'accounts:signup' %}"
-        class="space-y-5"
-        onsubmit="this.querySelector('button').disabled=true; this.querySelector('button').innerText='Loading...';"
-      >
-        {% csrf_token %}
+      <div class="bg-surface rounded-2xl shadow-xl border border-white/10 p-8 relative overflow-hidden group">
+        <div class="absolute top-0 right-0 w-1 h-full bg-accent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
 
-        <div>
-          <label for="fpl_id" class="block text-sm font-medium text-gray-700"
-            >Your FPL Team ID</label
-          >
-          <input
-            type="text"
-            id="fpl_id"
-            name="fpl_id"
-            value="{{ form.fpl_id.value|default:'' }}"
-            placeholder="e.g. 1234567"
-            class="mt-1 block w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-green-500"
-          />
-          {% if form.fpl_id.errors %}
-          <p class="text-sm text-red-600 mt-1">{{ form.fpl_id.errors.0 }}</p>
-          {% endif %}
-        </div>
+        {# Flash errors #} 
+        {% if messages %} 
+          {% for message in messages %} 
+            {% if message.tags == "error" %}
+            <div class="mb-6 p-4 rounded-xl bg-danger/10 text-danger border border-danger/20 text-sm font-bold flex items-center gap-2">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              {{ message }}
+            </div>
+            {% endif %} 
+          {% endfor %} 
+        {% endif %}
 
-        <div>
-          <label for="email" class="block text-sm font-medium text-gray-700"
-            >Email</label
-          >
-          <input
-            type="email"
-            id="email"
-            name="email"
-            value="{{ form.email.value|default:'' }}"
-            class="mt-1 block w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-green-500"
-          />
-          {% if form.email.errors %}
-          <p class="text-sm text-red-600 mt-1">{{ form.email.errors.0 }}</p>
-          {% endif %}
-        </div>
-
-        <div>
-          <label for="password1" class="block text-sm font-medium text-gray-700"
-            >Password</label
-          >
-          <input
-            type="password"
-            id="password1"
-            name="password1"
-            class="mt-1 block w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-green-500"
-          />
-          {% if form.password1.errors %}
-          <p class="text-sm text-red-600 mt-1">{{ form.password1.errors.0 }}</p>
-          {% endif %}
-        </div>
-
-        <div>
-          <label for="password2" class="block text-sm font-medium text-gray-700"
-            >Confirm password</label
-          >
-          <input
-            type="password"
-            id="password2"
-            name="password2"
-            class="mt-1 block w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-green-500"
-          />
-          {% if form.password2.errors %}
-          <p class="text-sm text-red-600 mt-1">{{ form.password2.errors.0 }}</p>
-          {% endif %}
-        </div>
-
-        <button
-          type="submit"
-          class="w-full bg-green-600 text-white font-semibold py-3 rounded-lg hover:bg-green-700 transition-colors"
+        <form
+          method="POST"
+          action="{% url 'accounts:signup' %}"
+          class="space-y-5"
+          onsubmit="this.querySelector('button').disabled=true; this.querySelector('button').innerText='Creating Account...';"
         >
-          Start Tracking Rivals
-        </button>
-      </form>
+          {% csrf_token %}
 
-      <div class="mt-6 text-sm text-gray-600 text-center">
-        Already have an account?
-        <a
-          href="{% url 'accounts:login' %}"
-          class="font-medium text-green-700 hover:underline"
-          >Login</a
-        >
-      </div>
-      <div class="mt-3 text-sm text-gray-600 text-center">
-        <a href="/guides/getting-team-id" class="hover:underline"
-          >How to find your FPL Team ID</a
-        >
+          <div>
+            <label for="fpl_id" class="block text-xs font-bold uppercase tracking-wide text-muted mb-2">FPL Team ID</label>
+            <input
+              type="text"
+              id="fpl_id"
+              name="fpl_id"
+              value="{{ form.fpl_id.value|default:'' }}"
+              placeholder="e.g. 1234567"
+              class="block w-full px-4 py-3 rounded-xl bg-surface-alt border border-white/10 text-text-main focus:ring-2 focus:ring-accent focus:border-accent transition-all placeholder-gray-500"
+            />
+            {% if form.fpl_id.errors %}
+            <p class="text-xs text-danger font-bold mt-1 uppercase">{{ form.fpl_id.errors.0 }}</p>
+            {% endif %}
+          </div>
+
+          <div>
+            <label for="email" class="block text-xs font-bold uppercase tracking-wide text-muted mb-2">Email Address</label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              value="{{ form.email.value|default:'' }}"
+              class="block w-full px-4 py-3 rounded-xl bg-surface-alt border border-white/10 text-text-main focus:ring-2 focus:ring-accent focus:border-accent transition-all placeholder-gray-500"
+              placeholder="manager@example.com"
+            />
+            {% if form.email.errors %}
+            <p class="text-xs text-danger font-bold mt-1 uppercase">{{ form.email.errors.0 }}</p>
+            {% endif %}
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label for="password1" class="block text-xs font-bold uppercase tracking-wide text-muted mb-2">Password</label>
+              <input
+                type="password"
+                id="password1"
+                name="password1"
+                class="block w-full px-4 py-3 rounded-xl bg-surface-alt border border-white/10 text-text-main focus:ring-2 focus:ring-accent focus:border-accent transition-all placeholder-gray-500"
+                placeholder="••••••"
+              />
+              {% if form.password1.errors %}
+              <p class="text-xs text-danger font-bold mt-1 uppercase">{{ form.password1.errors.0 }}</p>
+              {% endif %}
+            </div>
+
+            <div>
+              <label for="password2" class="block text-xs font-bold uppercase tracking-wide text-muted mb-2">Confirm</label>
+              <input
+                type="password"
+                id="password2"
+                name="password2"
+                class="block w-full px-4 py-3 rounded-xl bg-surface-alt border border-white/10 text-text-main focus:ring-2 focus:ring-accent focus:border-accent transition-all placeholder-gray-500"
+                placeholder="••••••"
+              />
+              {% if form.password2.errors %}
+              <p class="text-xs text-danger font-bold mt-1 uppercase">{{ form.password2.errors.0 }}</p>
+              {% endif %}
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            class="w-full bg-accent text-pitch font-black uppercase tracking-wide py-4 rounded-xl hover:bg-white transition-all shadow-lg shadow-accent/20 hover:scale-[1.02] active:scale-[0.98] mt-6"
+          >
+            Start Tracking Rivals
+          </button>
+        </form>
+
+        <div class="mt-8 pt-6 border-t border-white/5 text-sm text-center space-y-3">
+          <div>
+            <span class="text-muted">Already enlisted?</span>
+            <a
+              href="{% url 'accounts:login' %}"
+              class="font-bold text-accent hover:text-white uppercase tracking-wide ml-1 transition-colors"
+              >Return to Base</a
+            >
+          </div>
+          <div>
+            <a href="/guides/getting-team-id" class="text-xs font-bold text-gray-500 hover:text-gray-300 uppercase tracking-wide transition-colors"
+              >Help finding your Team ID</a
+            >
+          </div>
+        </div>
       </div>
     </div>
   </div>
-</c-layouts.base>
+</c-layouts.guest>

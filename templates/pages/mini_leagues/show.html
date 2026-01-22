@@ -1,133 +1,103 @@
 <c-layouts.base title="{{ mini_league.name }} - Mini League">
   {% load math_filters %}
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <div
-      class="flex flex-col md:flex-row md:items-center md:justify-between mb-6"
-    >
+    <div class="flex flex-col md:flex-row md:items-end md:justify-between mb-8 pb-8 border-b border-gray-100">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">{{ mini_league.name }}</h1>
-        <p class="text-gray-600 text-sm">
-          Last synced: {{ mini_league.last_synced_at|timesince }} ago{% if not
-          mini_league.last_synced_at %}Never{% endif %}
+        <div class="flex items-center gap-2 mb-2">
+            <span class="w-2 h-8 bg-highlight skew-x-12 rounded-sm"></span>
+            <h1 class="text-3xl md:text-5xl font-black text-text-main uppercase tracking-tighter italic">{{ mini_league.name }}</h1>
+        </div>
+        <p class="text-muted font-bold tracking-wide text-xs uppercase ml-4">
+          Last Scan: <span class="text-text-main">{% if mini_league.last_synced_at %}{{ mini_league.last_synced_at|timesince }} ago{% else %}Never Scanned{% endif %}</span>
         </p>
       </div>
 
-      <div class="mt-4 md:mt-0 flex space-x-3">
-        <form
-          action="{% url 'rivals:minileagues.sync' mini_league.id %}"
-          method="POST"
-        >
+      <div class="mt-6 md:mt-0 flex gap-3">
+        <form action="{% url 'rivals:minileagues.sync' mini_league.id %}" method="POST">
           {% csrf_token %}
-          <button
-            type="submit"
-            class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm font-medium"
-            onsubmit="this.querySelector('button').disabled=true; this.querySelector('button').innerText='Loading...';"
-          >
-            Sync Now
+          <button type="submit" class="bg-surface border-2 border-accent text-accent hover:bg-accent hover:text-pitch px-6 py-2 rounded-xl font-bold uppercase tracking-wide text-sm transition-all shadow-lg hover:shadow-accent/20 cursor-pointer flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+            Sync League
           </button>
         </form>
-        <a
-          href="{% url 'rivals:dashboard' %}"
-          class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 text-sm font-medium"
-        >
-          Back to Dashboard
+        <a href="{% url 'rivals:dashboard' %}" class="bg-surface text-muted hover:text-text-main px-6 py-2 rounded-xl font-bold uppercase tracking-wide text-sm transition-colors border border-gray-200 hover:border-gray-300 flex items-center">
+          Back to Base
         </a>
       </div>
     </div>
 
-    <div class="bg-white rounded-lg shadow overflow-hidden">
-      <div class="px-6 py-4 border-b border-gray-200">
-        <h2 class="text-lg font-semibold text-gray-900">Current Standings</h2>
+    <div class="bg-surface rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
+        <h2 class="text-lg font-black text-text-main uppercase tracking-tight">League Standings</h2>
       </div>
 
       <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200 text-sm">
-          <thead class="bg-gray-50">
+        <table class="min-w-full text-sm">
+          <thead class="bg-surface-alt text-xs uppercase font-black text-muted tracking-wider">
             <tr>
-              <th class="px-4 py-3 text-left font-medium text-gray-600">
-                Rank
-              </th>
-              <th class="px-4 py-3 text-left font-medium text-gray-600">
-                Team
-              </th>
-              <th class="px-4 py-3 text-left font-medium text-gray-600">
-                Manager
-              </th>
-              <th class="px-4 py-3 text-left font-medium text-gray-600">
-                Points
-              </th>
-              <th class="px-4 py-3 text-left font-medium text-gray-600">
-                Change
-              </th>
-              <th class="px-4 py-3 text-left font-medium text-gray-600">
-                Actions
-              </th>
-              <th class="px-4 py-3 text-left font-medium text-gray-600"></th>
+              <th class="px-6 py-4 text-left">Rank</th>
+              <th class="px-6 py-4 text-left">Team & Manager</th>
+              <th class="px-6 py-4 text-left">Points</th>
+              <th class="px-6 py-4 text-left">Form</th>
+              <th class="px-6 py-4 text-left">Status</th>
+              <th class="px-6 py-4 text-left"></th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-200">
+          <tbody class="divide-y divide-gray-100">
             {% for standing in standings %}
-            <tr
-              class="hover:bg-gray-50{% if user.team and user.team.id == standing.team.id %} bg-green-50{% endif %}"
-            >
-              <td class="px-4 py-3 font-medium text-gray-900">
-                {{ standing.current_rank }}
+            <tr class="hover:bg-surface-alt/50 transition-colors group {% if user.team and user.team.id == standing.team.id %}bg-accent/5{% endif %}">
+              <td class="px-6 py-4">
+                 <div class="text-2xl font-black text-text-main italic">#{{ standing.current_rank }}</div>
               </td>
-              <td class="px-4 py-3">
-                <a
-                  href="{% url 'rivals:teams.show' standing.team.id %}"
-                  class="text-green-700 font-medium hover:underline"
-                >
+              <td class="px-6 py-4">
+                <a href="{% url 'rivals:teams.show' standing.team.id %}" class="font-bold text-lg text-text-main hover:text-accent transition-colors block">
                   {{ standing.team.team_name }}
                 </a>
+                <span class="text-xs text-muted font-bold uppercase">{{ standing.team.manager_name }}</span>
               </td>
-              <td class="px-4 py-3 text-gray-700">
-                {{ standing.team.manager_name }}
+              <td class="px-6 py-4">
+                <div class="font-black text-xl text-text-main">{{ standing.total_points|floatformat:0 }}</div>
               </td>
-              <td class="px-4 py-3 font-semibold">
-                {{ standing.total_points|floatformat:0 }}
-              </td>
-              <td class="px-4 py-3">
-                {% if standing.previous_rank %} {% with
-                change=standing.previous_rank|sub:standing.current_rank %} {% if
-                change > 0 %}
-                <span class="text-green-600">↑ +{{ change }}</span>
-                {% elif change < 0 %}
-                <span class="text-red-600">↓ {{ change }}</span>
+              <td class="px-6 py-4">
+                {% if standing.previous_rank %} 
+                    {% with change=standing.previous_rank|sub:standing.current_rank %} 
+                        {% if change > 0 %}
+                            <span class="inline-flex items-center gap-1 text-success font-bold bg-success/10 px-2 py-1 rounded">
+                                ↑ {{ change }}
+                            </span>
+                        {% elif change < 0 %}
+                            <span class="inline-flex items-center gap-1 text-danger font-bold bg-danger/10 px-2 py-1 rounded">
+                                ↓ {{ change|abs }}
+                            </span>
+                        {% else %}
+                            <span class="text-muted font-medium">-</span>
+                        {% endif %} 
+                    {% endwith %} 
                 {% else %}
-                <span class="text-gray-500">-</span>
-                {% endif %} {% endwith %} {% else %}
-                <span class="text-gray-500">-</span>
+                    <span class="text-muted font-medium">-</span>
                 {% endif %}
               </td>
-              <td class="px-4 py-3 text-s">
+              <td class="px-6 py-4">
                 {% if user.team and user.team.id == standing.team.id %}
-                <span class="text-xs font-medium">-</span>
+                    <span class="px-2 py-1 bg-accent text-pitch text-xs font-black uppercase rounded tracking-wide">You</span>
                 {% elif standing.team.id in user.tracked_teams %}
-                <span class="text-green-600 text-xs font-medium">Tracking</span>
+                    <span class="px-2 py-1 bg-surface-alt border border-gray-200 text-muted text-xs font-bold uppercase rounded tracking-wide">Tracking</span>
                 {% else %}
-                <form
-                  action="{% url 'rivals:teams.track' standing.team.id %}"
-                  method="POST"
-                  onsubmit="this.querySelector('button').disabled=true; this.querySelector('button').innerText='Tracking...';"
-                >
+                    <span class="px-2 py-1 text-xs text-gray-300 font-bold uppercase">Scouted</span>
+                {% endif %}
+              </td>
+              <td class="px-6 py-4 text-right">
+                {% if user.team and user.team.id == standing.team.id %}
+                {% elif standing.team.id in user.tracked_teams %}
+                {% else %}
+                <form action="{% url 'rivals:teams.track' standing.team.id %}" method="POST" onsubmit="this.querySelector('button').disabled=true; this.querySelector('button').innerText='...';">
                   {% csrf_token %}
-                  <button
-                    type="submit"
-                    class="text-green-700 text-xs hover:underline"
-                  >
-                    Track
+                  <button type="submit" class="text-accent hover:text-white hover:bg-accent border border-accent/30 px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition-all shadow-sm hover:shadow-md">
+                    Track Rival
                   </button>
                 </form>
                 {% endif %}
               </td>
-              {% if user.team and user.team.id == standing.team.id %}
-              <td>
-                <span class="rounded-sm bg-green-200 p-2 text-xs font-medium"
-                  >You</span
-                >
-              </td>
-              {% endif %}
             </tr>
             {% endfor %}
           </tbody>

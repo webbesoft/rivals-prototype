@@ -1,62 +1,84 @@
 <c-layouts.base title="{{ team.team_name }} - Team">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <div
-      class="mb-8 bg-gradient-to-r from-green-700 to-emerald-800 rounded-xl shadow-lg p-6 text-white"
-    >
-      <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+    <div class="mb-8 rounded-2xl shadow-xl overflow-hidden relative group">
+      <div class="absolute inset-0 bg-pitch"></div>
+      <div class="absolute inset-0 bg-gradient-to-r from-black/50 to-transparent"></div>
+      <div class="absolute top-0 right-0 p-32 bg-accent/10 blur-3xl rounded-full"></div>
+      
+      <div class="relative p-8 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
         <div>
-          <h1 class="text-3xl font-bold">{{ team.team_name }}</h1>
-          <p class="text-green-100">Managed by {{ team.manager_name }}</p>
+          <div class="flex items-center gap-3 mb-2">
+            <span class="px-2 py-0.5 bg-accent/20 border border-accent/40 text-accent text-xs font-black uppercase tracking-wider rounded">FPL Manager</span>
+            <span class="text-xs text-muted font-mono uppercase">ID: {{ team.id }}</span>
+          </div>
+          <h1 class="text-4xl md:text-6xl font-black text-white uppercase italic tracking-tighter leading-none mb-1 shadow-black drop-shadow-lg">
+            {{ team.team_name }}
+          </h1>
+          <p class="text-xl text-gray-300 font-medium font-mono uppercase tracking-widest">{{ team.manager_name }}</p>
 
-          <div class="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div class="bg-white/10 rounded-lg p-3 text-center">
-              <div class="text-xs uppercase text-green-200">Overall Rank</div>
-              <div class="text-lg font-semibold">
-                {% if team.current_overall_rank %} {{
-                team.current_overall_rank|floatformat:0 }} {% else %} N/A {%
-                endif %}
+          <div class="mt-8 flex flex-wrap gap-4">
+            <div class="bg-black/40 backdrop-blur-sm rounded-xl p-4 border border-white/10 min-w-[120px]">
+              <div class="text-xs uppercase text-muted font-bold tracking-wider mb-1">Overall Rank</div>
+              <div class="text-3xl font-black text-accent shadow-black drop-shadow-md">
+                {% if team.current_overall_rank %} #{{ team.current_overall_rank|floatformat:0 }} {% else %} - {% endif %}
               </div>
             </div>
-            <div class="bg-white/10 rounded-lg p-3 text-center">
-              <div class="text-xs uppercase text-green-200">Points</div>
-              <div class="text-lg font-semibold">
+            <div class="bg-black/40 backdrop-blur-sm rounded-xl p-4 border border-white/10 min-w-[120px]">
+              <div class="text-xs uppercase text-muted font-bold tracking-wider mb-1">Total Points</div>
+              <div class="text-3xl font-black text-white">
                 {{ team.current_total_points|floatformat:0 }}
               </div>
             </div>
-            <div class="bg-white/10 rounded-lg p-3 text-center">
-              <div class="text-xs uppercase text-green-200">Team Value</div>
-              <div class="text-lg font-semibold">
-                £{{ team.value_in_millions }}M
+            <div class="bg-black/40 backdrop-blur-sm rounded-xl p-4 border border-white/10 min-w-[120px]">
+              <div class="text-xs uppercase text-muted font-bold tracking-wider mb-1">Team Value</div>
+              <div class="text-xl font-bold text-white">
+                £{{ team.value_in_millions }}m
               </div>
             </div>
-            <div class="bg-white/10 rounded-lg p-3 text-center">
-              <div class="text-xs uppercase text-green-200">In Bank</div>
-              <div class="text-lg font-semibold">
-                £{{ team.bank_in_millions }}M
+            <div class="bg-black/40 backdrop-blur-sm rounded-xl p-4 border border-white/10 min-w-[120px]">
+              <div class="text-xs uppercase text-muted font-bold tracking-wider mb-1">In Bank</div>
+              <div class="text-xl font-bold text-highlight">
+                £{{ team.bank_in_millions }}m
               </div>
             </div>
           </div>
         </div>
 
-        <div class="mt-6 md:mt-0 flex flex-col space-y-3">
+        <div class="flex flex-col gap-3 min-w-[200px]">
           {% if user.team_id == team.id %}
           <button
             hx-get="{% url 'rivals:teams.analysis' team.id %}"
             hx-target="#analysis-container"
             hx-indicator="#analysis-loading"
             hx-swap="innerHTML"
-            class="bg-green-600 hover:bg-green-700 px-6 py-2 rounded-lg font-medium transition-colors"
+            class="w-full bg-accent hover:bg-white hover:text-pitch text-pitch px-6 py-3 rounded-xl font-black uppercase tracking-wide transition-all shadow-lg shadow-accent/20 cursor-pointer"
           >
-            Analyse Team
+            Run Analysis
           </button>
+          {% elif user.team %}
+          <button
+            hx-get="{% url 'rivals:teams.compare.quick' team.id %}"
+            hx-target="#rival-comparison-container"
+            hx-indicator="#comparison-loading"
+            hx-swap="innerHTML"
+            class="w-full bg-accent hover:bg-white hover:text-pitch text-pitch px-6 py-3 rounded-xl font-black uppercase tracking-wide transition-all shadow-lg shadow-accent/20 cursor-pointer"
+          >
+            Compare
+          </button>
+          <a
+            href="{% url 'rivals:teams.compare' team.id %}"
+            class="w-full bg-white/5 hover:bg-white/10 text-white border border-white/20 px-6 py-2 rounded-xl font-bold uppercase tracking-wide text-xs transition-colors cursor-pointer text-center"
+          >
+            Full Comparison →
+          </a>
           {% elif team in user.tracked_teams.all %}
-          <form action="{% url 'teams:untrack' team.id %}" method="POST">
+          <form action="{% url 'rivals:teams.untrack' team.id %}" method="POST">
             {% csrf_token %}
             <button
               type="submit"
-              class="bg-red-600 hover:bg-red-700 px-6 py-2 rounded-lg font-medium transition-colors"
+              class="w-full bg-danger/20 hover:bg-danger text-danger hover:text-white border border-danger/50 px-6 py-3 rounded-xl font-bold uppercase tracking-wide transition-all cursor-pointer"
             >
-              Untrack
+              Untrack Rival
             </button>
           </form>
           {% else %}
@@ -68,9 +90,9 @@
             {% csrf_token %}
             <button
               type="submit"
-              class="bg-green-600 hover:bg-green-700 px-6 py-2 rounded-lg font-medium transition-colors"
+              class="w-full bg-accent hover:bg-white hover:text-pitch text-pitch px-6 py-3 rounded-xl font-black uppercase tracking-wide transition-all shadow-lg shadow-accent/20 cursor-pointer"
             >
-              Track Team
+              Track Rival
             </button>
           </form>
           {% endif %}
@@ -79,139 +101,125 @@
             {% csrf_token %}
             <button
               type="submit"
-              class="bg-white/20 hover:bg-white/30 px-6 py-2 rounded-lg font-medium border border-white/30"
+              class="w-full bg-white/5 hover:bg-white/10 text-white border border-white/20 px-6 py-2 rounded-xl font-bold uppercase tracking-wide text-xs transition-colors cursor-pointer"
             >
-              Sync Data
+              Force Sync Data
             </button>
           </form>
         </div>
       </div>
     </div>
 
-    <div id="analysis-loading" class="hidden px-6 py-8">
-      <div class="flex items-center justify-center">
-        <svg
-          class="animate-spin h-8 w-8 text-blue-600 mr-3"
-          fill="none"
-          viewBox="0 0 24 24"
-        >
-          <circle
-            class="opacity-25"
-            cx="12"
-            cy="12"
-            r="10"
-            stroke="currentColor"
-            stroke-width="4"
-          ></circle>
-          <path
-            class="opacity-75"
-            fill="currentColor"
-            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-          ></path>
-        </svg>
-        <div class="text-lg text-gray-600">
-          Analysing team data and generating smart recommendations...
+    <div id="analysis-loading" class="hidden px-6 py-12">
+      <div class="flex flex-col items-center justify-center">
+        <div class="w-16 h-16 border-4 border-accent border-t-transparent rounded-full animate-spin mb-4"></div>
+        <div class="text-lg font-bold text-text-main animate-pulse">Running Tactical Analysis...</div>
+        <div class="text-sm text-muted">Calculating optimal transfers and fixture difficulties</div>
+      </div>
+    </div>
+
+    {% if user.team_id == team.id %}
+    <div id="analysis-container" class="min-h-32 mb-8">
+      <div class="bg-surface rounded-2xl shadow-sm border border-gray-100 p-8 text-center border-dashed">
+        <div class="w-16 h-16 bg-surface-alt rounded-full flex items-center justify-center mx-auto mb-4 text-muted">
+          <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          </svg>
         </div>
-      </div>
-    </div>
-
-    <div id="analysis-container" class="min-h-32 my-2">
-      <div class="px-6 py-8 text-center text-gray-500">
-        <svg
-          class="mx-auto h-12 w-12 text-gray-400 mb-4"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-          ></path>
-        </svg>
-        <p class="text-lg">
-          Click "Analyse Team" to get smart transfer recommendations
+        <p class="text-lg font-bold text-text-main">
+          Ready to Analyse
         </p>
-        <p class="text-sm text-gray-400 mt-2">
-          Analysis considers your budget, free transfers, and upcoming fixtures
+        <p class="text-sm text-muted mt-1 max-w-md mx-auto">
+          Get smart transfer recommendations based on budget, free transfers, and upcoming fixtures.
         </p>
       </div>
     </div>
+    {% elif user.team %}
+    <div id="comparison-loading" class="hidden px-6 py-12">
+      <div class="flex flex-col items-center justify-center">
+        <div class="w-16 h-16 border-4 border-accent border-t-transparent rounded-full animate-spin mb-4"></div>
+        <div class="text-lg font-bold text-text-main animate-pulse">Comparing Squads...</div>
+        <div class="text-sm text-muted">Analyzing expected points, fixtures, and momentum</div>
+      </div>
+    </div>
+    <div id="rival-comparison-container" class="min-h-32 mb-8">
+      <div class="bg-black/40 backdrop-blur-sm rounded-2xl shadow-xl border border-white/10 p-8 text-center">
+        <div class="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 text-muted">
+          <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          </svg>
+        </div>
+        <p class="text-lg font-bold text-white">
+          Ready to Compare
+        </p>
+        <p class="text-sm text-gray-300 mt-1 max-w-md mx-auto">
+          Click "Compare" to see head-to-head analysis with {{ team.team_name }}.
+        </p>
+      </div>
+    </div>
+    {% endif %}
 
-    <div class="bg-white rounded-lg shadow mb-8">
-      <div class="px-6 py-4 border-b border-gray-200">
-        <h2 class="text-lg font-semibold text-gray-900">Recent Performance</h2>
+    <div class="bg-surface rounded-2xl shadow-sm border border-gray-100 mb-12 overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+        <h2 class="text-lg font-black text-text-main uppercase tracking-tight">Recent Performance</h2>
+        <span class="text-xs font-bold text-muted bg-gray-100 px-2 py-1 rounded">Last 5 Gameweeks</span>
       </div>
       <div class="overflow-x-auto">
         <table class="min-w-full text-sm">
-          <thead class="bg-gray-50">
+          <thead class="bg-surface-alt text-xs uppercase font-black text-muted tracking-wider">
             <tr>
-              <th class="px-4 py-3 text-left">GW</th>
-              <th class="px-4 py-3 text-left">Points</th>
-              <th class="px-4 py-3 text-left">Rank</th>
-              <th class="px-4 py-3 text-left">Captain</th>
-              <th class="px-4 py-3 text-left">Transfers</th>
-              <th class="px-4 py-3 text-left">Chip</th>
-              <th class="px-4 py-3 text-left">Bench points</th>
+              <th class="px-6 py-4 text-left">GW</th>
+              <th class="px-6 py-4 text-left">Points</th>
+              <th class="px-6 py-4 text-left">Rank</th>
+              <th class="px-6 py-4 text-left">Captain</th>
+              <th class="px-6 py-4 text-left">Transfers</th>
+              <th class="px-6 py-4 text-left">Chip</th>
+              <th class="px-6 py-4 text-left">Bench</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-200">
+          <tbody class="divide-y divide-gray-100">
             {% for gw in gameweek_data %}
-            <tr class="hover:bg-gray-50">
-              <td class="px-4 py-3 font-medium">GW{{ gw.gameweek }}</td>
-              <td
-                class="px-4 py-3 font-semibold {% if gw.points > 60 %}text-green-600{% elif gw.points < 40 %}text-red-600{% endif %}"
-              >
+            <tr class="hover:bg-surface-alt/50 transition-colors">
+              <td class="px-6 py-4 font-bold text-text-main">GW{{ gw.gameweek }}</td>
+              <td class="px-6 py-4 font-black text-lg {% if gw.points > 60 %}text-success{% elif gw.points < 40 %}text-danger{% endif %}">
                 {{ gw.points }}
               </td>
-              <td class="px-4 py-3">
-                {% if gw.rank %} {{ gw.rank|floatformat:0 }} {% else %} N/A {%
-                endif %}
+              <td class="px-6 py-4 font-mono text-muted">
+                {% if gw.rank %} {{ gw.rank|floatformat:0 }} {% else %} - {% endif %}
               </td>
-              <td class="px-4 py-3">{{ gw.captain_name }}</td>
-              <td class="px-4 py-3">
-                {{ gw.event_transfers }} {% if gw.event_transfers_cost > 0 %}
-                <span
-                  class="ml-2 bg-red-100 text-red-700 px-2 py-1 rounded-full text-xs"
-                >
+              <td class="px-6 py-4 font-medium">{{ gw.captain_name }}</td>
+              <td class="px-6 py-4">
+                {{ gw.event_transfers }} 
+                {% if gw.event_transfers_cost > 0 %}
+                <span class="ml-2 bg-danger/10 text-danger px-1.5 py-0.5 rounded font-bold text-xs">
                   -{{ gw.event_transfers_cost }}
                 </span>
                 {% endif %}
               </td>
-              <td class="px-4 py-3">
+              <td class="px-6 py-4">
                 {% if gw.chip_played %}
-                <span
-                  class="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs font-medium"
-                >
+                <span class="bg-highlight/20 text-yellow-800 px-2 py-1 rounded-full text-xs font-black uppercase tracking-wide border border-highlight/40">
                   {{ gw.chip_name }}
                 </span>
                 {% else %}
-                <span class="text-gray-400">-</span>
+                <span class="text-gray-300">-</span>
                 {% endif %}
               </td>
-              <td class="px-4 py-3">
-                {% if gw.bench_points < 10 %}
-                <span
-                  class="text-green-400 px-2 py-1 rounded-full text-xs font-medium"
-                >
+              <td class="px-6 py-4">
+                {% if gw.bench_points > 10 %}
+                <span class="text-danger font-bold relative group cursor-help">
                   {{ gw.bench_points }}
-                </span>
-                {% elif gw.bench_points >= 10 %}
-                <span
-                  class="text-red-400 px-2 py-1 rounded-full text-xs font-medium"
-                >
-                  {{ gw.bench_points }}
+                  <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 bg-black text-white text-xs rounded opacity-0 group-hover:opacity-100 whitespace-nowrap">Bench Pain! 😬</span>
                 </span>
                 {% else %}
-                <span class="text-gray-400">-</span>
+                <span class="text-muted">{{ gw.bench_points }}</span>
                 {% endif %}
               </td>
             </tr>
             {% empty %}
             <tr>
-              <td colspan="7" class="px-4 py-8 text-center text-gray-500">
-                No gameweek data available
+              <td colspan="7" class="px-6 py-8 text-center text-muted italic">
+                No gameweek data available yet.
               </td>
             </tr>
             {% endfor %}
@@ -220,62 +228,52 @@
       </div>
     </div>
 
-    <c-components.squad_history_carousel
-      :team="{{ team }}"
-    ></c-components.squad_history_carousel>
+    <c-components.squad_history_carousel :team="{{ team }}"></c-components.squad_history_carousel>
 
-    <div class="bg-white rounded-lg shadow mb-8">
-      <div class="px-6 py-4 border-b border-gray-200">
-        <h2 class="text-lg font-semibold text-gray-900">Recent Transfers</h2>
-      </div>
-      <div class="p-6">
-        {% for transfer in transfers %}
-        <div class="border rounded-lg p-4 mb-4 hover:shadow transition">
-          <div class="flex justify-between">
-            <div>
-              <p class="font-medium text-red-600">
-                Out: {{ transfer.player_out_display_name }}
-              </p>
-              <p class="font-medium text-green-600">
-                In: {{ transfer.player_in_display_name }}
-              </p>
-            </div>
-            <div class="text-right text-sm text-gray-600">
-              GW{{ transfer.gameweek }} {% if transfer.point_cost %}
-              <div class="text-red-600">-{{ transfer.point_cost }} pts</div>
-              {% endif %}
-            </div>
+    <div class="grid md:grid-cols-2 gap-8 mb-12">
+      <c-components.card title="Recent Transfers">
+         <div class="space-y-4">
+           {% for transfer in transfers %}
+           <div class="flex items-center justify-between p-3 bg-surface-alt rounded-lg border border-gray-100 hover:border-gray-200 transition-colors">
+             <div class="flex items-center gap-4 text-sm">
+                <div class="flex flex-col items-center">
+                   <div class="text-xs font-bold text-muted uppercase mb-1">Out</div>
+                   <div class="font-bold text-danger">{{ transfer.player_out_display_name }}</div>
+                </div>
+                <div class="text-gray-300">→</div>
+                <div class="flex flex-col items-center">
+                   <div class="text-xs font-bold text-muted uppercase mb-1">In</div>
+                   <div class="font-bold text-success">{{ transfer.player_in_display_name }}</div>
+                </div>
+             </div>
+             <div class="text-right">
+                <div class="text-xs font-bold text-muted uppercase">GW{{ transfer.gameweek }}</div>
+                {% if transfer.point_cost %}
+                <div class="text-danger font-bold text-xs mt-1">-{{ transfer.point_cost }} pts</div>
+                {% endif %}
+             </div>
+           </div>
+           {% empty %}
+           <p class="text-muted text-center py-4 italic">No transfers made recently.</p>
+           {% endfor %}
+         </div>
+      </c-components.card>
+
+      {% if recent_news %}
+      <c-components.card title="Player News">
+        <div class="space-y-3">
+          {% for player in recent_news %}
+          <div class="border-l-4 border-highlight bg-highlight/5 p-3 rounded-r-lg">
+            <h3 class="font-bold text-text-main text-sm flex justify-between">
+              {{ player.web_name }}
+              <span class="text-xs text-muted font-normal">{{ player.news_added|timesince }} ago</span>
+            </h3>
+            <p class="text-xs text-gray-600 mt-1 leading-relaxed">{{ player.news }}</p>
           </div>
+          {% endfor %}
         </div>
-        {% empty %}
-        <p class="text-gray-500 text-center">No transfer data available</p>
-        {% endfor %}
-      </div>
+      </c-components.card>
+      {% endif %}
     </div>
-
-    {% if recent_news %}
-    <div class="bg-white rounded-lg shadow mb-8">
-      <div class="px-6 py-4 border-b border-gray-200">
-        <h2 class="text-lg font-semibold text-gray-900">Player News</h2>
-      </div>
-      <div class="p-6 space-y-4">
-        {% for player in recent_news %}
-        <div class="border-l-4 border-yellow-400 bg-yellow-50 p-4 rounded-r-lg">
-          <h3 class="font-semibold text-yellow-900">
-            {{ player.web_name }} {% if player.position_code %}
-            <span class="text-sm text-yellow-700"
-              >({{ player.position_code }})</span
-            >
-            {% endif %}
-          </h3>
-          <p class="text-sm text-yellow-800 mt-1">{{ player.news }}</p>
-          <p class="text-xs text-yellow-600 mt-2">
-            {{ player.news_added|timesince }} ago
-          </p>
-        </div>
-        {% endfor %}
-      </div>
-    </div>
-    {% endif %}
   </div>
 </c-layouts.base>

@@ -1,0 +1,68 @@
+<div class="bg-surface rounded-2xl p-6 border border-gray-100 shadow-lg hover:shadow-xl transition-all duration-300 relative overflow-hidden group">
+  <div class="absolute top-0 right-0 w-1 h-full bg-highlight opacity-0 group-hover:opacity-100 transition-opacity"></div>
+  
+  <div class="flex items-center justify-between mb-4">
+    <h3 class="text-xl font-black text-text-main uppercase tracking-tight">Fixture Radar</h3>
+    <span class="text-xs font-mono text-muted bg-gray-100 px-2 py-1 rounded">Next 3 GWs</span>
+  </div>
+  
+  <p class="text-xs text-muted mb-6 uppercase tracking-wide">Best and worst upcoming fixtures</p>
+  
+  <div class="space-y-6">
+    <!-- Best Fixtures -->
+    <div>
+      <div class="flex items-center gap-2 mb-3">
+        <span class="w-1 h-4 bg-success skew-x-12 rounded-sm"></span>
+        <h4 class="text-xs font-black text-success uppercase tracking-widest">Green Lights</h4>
+      </div>
+      <ul class="space-y-2">
+        {% for fixture in best_fixtures %}
+        <li class="flex items-center justify-between p-2 rounded-lg bg-success/5 border border-success/10">
+          <div class="flex items-center gap-2">
+            <span class="font-bold text-text-main text-sm">{{ fixture.team }}</span>
+            <span class="text-xs text-muted">vs</span>
+            <span class="text-xs font-mono text-muted">{{ fixture.opponent }}</span>
+          </div>
+          <div class="flex gap-1">
+            {% for i in "12345" %}
+            <div class="w-2 h-2 rounded-full {% if forloop.counter <= fixture.difficulty %}bg-success{% else %}bg-gray-200{% endif %}"></div>
+            {% endfor %}
+          </div>
+        </li>
+        {% empty %}
+        <li class="text-xs text-muted italic">No data</li>
+        {% endfor %}
+      </ul>
+    </div>
+    
+    <!-- Worst Fixtures -->
+    <div>
+      <div class="flex items-center gap-2 mb-3">
+        <span class="w-1 h-4 bg-danger skew-x-12 rounded-sm"></span>
+        <h4 class="text-xs font-black text-danger uppercase tracking-widest">Red Alerts</h4>
+      </div>
+      <ul class="space-y-2">
+        {% for fixture in worst_fixtures %}
+        <li class="flex items-center justify-between p-2 rounded-lg bg-danger/5 border border-danger/10">
+          <div class="flex items-center gap-2">
+            <span class="font-bold text-text-main text-sm">{{ fixture.team }}</span>
+            <span class="text-xs text-muted">vs</span>
+            <span class="text-xs font-mono text-muted">{{ fixture.opponent }}</span>
+          </div>
+          <div class="flex gap-1">
+            {% for i in "12345" %}
+            <div class="w-2 h-2 rounded-full {% if forloop.counter <= fixture.difficulty %}bg-danger{% else %}bg-gray-200{% endif %}"></div>
+            {% endfor %}
+          </div>
+        </li>
+        {% empty %}
+        <li class="text-xs text-muted italic">No data</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  
+  <div class="mt-6 pt-4 border-t border-gray-100">
+    <p class="text-xs text-muted italic">💡 RivalSpy analyzes fixture difficulty to optimize your transfer strategy</p>
+  </div>
+</div>

@@ -9,7 +9,7 @@ from rivals.services.mini_league_sync_service import MiniLeagueSyncService
 
 @login_required
 def mini_league_index(request):
-    mini_leagues = request.user.minileagues.prefetch_related("teams").all()
+    mini_leagues = request.user.mini_leagues.prefetch_related("teams").all()
     return render(request, "mini_leagues/index.html", {"mini_leagues": mini_leagues})
 
 
@@ -55,7 +55,7 @@ def mini_league_store(request):
     fpl_league_id = request.POST.get("fpl_league_id", "").strip()
     if not fpl_league_id:
         messages.error(request, "Mini-league ID is required.")
-        return redirect("mini_league_create")
+        return redirect("rivals:minileagues.create")
 
     mini_league, created = MiniLeague.objects.get_or_create(fpl_league_id=fpl_league_id)
 
@@ -67,24 +67,24 @@ def mini_league_store(request):
             messages.error(
                 request, "Invalid mini-league code. Please check and try again."
             )
-            return redirect("mini_league_create")
+            return redirect("rivals:minileagues.create")
 
         mini_league.name = league_data["league_info"]["name"]
         mini_league.save()
 
         MiniLeagueSyncService(mini_league).sync()
 
-    request.user.userminileagues.get_or_create(mini_league=mini_league)
+    request.user.customminileagues.get_or_create(mini_league=mini_league)
     messages.success(request, "Mini-league added successfully!")
 
-    return redirect("mini_league_show", league_id=mini_league.id)
+    return redirect("rivals:minileagues.show", mini_league_id=mini_league.id)
 
 
 @login_required
 def mini_league_sync(request, mini_league_id):
     mini_league = get_object_or_404(MiniLeague, id=mini_league_id)
 
-    if not request.user.minileagues.filter(id=mini_league.id).exists():
+    if not request.user.mini_leagues.filter(id=mini_league.id).exists():
         return render(request, "404.html", status=404)
 
     success = MiniLeagueSyncService(mini_league).sync()
@@ -93,4 +93,4 @@ def mini_league_sync(request, mini_league_id):
     else:
         messages.error(request, "Failed to sync league. Please try again.")
 
-    return redirect("mini_league_show", league_id=mini_league.id)
+    return redirect("rivals:minileagues.show", mini_league_id=mini_league.id)

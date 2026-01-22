@@ -1,0 +1,30 @@
+#!/bin/bash
+# Deployment script for Rivals app
+# Runs migrations and syncs players after deployment
+
+set -e  # Exit on error
+
+echo "🚀 Starting deployment tasks..."
+
+# Run migrations
+echo "📦 Running database migrations..."
+uv run python manage.py migrate --noinput
+
+if [ $? -ne 0 ]; then
+    echo "❌ Migration failed!"
+    exit 1
+fi
+
+echo "✅ Migrations completed successfully"
+
+# Sync players
+echo "🔄 Syncing players from FPL API..."
+uv run python manage.py sync_players
+
+if [ $? -ne 0 ]; then
+    echo "⚠️  Player sync had errors, but continuing..."
+    # Don't fail deployment if player sync has issues (non-critical)
+fi
+
+echo "✅ Deployment tasks completed!"
+exit 0

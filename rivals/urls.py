@@ -16,7 +16,16 @@ urlpatterns = [
     path(
         "teams/<int:team_id>/analysis/", team_views.team_analysis, name="teams.analysis"
     ),
-    # path("teams/<int:team_id>/compare/<int:rival_id>/", team_views.compare_teams, name="compare"),
+    path(
+        "teams/<int:team_id>/compare/quick/",
+        team_views.team_quick_compare,
+        name="teams.compare.quick",
+    ),
+    path(
+        "teams/<int:team_id>/compare/",
+        team_views.team_compare,
+        name="teams.compare",
+    ),
     # Mini Leagues
     path("mini-leagues/", minileague_views.mini_league_index, name="minileagues.index"),
     path(

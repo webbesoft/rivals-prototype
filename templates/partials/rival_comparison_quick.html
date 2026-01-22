@@ -1,0 +1,215 @@
+{% if error %}
+<div class="bg-danger/10 border border-danger/20 rounded-2xl p-6 text-center">
+  <p class="text-danger font-bold">{{ error }}</p>
+</div>
+{% elif comparison.error %}
+<div class="bg-danger/10 border border-danger/20 rounded-2xl p-6 text-center">
+  <p class="text-danger font-bold">Comparison failed: {{ comparison.error }}</p>
+</div>
+{% else %}
+<div class="bg-surface rounded-2xl shadow-xl border border-gray-100 p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+  <div class="flex items-center justify-between mb-6">
+    <h3 class="text-xl font-black text-text-main uppercase tracking-tight flex items-center gap-2">
+      <span class="w-2 h-2 bg-accent rounded-full animate-pulse"></span>
+      Head-to-Head
+    </h3>
+    <a
+      href="{% url 'rivals:teams.compare' rival_team.id %}"
+      class="text-xs font-bold text-accent hover:text-text-main uppercase tracking-wider transition-colors"
+    >
+      Full Analysis →
+    </a>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <!-- Expected Points Next GW -->
+    <div class="bg-surface-alt rounded-xl p-4 border border-gray-100">
+      <div class="text-xs font-bold text-muted uppercase tracking-wider mb-2">Expected Points (GW{{ comparison.current_gameweek|add:1 }})</div>
+      <div class="flex items-center justify-between mb-2">
+        <div>
+          <div class="text-sm text-gray-500 font-mono">You</div>
+          <div class="text-2xl font-black {% if comparison.expected_points.difference > 0 %}text-accent{% elif comparison.expected_points.difference < 0 %}text-danger{% else %}text-text-main{% endif %}">
+            {{ comparison.expected_points.mine|floatformat:1 }}
+          </div>
+        </div>
+        <div class="text-gray-400">vs</div>
+        <div class="text-right">
+          <div class="text-sm text-gray-500 font-mono">Rival</div>
+          <div class="text-2xl font-black text-text-main">
+            {{ comparison.expected_points.rival|floatformat:1 }}
+          </div>
+        </div>
+      </div>
+      {% if comparison.expected_points.difference != 0 %}
+      <div class="text-xs font-bold {% if comparison.expected_points.difference > 0 %}text-accent{% else %}text-danger{% endif %} mt-2">
+        {% if comparison.expected_points.difference > 0 %}+{% endif %}{{ comparison.expected_points.difference|floatformat:1 }} advantage
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Captaincy Comparison -->
+    <div class="bg-surface-alt rounded-xl p-4 border border-gray-100">
+      <div class="text-xs font-bold text-muted uppercase tracking-wider mb-2">Captaincy</div>
+      {% if comparison.captaincy.mine and comparison.captaincy.rival %}
+      <div class="space-y-2">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="text-xs text-muted">You</div>
+            <div class="text-sm font-bold text-text-main">{{ comparison.captaincy.mine.name }}</div>
+          </div>
+          <div class="text-lg font-black text-accent">{{ comparison.captaincy.mine.expected_points|floatformat:1 }}</div>
+        </div>
+        <div class="h-px bg-gray-200"></div>
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="text-xs text-muted">Rival</div>
+            <div class="text-sm font-bold text-text-main">{{ comparison.captaincy.rival.name }}</div>
+          </div>
+          <div class="text-lg font-black text-text-main">{{ comparison.captaincy.rival.expected_points|floatformat:1 }}</div>
+        </div>
+        {% if comparison.captaincy.difference > 0 %}
+        <div class="text-xs font-bold text-accent mt-1">
+          +{{ comparison.captaincy.difference|floatformat:1 }} advantage
+        </div>
+        {% elif comparison.captaincy.difference < 0 %}
+        <div class="text-xs font-bold text-danger mt-1">
+          {{ comparison.captaincy.difference|floatformat:1 }} behind
+        </div>
+        {% endif %}
+      </div>
+      {% else %}
+      <div class="text-xs text-muted italic">Data unavailable</div>
+      {% endif %}
+    </div>
+
+    <!-- Fixture Difficulty -->
+    <div class="bg-surface-alt rounded-xl p-4 border border-gray-100">
+      <div class="text-xs font-bold text-muted uppercase tracking-wider mb-2">Next 5 FDR (Squad Avg)</div>
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <div class="text-xs text-muted">You</div>
+          <div class="text-lg font-black {% if comparison.fixture_difficulty.mine < comparison.fixture_difficulty.rival %}text-accent{% elif comparison.fixture_difficulty.mine > comparison.fixture_difficulty.rival %}text-danger{% else %}text-text-main{% endif %}">
+            {{ comparison.fixture_difficulty.mine|floatformat:1 }}
+          </div>
+        </div>
+        <div class="text-gray-400">vs</div>
+        <div class="text-right">
+          <div class="text-xs text-muted">Rival</div>
+          <div class="text-lg font-black text-text-main">
+            {{ comparison.fixture_difficulty.rival|floatformat:1 }}
+          </div>
+        </div>
+      </div>
+      <!-- FDR Schedule Bars -->
+      <div class="flex gap-1 mb-2">
+        {% for fixture in comparison.fixture_difficulty.mine_schedule|slice:":5" %}
+        <div
+          class="flex-1 h-3 rounded-sm {% if fixture.rating == 'easy' %}bg-success{% elif fixture.rating == 'hard' %}bg-danger{% else %}bg-highlight{% endif %}"
+          title="GW{{ fixture.gameweek }}: {{ fixture.difficulty_score }} Avg"
+        ></div>
+        {% empty %}
+        <div class="flex-1 h-3 rounded-sm bg-gray-300"></div>
+        {% endfor %}
+      </div>
+      <div class="flex gap-1">
+        {% for fixture in comparison.fixture_difficulty.rival_schedule|slice:":5" %}
+        <div
+          class="flex-1 h-3 rounded-sm {% if fixture.rating == 'easy' %}bg-success{% elif fixture.rating == 'hard' %}bg-danger{% else %}bg-highlight{% endif %}"
+           title="GW{{ fixture.gameweek }}: {{ fixture.difficulty_score }} Avg"
+        ></div>
+        {% empty %}
+        <div class="flex-1 h-3 rounded-sm bg-gray-300"></div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Momentum -->
+    <div class="bg-surface-alt rounded-xl p-4 border border-gray-100">
+      <div class="text-xs font-bold text-muted uppercase tracking-wider mb-2">Momentum (Last 5 GWs)</div>
+      <div class="flex items-center justify-between mb-2">
+        <div>
+          <div class="text-xs text-muted">You</div>
+          <div class="text-lg font-black {% if comparison.momentum.difference > 0 %}text-accent{% elif comparison.momentum.difference < 0 %}text-danger{% else %}text-text-main{% endif %}">
+            {{ comparison.momentum.mine.average|floatformat:1 }}
+          </div>
+        </div>
+        <div class="text-gray-400">vs</div>
+        <div class="text-right">
+          <div class="text-xs text-muted">Rival</div>
+          <div class="text-lg font-black text-text-main">
+            {{ comparison.momentum.rival.average|floatformat:1 }}
+          </div>
+        </div>
+      </div>
+      {% if comparison.momentum.difference != 0 %}
+      <div class="text-xs font-bold {% if comparison.momentum.difference > 0 %}text-accent{% else %}text-danger{% endif %}">
+        {% if comparison.momentum.difference > 0 %}+{% endif %}{{ comparison.momentum.difference|floatformat:1 }} avg
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Transfer Pressure -->
+    <div class="bg-surface-alt rounded-xl p-4 border border-gray-100">
+      <div class="text-xs font-bold text-muted uppercase tracking-wider mb-2">Free Transfers</div>
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="text-xs text-muted">You</div>
+          <div class="text-lg font-black {% if comparison.transfers.mine_free >= 2 %}text-accent{% else %}text-text-main{% endif %}">
+            {{ comparison.transfers.mine_free }}
+          </div>
+        </div>
+        <div class="text-gray-400">vs</div>
+        <div class="text-right">
+          <div class="text-xs text-muted">Rival</div>
+          <div class="text-lg font-black {% if comparison.transfers.rival_free >= 2 %}text-danger{% else %}text-text-main{% endif %}">
+            {{ comparison.transfers.rival_free }}
+          </div>
+        </div>
+      </div>
+      {% if comparison.transfers.rival_free >= 2 %}
+      <div class="text-xs font-bold text-danger mt-2">⚠️ Rival has 2+ FTs</div>
+      {% endif %}
+    </div>
+
+    <!-- Quick Summary -->
+    <div class="bg-surface-alt rounded-xl p-4 border border-gray-100 md:col-span-2 lg:col-span-1">
+      <div class="text-xs font-bold text-muted uppercase tracking-wider mb-2">Quick Take</div>
+      <div class="space-y-1 text-xs">
+        {% if comparison.expected_points.difference > 5 %}
+        <div class="flex items-center gap-2 text-accent">
+          <span>✓</span>
+          <span>Strong projected advantage</span>
+        </div>
+        {% elif comparison.expected_points.difference < -5 %}
+        <div class="flex items-center gap-2 text-danger">
+          <span>⚠</span>
+          <span>Rival projected ahead</span>
+        </div>
+        {% endif %}
+        {% if comparison.fixture_difficulty.mine < comparison.fixture_difficulty.rival %}
+        <div class="flex items-center gap-2 text-accent">
+          <span>✓</span>
+          <span>Easier fixtures ahead</span>
+        </div>
+        {% elif comparison.fixture_difficulty.mine > comparison.fixture_difficulty.rival %}
+        <div class="flex items-center gap-2 text-danger">
+          <span>⚠</span>
+          <span>Tougher fixtures ahead</span>
+        </div>
+        {% endif %}
+        {% if comparison.momentum.difference > 3 %}
+        <div class="flex items-center gap-2 text-accent">
+          <span>↑</span>
+          <span>Better recent form</span>
+        </div>
+        {% elif comparison.momentum.difference < -3 %}
+        <div class="flex items-center gap-2 text-danger">
+          <span>↓</span>
+          <span>Rival in better form</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}

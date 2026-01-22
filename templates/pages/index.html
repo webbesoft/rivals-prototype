@@ -1,36 +1,197 @@
-<c-layouts.base>
-  <div class="min-h-screen bg-gradient-to-br from-green-700 via-emerald-800 to-green-900 flex items-center">
-    <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+{% load humanize %}
+<c-layouts.guest>
+  <!-- Hero Block -->
+  <div class="min-h-screen relative flex flex-col items-center justify-center p-6 text-center overflow-hidden bg-pitch">
+    <!-- Ambient Background -->
+    <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20 pointer-events-none"></div>
+    <div class="absolute inset-0 bg-gradient-to-b from-pitch via-pitch/90 to-black/80 pointer-events-none"></div>
+    <div class="absolute top-0 right-0 p-[30rem] bg-accent/5 blur-[100px] rounded-full pointer-events-none animate-pulse"></div>
 
-            <div class="text-center lg:text-left">
-                <h1 class="text-4xl sm:text-5xl md:text-6xl font-extrabold text-white mb-6 leading-tight">
-                    Track Your <span class="text-yellow-300">FPL Rivals</span> with Ease
-                </h1>
+    <div class="relative z-10 max-w-5xl mx-auto space-y-12">
+      <!-- Live Badge -->
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/10 bg-white/5 backdrop-blur-sm shadow-xl animate-in fade-in slide-in-from-top-4 duration-700">
+         <span class="w-2 h-2 rounded-full bg-accent animate-pulse"></span>
+         <span class="text-xs font-bold text-white tracking-widest uppercase">Gameweek {{ current_gameweek }} • Live Intel</span>
+      </div>
 
-                <p class="text-lg sm:text-xl text-green-100 max-w-lg mx-auto lg:mx-0 mb-10">
-                    Stay ahead in your mini-leagues. Compare teams, monitor transfers, and watch your rivals' every move.
-                </p>
+      <!-- Hero Title -->
+      <h1 class="text-6xl md:text-9xl font-black italic tracking-tighter uppercase text-white leading-none drop-shadow-2xl animate-in fade-in zoom-in-50 duration-500">
+        <span class="block text-stroke-white text-transparent opacity-50 text-4xl md:text-7xl mb-2">Fantasy Premier League</span>
+        <span class="text-white">Rival</span><span class="text-accent">Spy</span>
+      </h1>
+      
+      <!-- Value Prop -->
+      <p class="text-xl md:text-2xl text-gray-300 font-medium max-w-2xl mx-auto leading-relaxed animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
+        Track mini-league activity, spy on opponent transfers before they happen, and <span class="text-white font-bold p-1 bg-highlight/20 -skew-x-6 inline-block border border-highlight/20">master the ranks</span> like a seasoned tactician.
+      </p>
 
-                <div class="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
-                    {% if current_user.is_authenticated %}
-                    <a href="{% url 'dashboard' %}" class="inline-block w-full sm:w-auto bg-yellow-400 text-green-900 font-semibold px-6 py-3 rounded-lg shadow-lg hover:bg-yellow-300 transition">
-                        Go to Dashboard
-                    </a>
-                    {% else %}
-                    <a href="{% url 'accounts:signup' %}" class="inline-block w-full sm:w-auto bg-yellow-400 text-green-900 font-semibold px-6 py-3 rounded-lg shadow-lg hover:bg-yellow-300 transition">
-                        Get Started Free
-                    </a>
-                    {% endif %}
-                    
-                </div>
-            </div>
-
-            <div>
-                <img src="assets/images/dashboard-preview.png" alt="RivalSpy Dashboard Preview" class="rounded-xl shadow-2xl border-4 border-white/20 w-full">
-            </div>
-
-        </div>
+      <!-- CTA -->
+      <div class="flex flex-col sm:flex-row gap-6 justify-center items-center mt-12 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300">
+        <a href="{% url 'accounts:signup' %}" class="bg-accent hover:bg-white text-pitch px-8 py-4 rounded-xl font-black uppercase tracking-wide text-xl transition-all shadow-xl shadow-accent/20 hover:scale-105">
+          Enter the Dugout
+        </a>
+        <a href="#preview" class="bg-white/10 hover:bg-white/20 text-white border-2 border-white/20 px-8 py-4 rounded-xl font-bold uppercase tracking-wide text-xl transition-all">
+          See Live Intel
+        </a>
+      </div>
     </div>
-</div>
+  </div>
+
+  <!-- Live Gameweek Insights -->
+  <section id="preview" class="py-20 bg-surface-alt relative overflow-hidden">
+    <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/grid.png')] opacity-5"></div>
+    
+    <div class="max-w-7xl mx-auto px-6 relative z-10">
+      <div class="text-center mb-12">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-accent/20 bg-accent/10 mb-4">
+          <span class="w-2 h-2 rounded-full bg-accent animate-pulse"></span>
+          <span class="text-xs font-bold text-accent tracking-widest uppercase">Live Intelligence Feed</span>
+        </div>
+        <h2 class="text-4xl md:text-6xl font-black text-text-main uppercase italic tracking-tighter mb-4">
+          This Week's <span class="text-accent">Intel</span>
+        </h2>
+        <p class="text-muted text-lg max-w-2xl mx-auto">
+          Real-time FPL data aggregated from millions of managers. No login required.
+        </p>
+      </div>
+      
+      <div class="grid md:grid-cols-3 gap-8">
+        <c-components.captain_picks_card :captain_picks="captain_picks" :gameweek="current_gameweek" />
+        <c-components.transfer_trends_card :transfers_in="transfer_trends.transfers_in" :transfers_out="transfer_trends.transfers_out" :gameweek="current_gameweek" />
+        <c-components.fixture_difficulty_card :best_fixtures="fixture_highlights.best_fixtures" :worst_fixtures="fixture_highlights.worst_fixtures" />
+      </div>
+    </div>
+  </section>
+
+  <!-- Demo Team Showcase -->
+  {% if demo_team %}
+  <section class="py-20 bg-pitch relative overflow-hidden">
+    <div class="absolute inset-0 bg-gradient-to-br from-pitch via-pitch/90 to-black/80"></div>
+    <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10"></div>
+    
+    <div class="max-w-7xl mx-auto px-6 relative z-10">
+      <div class="text-center mb-12">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/10 bg-white/5 mb-4">
+          <span class="text-xs font-bold text-white tracking-widest uppercase">Live Team Analysis</span>
+        </div>
+        <h2 class="text-4xl md:text-6xl font-black text-white uppercase italic tracking-tighter mb-4">
+          See What You're <span class="text-accent">Missing</span>
+        </h2>
+        <p class="text-gray-300 text-lg max-w-2xl mx-auto">
+          Here's what RivalSpy reveals about <span class="font-bold text-white">one of your rivals.</span>
+        </p>
+      </div>
+
+      <!-- Team Stats Grid -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12">
+        <div class="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10">
+          <div class="text-xs uppercase text-muted font-bold tracking-wider mb-2">Overall Rank</div>
+          <div class="text-3xl font-black text-accent">#{{ demo_team.overall_rank|intcomma }}</div>
+        </div>
+        <div class="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10">
+          <div class="text-xs uppercase text-muted font-bold tracking-wider mb-2">Total Points</div>
+          <div class="text-3xl font-black text-white">{{ demo_team.total_points|intcomma }}</div>
+        </div>
+        <div class="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10">
+          <div class="text-xs uppercase text-muted font-bold tracking-wider mb-2">Team Value</div>
+          <div class="text-3xl font-black text-highlight">£{{ demo_team.value }}m</div>
+        </div>
+        <div class="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10">
+          <div class="text-xs uppercase text-muted font-bold tracking-wider mb-2">In Bank</div>
+          <div class="text-3xl font-black text-success">£{{ demo_team.bank }}m</div>
+        </div>
+      </div>
+
+      <!-- Recent Performance -->
+      <div class="bg-white/5 backdrop-blur-md rounded-2xl p-8 border border-white/10">
+        <h3 class="text-xl font-black text-white uppercase tracking-tight mb-6">Recent Performance</h3>
+        <div class="grid grid-cols-5 gap-4">
+          {% for gw in demo_team.recent_performance %}
+          <div class="text-center p-4 rounded-xl {% if gw.points > 60 %}bg-success/10 border border-success/20{% elif gw.points < 40 %}bg-danger/10 border border-danger/20{% else %}bg-white/5 border border-white/10{% endif %}">
+            <div class="text-xs text-muted uppercase font-bold mb-2">GW{{ gw.event }}</div>
+            <div class="text-2xl font-black {% if gw.points > 60 %}text-success{% elif gw.points < 40 %}text-danger{% else %}text-white{% endif %}">
+              {{ gw.points }}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- CTA -->
+      <div class="mt-12 text-center">
+        <p class="text-gray-300 text-lg mb-6">
+          Want personalized insights? <span class="font-bold text-white">Sign up to unlock your team's full dossier.</span>
+        </p>
+        <a href="{% url 'accounts:signup' %}" class="inline-block bg-accent hover:bg-white text-pitch px-8 py-4 rounded-xl font-black uppercase tracking-wide text-xl transition-all shadow-xl shadow-accent/20 hover:scale-105">
+          Unlock My Team
+        </a>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- Why RivalSpy -->
+  <section class="py-20 bg-surface">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="text-center mb-16">
+        <h2 class="text-4xl md:text-6xl font-black text-text-main uppercase italic tracking-tighter mb-4">
+          Why <span class="text-accent">RivalSpy</span>?
+        </h2>
+        <p class="text-muted text-lg max-w-2xl mx-auto">
+          Built by FPL managers, for FPL managers. No corporate nonsense.
+        </p>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-8">
+        <div class="text-center p-8">
+          <div class="w-16 h-16 bg-accent/10 rounded-2xl flex items-center justify-center mx-auto mb-6 transform -rotate-6">
+            <span class="text-4xl">🎯</span>
+          </div>
+          <h3 class="text-xl font-black text-text-main uppercase tracking-tight mb-3">Player-First Design</h3>
+          <p class="text-muted leading-relaxed">
+            No bloat, no ads, no BS. Just the intel you need to beat your mates.
+          </p>
+        </div>
+
+        <div class="text-center p-8">
+          <div class="w-16 h-16 bg-accent/10 rounded-2xl flex items-center justify-center mx-auto mb-6 transform rotate-6">
+            <span class="text-4xl">🔍</span>
+          </div>
+          <h3 class="text-xl font-black text-text-main uppercase tracking-tight mb-3">Deep Intelligence</h3>
+          <p class="text-muted leading-relaxed">
+            AI-powered transfer recommendations based on fixtures, form, and your budget.
+          </p>
+        </div>
+
+        <div class="text-center p-8">
+          <div class="w-16 h-16 bg-accent/10 rounded-2xl flex items-center justify-center mx-auto mb-6 transform -rotate-3">
+            <span class="text-4xl">⚡</span>
+          </div>
+          <h3 class="text-xl font-black text-text-main uppercase tracking-tight mb-3">Real-Time Tracking</h3>
+          <p class="text-muted leading-relaxed">
+            Live rank updates, rival monitoring, and instant transfer alerts.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Final CTA -->
+  <section class="py-20 bg-pitch relative overflow-hidden">
+    <div class="absolute inset-0 bg-gradient-to-br from-pitch via-pitch/90 to-black/80"></div>
+    <div class="absolute top-0 left-0 p-[30rem] bg-accent/5 blur-[100px] rounded-full pointer-events-none"></div>
+    
+    <div class="max-w-4xl mx-auto px-6 text-center relative z-10">
+      <h2 class="text-4xl md:text-6xl font-black text-white uppercase italic tracking-tighter mb-6">
+        Ready to <span class="text-accent">Dominate</span>?
+      </h2>
+      <p class="text-xl text-gray-300 mb-10 leading-relaxed">
+        Join thousands of managers using RivalSpy to gain the edge in their mini-leagues.
+      </p>
+      <a href="{% url 'accounts:signup' %}" class="inline-block bg-accent hover:bg-white text-pitch px-10 py-5 rounded-xl font-black uppercase tracking-wide text-2xl transition-all shadow-2xl shadow-accent/30 hover:scale-105">
+        Start Free Today
+      </a>
+      <p class="text-sm text-gray-400 mt-6">No credit card required • Free forever</p>
+    </div>
+  </section>
 </c-layouts.guest>

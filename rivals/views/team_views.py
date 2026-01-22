@@ -161,6 +161,75 @@ def team_analysis(request, team_id):
     return render(request, "partials/analysis.html", {"analysis": result, "team": team})
 
 
-# @login_required
-# def compare_teams(request, team_id, rival_id):
-#     pass
+@require_http_methods(["GET"])
+@login_required
+def team_quick_compare(request, team_id):
+    """Quick comparison panel for inline display."""
+    rival_team = get_object_or_404(Team, id=team_id)
+
+    if not request.user.team:
+        return render(
+            request,
+            "partials/rival_comparison_quick.html",
+            {"error": "You need to have a team to compare."},
+        )
+
+    my_team = request.user.team
+    if my_team.id == rival_team.id:
+        return render(
+            request,
+            "partials/rival_comparison_quick.html",
+            {"error": "Cannot compare your team with itself."},
+        )
+
+    result = analysis_service.quick_compare(
+        int(my_team.fpl_team_id),
+        int(rival_team.fpl_team_id),
+        my_team_model=my_team,
+        rival_team_model=rival_team,
+    )
+
+    return render(
+        request,
+        "partials/rival_comparison_quick.html",
+        {
+            "comparison": result,
+            "my_team": my_team,
+            "rival_team": rival_team,
+        },
+    )
+
+
+@login_required
+def team_compare(request, team_id):
+    """Full dedicated comparison page."""
+    rival_team = get_object_or_404(Team, id=team_id)
+
+    if not request.user.team:
+        messages.error(request, "You need to have a team to compare.")
+        return redirect("rivals:teams.show", team_id=team_id)
+
+    my_team = request.user.team
+    if my_team.id == rival_team.id:
+        messages.error(request, "Cannot compare your team with itself.")
+        return redirect("rivals:teams.show", team_id=team_id)
+
+    result = analysis_service.compare_teams(
+        int(my_team.fpl_team_id),
+        int(rival_team.fpl_team_id),
+        include_models=(my_team, rival_team),
+    )
+
+    if result.get("error"):
+        messages.error(request, f"Comparison failed: {result['error']}")
+        return redirect("rivals:teams.show", team_id=team_id)
+
+    return render(
+        request,
+        "pages/teams/compare.html",
+        {
+            "comparison": result,
+            "my_team": my_team,
+            "rival_team": rival_team,
+        },
+    )

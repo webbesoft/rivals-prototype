@@ -1,30 +1,34 @@
-<div
-  class="mb-8"
-  data-team-id="{{ team.id }}"
-  data-last-gameweek="{% if team.get_available_gameweeks %}{{ team.get_available_gameweeks|last }}{% endif %}"
->
-  <p>{{ team.name }}</p>
-  <div
-    class="bg-gradient-to-r from-green-700 to-emerald-800 rounded-xl shadow-lg p-6 text-white"
-  >
-    <h2 class="text-2xl font-bold mb-4">Squad History</h2>
+<div class="mb-12" data-team-id="{{ team.id }}" data-last-gameweek="{% if team.get_available_gameweeks %}{{ team.get_available_gameweeks|last }}{% endif %}">
+  <div class="bg-pitch rounded-2xl shadow-xl p-8 relative overflow-hidden group border border-accent/20">
+    <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10"></div>
+    <div class="absolute top-0 right-0 p-32 bg-accent/5 blur-3xl rounded-full"></div>
 
-    <div class="relative">
-      <div class="flex space-x-2 mb-4 overflow-x-auto pb-2">
-        {% for gw in available_gameweeks %}
-        <button
-          onclick="showSquad({{ gw }})"
-          class="gameweek-btn flex-shrink-0 px-4 py-2 rounded-lg border border-white/30 text-sm font-medium transition-colors hover:bg-white/20"
-          data-gameweek="{{ gw }}"
-        >
-          GW {{ gw }}
-        </button>
-        {% endfor %}
+    <div class="relative z-10">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <div>
+           <div class="text-xs font-black uppercase tracking-widest text-accent mb-1">Tactical Setup</div>
+           <h2 class="text-3xl font-black text-white italic tracking-tighter uppercase">Squad History</h2>
+        </div>
+        
+        <div class="flex items-center bg-white/5 rounded-full p-1 border border-white/10 backdrop-blur-sm">
+           <button id="prev-gw-btn" onclick="changeGameweek(-1)" class="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 hover:bg-accent text-white hover:text-pitch transition-colors disabled:opacity-25 disabled:cursor-not-allowed">
+              ←
+           </button>
+           
+           <div class="px-4 font-mono font-bold text-white text-sm">
+              GW <span id="current-gw-display">-</span>
+           </div>
+
+           <button id="next-gw-btn" onclick="changeGameweek(1)" class="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 hover:bg-accent text-white hover:text-pitch transition-colors disabled:opacity-25 disabled:cursor-not-allowed">
+              →
+           </button>
+        </div>
       </div>
 
-      <div id="squad-container" class="min-h-[500px]">
-        <div class="flex items-center justify-center h-32">
-          <p class="text-blue-100">Select a gameweek to view the squad</p>
+      <div id="squad-container" class="min-h-[400px]">
+        <div class="flex flex-col items-center justify-center h-64 text-center">
+            <div class="w-16 h-16 border-4 border-white/10 border-t-accent rounded-full animate-spin mb-4"></div>
+            <p class="text-muted font-mono text-sm uppercase tracking-wider">Loading tactical data...</p>
         </div>
       </div>
     </div>
@@ -33,30 +37,51 @@
 
 <script>
   let currentGameweek = null;
+  let availableGameweeks = [
+    {% for gw in available_gameweeks %}{{ gw }}{% if not forloop.last %}, {% endif %}{% endfor %}
+  ];
+
+  function changeGameweek(direction) {
+      if (!currentGameweek && availableGameweeks.length > 0) {
+          currentGameweek = availableGameweeks[availableGameweeks.length - 1]; // Default to last
+      }
+      
+      const currentIndex = availableGameweeks.indexOf(currentGameweek);
+      let newIndex = currentIndex + direction;
+      
+      if (newIndex >= 0 && newIndex < availableGameweeks.length) {
+          showSquad(availableGameweeks[newIndex]);
+      }
+  }
+
+  function updateControls() {
+      const display = document.getElementById('current-gw-display');
+      const prevBtn = document.getElementById('prev-gw-btn');
+      const nextBtn = document.getElementById('next-gw-btn');
+      
+      if (display) display.textContent = currentGameweek;
+      
+      const currentIndex = availableGameweeks.indexOf(currentGameweek);
+      if (prevBtn) prevBtn.disabled = currentIndex <= 0;
+      if (nextBtn) nextBtn.disabled = currentIndex >= availableGameweeks.length - 1;
+  }
 
   function showSquad(gameweek) {
-    if (currentGameweek === gameweek) return;
-
     currentGameweek = gameweek;
-
-    document.querySelectorAll(".gameweek-btn").forEach((btn) => {
-      btn.classList.remove("bg-white/30");
-      if (btn.getAttribute("data-gameweek") == gameweek) {
-        btn.classList.add("bg-white/30");
-      }
-    });
+    updateControls();
 
     // Show loading
     document.getElementById("squad-container").innerHTML = `
-        <div class="flex items-center justify-center h-32">
-            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
-            <span class="ml-3 text-blue-100">Loading squad...</span>
+        <div class="flex flex-col items-center justify-center h-64 text-center">
+            <div class="w-12 h-12 border-4 border-white/10 border-t-accent rounded-full animate-spin mb-4"></div>
+            <p class="text-muted font-mono text-sm uppercase tracking-wider">Accessing archives...</p>
         </div>
     `;
 
     const teamId = document
       .querySelector("[data-team-id]")
       .getAttribute("data-team-id");
+      
     fetch(`/dashboard/teams/${teamId}/squad-history/${gameweek}`)
       .then((response) => response.json())
       .then((data) => {
@@ -65,8 +90,10 @@
       .catch((error) => {
         console.error("Error:", error);
         document.getElementById("squad-container").innerHTML = `
-                <div class="flex items-center justify-center h-32">
-                    <p class="text-red-200">Error loading squad data</p>
+                <div class="flex flex-col items-center justify-center h-64 text-center">
+                    <div class="text-danger text-4xl mb-2">⚠️</div>
+                    <p class="text-danger font-bold uppercase tracking-wide">Data corruption detected</p>
+                    <p class="text-muted text-xs mt-1">Could not load squad history.</p>
                 </div>
             `;
       });
@@ -77,28 +104,26 @@
     const bench = squadData.filter((player) => player.position > 11);
 
     const html = `
-        <div class="space-y-6">
-            <!-- Squad Header -->
-            <div class="text-center">
-                <h3 class="text-xl font-bold">Gameweek ${gameweek} Squad</h3>
-                <p class="text-blue-100 text-sm mt-1">Formation & Squad Selection</p>
-            </div>
-            
+        <div class="space-y-8 animate-in fade-in duration-500">
             <!-- Starting XI -->
-            <div class="bg-white/10 rounded-lg p-4">
-                <h4 class="font-semibold mb-3 text-green-200">Starting XI</h4>
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                    ${startingXI
-                      .map((player) => createPlayerCard(player))
-                      .join("")}
+            <div>
+                <div class="flex items-center gap-2 mb-4">
+                    <span class="w-1 h-4 bg-success skew-x-12 rounded-sm"></span>
+                    <h4 class="font-black text-white uppercase tracking-wider text-sm">Starting XI</h4>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    ${startingXI.map((player) => createPlayerCard(player)).join("")}
                 </div>
             </div>
             
             <!-- Bench -->
-            <div class="bg-white/5 rounded-lg p-4">
-                <h4 class="font-semibold mb-3 text-yellow-200">Bench</h4>
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                    ${bench.map((player) => createPlayerCard(player)).join("")}
+            <div>
+                 <div class="flex items-center gap-2 mb-4">
+                    <span class="w-1 h-4 bg-highlight skew-x-12 rounded-sm"></span>
+                    <h4 class="font-black text-white uppercase tracking-wider text-sm">Bench</h4>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    ${bench.map((player) => createPlayerCard(player, true)).join("")}
                 </div>
             </div>
         </div>
@@ -107,73 +132,53 @@
     document.getElementById("squad-container").innerHTML = html;
   }
 
-  function createPlayerCard(player) {
+  function createPlayerCard(player, isBench = false) {
     const captainBadge = player.is_captain
-      ? '<span class="absolute -top-1 -right-1 bg-yellow-500 text-black text-xs px-1.5 py-0.5 rounded-full font-bold">C</span>'
+      ? '<span class="absolute -top-2 -right-2 w-6 h-6 bg-highlight text-pitch flex items-center justify-center text-xs font-black rounded-full border-2 border-pitch shadow-lg z-10" title="Captain">C</span>'
       : "";
     const viceCaptainBadge = player.is_vice_captain
-      ? '<span class="absolute -top-1 -right-1 bg-gray-400 text-black text-xs px-1.5 py-0.5 rounded-full font-bold">V</span>'
+      ? '<span class="absolute -top-2 -right-2 w-6 h-6 bg-gray-400 text-pitch flex items-center justify-center text-xs font-black rounded-full border-2 border-pitch shadow-lg z-10" title="Vice Captain">V</span>'
       : "";
 
     const positionColors = {
-      GKP: "from-yellow-400 to-yellow-600",
-      DEF: "from-blue-400 to-blue-600",
-      MID: "from-green-400 to-green-600",
-      FWD: "from-red-400 to-red-600",
+      GKP: "bg-yellow-500",
+      DEF: "bg-blue-500",
+      MID: "bg-green-500",
+      FWD: "bg-red-500",
     };
 
+    const cardBg = isBench ? "bg-white/5 border-white/10" : "bg-white/10 border-white/20";
+    const hoverEffect = "group hover:bg-white/20 hover:border-accent/50 hover:-translate-y-1";
+
     return `
-        <div class="relative bg-white/10 rounded-lg p-3 border border-white/20 hover:bg-white/20 transition-colors">
+        <div class="relative ${cardBg} backdrop-blur-sm rounded-xl p-4 border transition-all duration-300 ${hoverEffect}">
             ${captainBadge}${viceCaptainBadge}
             
-            <div class="flex items-start space-x-3">
+            <div class="flex items-start gap-4">
                 <div class="flex-shrink-0">
-                    <div class="w-10 h-10 bg-gradient-to-br ${
-                      positionColors[player.position_type] ||
-                      "from-gray-400 to-gray-600"
-                    } rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg">
+                    <div class="w-10 h-10 ${positionColors[player.position_type] || "bg-gray-500"} rounded-lg flex items-center justify-center text-pitch text-xs font-black shadow-lg transform rotate-3 group-hover:rotate-0 transition-transform duration-300">
                         ${player.position_type}
                     </div>
                 </div>
                 
                 <div class="flex-1 min-w-0">
-                    <p class="font-medium text-white text-sm truncate">${
-                      player.player_name
-                    }</p>
-                    <div class="flex items-center space-x-2 text-xs text-blue-100 mt-1">
-                        <span class="font-medium">${
-                          player.formatted_cost
-                        }</span>
-                        ${
-                          player.form ? `<span>Form: ${player.form}</span>` : ""
-                        }
+                    <div class="flex items-baseline justify-between">
+                         <p class="font-bold text-white text-sm truncate uppercase tracking-tight">${player.player_name}</p>
+                         <span class="text-xs font-mono text-accent font-bold">${player.total_points_at_time || '-'}pts</span>
                     </div>
                     
-                    <!-- Additional Stats -->
-                    <div class="mt-2 flex flex-wrap gap-1 text-xs text-blue-100">
-                        ${
-                          player.expected_goals &&
-                          parseFloat(player.expected_goals) > 0
-                            ? `<span class="bg-white/10 px-2 py-1 rounded">xG: ${parseFloat(
-                                player.expected_goals
-                              ).toFixed(1)}</span>`
-                            : ""
-                        }
-                        ${
-                          player.expected_assists &&
-                          parseFloat(player.expected_assists) > 0
-                            ? `<span class="bg-white/10 px-2 py-1 rounded">xA: ${parseFloat(
-                                player.expected_assists
-                              ).toFixed(1)}</span>`
-                            : ""
-                        }
-                        ${
-                          player.selected_by_percent
-                            ? `<span class="bg-white/10 px-2 py-1 rounded">${parseFloat(
-                                player.selected_by_percent
-                              ).toFixed(1)}% owned</span>`
-                            : ""
-                        }
+                    <div class="flex items-center gap-2 text-xs text-gray-300 mt-1">
+                        <span class="font-medium bg-black/20 px-1.5 py-0.5 rounded">${player.formatted_cost}</span>
+                        ${player.form ? `<span class="text-muted">Form: ${player.form}</span>` : ""}
+                    </div>
+                    
+                    <div class="mt-3 flex flex-wrap gap-1 text-[10px] uppercase font-bold text-gray-400">
+                        ${player.expected_goals && parseFloat(player.expected_goals) > 0
+                            ? `<span class="bg-white/5 px-1.5 py-0.5 rounded border border-white/10">xG: ${parseFloat(player.expected_goals).toFixed(2)}</span>`
+                            : ""}
+                        ${player.expected_assists && parseFloat(player.expected_assists) > 0
+                             ? `<span class="bg-white/5 px-1.5 py-0.5 rounded border border-white/10">xA: ${parseFloat(player.expected_assists).toFixed(2)}</span>`
+                             : ""}
                     </div>
                 </div>
             </div>

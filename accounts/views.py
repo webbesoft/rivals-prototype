@@ -24,17 +24,11 @@ def signup_view(request):
         form = SignUpForm(request.POST)
         if form.is_valid():
             user = form.save()
-
-            # Send verification email
-            # send_verification_email.delay(user.id)
-
-            login(request, user)
-
             messages.success(
                 request,
                 "Account created! Please check your email to verify your account.",
             )
-            return redirect("rivals:dashboard")
+            return redirect("accounts:login")
     else:
         form = SignUpForm()
 
@@ -49,6 +43,12 @@ def login_view(request):
         form = LoginForm(request, data=request.POST)
         if form.is_valid():
             user = form.get_user()
+            if not user.is_verified:
+                messages.error(
+                    request,
+                    "Your email address is not verified. Please check your inbox for a verification link.",
+                )
+                return render(request, "accounts/login.html", {"form": form})
             login(request, user)
 
             next_url = request.GET.get("next", "rivals:dashboard")

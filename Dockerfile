@@ -16,8 +16,9 @@ WORKDIR /app
 COPY pyproject.toml uv.lock ./
 
 # Install system build tools minimal (if you need wheels/build deps)
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends gcc build-essential libpq-dev ca-certificates \
+# Use --network=host workaround for networking issues during build
+RUN --network=host apt-get update \
+  && apt-get install -y --no-install-recommends gcc build-essential libpq-dev ca-certificates curl \
   && rm -rf /var/lib/apt/lists/*
 
 # Sync the project into the image (creates system-installed packages because UV_PROJECT_ENVIRONMENT=system)
@@ -71,6 +72,11 @@ USER app
 EXPOSE ${PORT}
 
 # Simple healthcheck - checks that the server responds on the configured port
+# Install curl in runtime stage for healthcheck
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends curl \
+  && rm -rf /var/lib/apt/lists/*
+
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
   CMD curl -f http://127.0.0.1:${PORT}/healthz || exit 1
 

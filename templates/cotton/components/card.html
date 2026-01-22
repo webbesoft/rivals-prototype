@@ -1,5 +1,16 @@
-<div class="bg-white shadow rounded border p-4">
-  <h2>{{ title }}</h2>
-  <p>{{ slot }}</p>
-  <button href="{% url url %}">Read more</button>
+<div class="bg-surface rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-all duration-300 relative group overflow-hidden">
+  <div class="absolute top-0 left-0 w-1 h-full bg-accent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+  {% if title %}
+  <h2 class="text-xl font-bold mb-4 flex items-center gap-2 group-hover:text-accent transition-colors duration-300">{{ title }}</h2>
+  {% endif %}
+  <div class="text-text-main">
+    {{ slot }}
+  </div>
+  {% if url %}
+  <div class="mt-4 pt-4 border-t border-gray-100 flex justify-end">
+    <a href="{{ url }}" class="text-sm font-bold text-muted hover:text-accent transition-colors duration-200 flex items-center gap-1">
+      Read more <span class="group-hover:translate-x-1 transition-transform duration-200">→</span>
+    </a>
+  </div>
+  {% endif %}
 </div>

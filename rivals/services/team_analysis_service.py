@@ -645,48 +645,398 @@ class TeamAnalysisService:
             logger.exception("Analyze team failed: %s", e)
             return {"error": str(e)}
 
-    # def compare_teams(self, my_fpl_team_id: int, rival_fpl_team_id: int, include_models: Optional[Tuple[Team, Team]] = None) -> Dict[str, Any]:
-    #     """
-    #     Compare two teams and produce TeamComparison-like dict.
-    #     """
-    #     self.ensure_data()
-    #     try:
-    #         gw = self.current_gw or self.api.fetch_current_gameweek()
-    #         my_picks = self.api.fetch_team_picks(my_fpl_team_id, gw)
-    #         rival_picks = self.api.fetch_team_picks(rival_fpl_team_id, gw)
-    #         my_info = self.api.fetch_team_basic_info(my_fpl_team_id) or {}
-    #         rival_info = self.api.fetch_team_basic_info(rival_fpl_team_id) or {}
+    def get_captain_projection(
+        self, squad_picks: List[Dict[str, Any]]
+    ) -> Optional[Dict[str, Any]]:
+        """Get projected captain points for next GW."""
+        captain_suggestions = self.get_captain_suggestions(squad_picks, limit=1)
+        if captain_suggestions:
+            captain = captain_suggestions[0]
+            return {
+                "name": captain["name"],
+                "team": captain["team"],
+                "expected_points": captain["expected_points_next_gw"]
+                * 2,  # Captain gets 2x
+                "form": captain["form"],
+            }
+        return None
 
-    #         my_analysis = self.analyze_squad_metrics(my_picks.get("picks", []))
-    #         rival_analysis = self.analyze_squad_metrics(rival_picks.get("picks", []))
+    def calculate_momentum(self, team_model: Team, last_n: int = 5) -> Dict[str, Any]:
+        """Calculate momentum from last N gameweeks."""
+        recent_gws = team_model.gameweek_data.order_by("-gameweek")[
+            :last_n
+        ].values_list("points", flat=True)
+        points_list = list(recent_gws)
+        if not points_list:
+            return {"average": 0.0, "trend": "neutral", "points": []}
 
-    #         my_summary = self.create_team_summary(my_info, my_picks, my_analysis)
-    #         rival_summary = self.create_team_summary(rival_info, rival_picks, rival_analysis)
+        avg = sum(points_list) / len(points_list)
+        if len(points_list) >= 2:
+            trend = "up" if points_list[0] > points_list[-1] else "down"
+        else:
+            trend = "neutral"
 
-    #         if include_models:
-    #             my_model, rival_model = include_models
-    #             my_summary["django_team"] = {
-    #                 "id": my_model.id,
-    #                 "last_synced": my_model.last_synced_at.isoformat() if my_model.last_synced_at else None,
-    #                 "active": my_model.active
-    #             }
-    #             rival_summary["django_team"] = {
-    #                 "id": rival_model.id,
-    #                 "last_synced": rival_model.last_synced_at.isoformat() if rival_model.last_synced_at else None,
-    #                 "active": rival_model.active
-    #             }
+        return {
+            "average": round(avg, 1),
+            "trend": trend,
+            "points": points_list,
+        }
 
-    #         pos_comparisons = self.compare_positions(my_picks.get("picks", []), rival_picks.get("picks", []))
-    #         advantages, insights = self.generate_head_to_head_insights(my_summary, rival_summary, pos_comparisons)
+    def calculate_squad_difficulty_schedule(
+        self, squad_picks: List[Dict[str, Any]], next_gw: int, duration: int = 5
+    ) -> List[Dict[str, Any]]:
+        """
+        Calculate the average fixture difficulty for the squad for upcoming gameweeks.
+        Returns a list of dicts with gameweek and average difficulty score.
+        """
+        schedule = []
+        # optimization: pre-fetch all player definitions
+        squad_players = []
+        for pick in squad_picks:
+            p = next((x for x in self.elements if x["id"] == pick["element"]), None)
+            if p:
+                squad_players.append(p)
 
-    #         return {
-    #             "my_team": my_summary,
-    #             "rival_team": rival_summary,
-    #             "position_comparisons": pos_comparisons,
-    #             "head_to_head_advantages": advantages,
-    #             "key_insights": insights,
-    #             "analysis_timestamp": datetime.utcnow().isoformat()
-    #         }
-    #     except Exception as e:
-    #         logger.exception("Compare teams failed: %s", e)
-    #         return {"error": str(e)}
+        if not squad_players:
+            return []
+
+        # We assume self.fixtures is already loaded and sorted/filterable
+        # But efficiently mapping team/GW to difficulty requires a lookup
+        # Let's build a quick lookup: (team_id, event) -> difficulty
+        fixture_lookup = defaultdict(list)
+        upcoming_fixtures = [
+            f
+            for f in self.fixtures
+            if f.get("event") and f.get("event") >= next_gw and not f.get("finished")
+        ]
+
+        for f in upcoming_fixtures:
+            evt = f["event"]
+            if evt >= next_gw + duration:
+                continue
+
+            # For double gameweeks, a team might have multiple fixtures
+            # We will average them for that GW if multiple exist
+            fixture_lookup[(f["team_h"], evt)].append(f.get("team_h_difficulty", 3))
+            fixture_lookup[(f["team_a"], evt)].append(f.get("team_a_difficulty", 3))
+
+        for gw in range(next_gw, next_gw + duration):
+            total_difficulty = 0
+            count = 0
+
+            for player in squad_players:
+                team_id = player["team"]
+                difficulties = fixture_lookup.get((team_id, gw), [])
+
+                if not difficulties:
+                    # Blank gameweek for this player? Or just no data.
+                    # Assign neutral or penalty? Let's use 3 (neutral) but it might be misleading for blanks.
+                    # For now, treat as average difficulty.
+                    # Ideally we should flag blanks, but for a difficulty score, 0 would drag it down misleadingly (easier?)
+                    # or 5 (hard). Let's stick to 4 to penalize blanks slightly in difficulty view,
+                    # or keep it simple with 3.
+                    pass
+                else:
+                    # Average difficulty for this player this GW (e.g. DGW)
+                    avg_diff = sum(difficulties) / len(difficulties)
+                    total_difficulty += avg_diff
+                    count += 1
+
+            if count > 0:
+                squad_avg = total_difficulty / count
+            else:
+                squad_avg = 0.0  # No players have fixtures?
+
+            schedule.append(
+                {
+                    "gameweek": gw,
+                    "difficulty_score": round(squad_avg, 2),
+                    "rating": (
+                        "easy"
+                        if squad_avg <= 2.5
+                        else "hard" if squad_avg >= 3.5 else "medium"
+                    ),
+                }
+            )
+
+        return schedule
+
+    def get_fixture_schedule(
+        self, team_id: int, next_fixtures: int = 5
+    ) -> List[Dict[str, Any]]:
+        """Get upcoming fixture schedule with difficulty ratings."""
+        fixtures = [f for f in self.fixtures if not f.get("finished")]
+        team_fixtures = []
+        for fx in fixtures:
+            event = fx.get("event")
+            if fx.get("team_h") == team_id:
+                team_fixtures.append(
+                    {
+                        "gameweek": event,
+                        "difficulty": fx.get("team_h_difficulty", 3),
+                        "opponent": self.teams.get(fx.get("team_a"), {}).get(
+                            "short_name", "?"
+                        ),
+                        "is_home": True,
+                    }
+                )
+            elif fx.get("team_a") == team_id:
+                team_fixtures.append(
+                    {
+                        "gameweek": event,
+                        "difficulty": fx.get("team_a_difficulty", 3),
+                        "opponent": self.teams.get(fx.get("team_h"), {}).get(
+                            "short_name", "?"
+                        ),
+                        "is_home": False,
+                    }
+                )
+
+        return sorted(team_fixtures, key=lambda x: x["gameweek"])[:next_fixtures]
+
+    def quick_compare(
+        self,
+        my_fpl_team_id: int,
+        rival_fpl_team_id: int,
+        my_team_model: Optional[Team] = None,
+        rival_team_model: Optional[Team] = None,
+    ) -> Dict[str, Any]:
+        """Lightweight comparison for quick panel display."""
+        self.ensure_data()
+        try:
+            gw = self.current_gw or self.api.fetch_current_gameweek()
+            my_picks = self.api.fetch_team_picks(my_fpl_team_id, gw)
+            rival_picks = self.api.fetch_team_picks(rival_fpl_team_id, gw)
+
+            if not my_picks or not rival_picks:
+                return {"error": "Team picks not found"}
+
+            my_squad = my_picks.get("picks", [])
+            rival_squad = rival_picks.get("picks", [])
+
+            # Expected points next GW
+            my_metrics = self.analyze_squad_metrics(my_squad)
+            rival_metrics = self.analyze_squad_metrics(rival_squad)
+            my_expected_next = (
+                (my_metrics["total_expected_points"] / 5.0)
+                if my_metrics.get("total_expected_points")
+                else 0
+            )
+            rival_expected_next = (
+                (rival_metrics["total_expected_points"] / 5.0)
+                if rival_metrics.get("total_expected_points")
+                else 0
+            )
+            expected_diff = my_expected_next - rival_expected_next
+
+            # Captaincy
+            my_captain = self.get_captain_projection(my_squad)
+            rival_captain = self.get_captain_projection(rival_squad)
+            captain_diff = 0.0
+            if my_captain and rival_captain:
+                captain_diff = (
+                    my_captain["expected_points"] - rival_captain["expected_points"]
+                )
+
+            # FDR
+            my_fdr = my_metrics.get("avg_fixture_difficulty", 3.0)
+            rival_fdr = rival_metrics.get("avg_fixture_difficulty", 3.0)
+
+            # FD Schedule
+            my_schedule = self.calculate_squad_difficulty_schedule(my_squad, gw, 5)
+            rival_schedule = self.calculate_squad_difficulty_schedule(
+                rival_squad, gw, 5
+            )
+
+            # Momentum
+            my_momentum = (
+                self.calculate_momentum(my_team_model)
+                if my_team_model
+                else {"average": 0.0, "trend": "neutral"}
+            )
+            rival_momentum = (
+                self.calculate_momentum(rival_team_model)
+                if rival_team_model
+                else {"average": 0.0, "trend": "neutral"}
+            )
+            momentum_diff = my_momentum["average"] - rival_momentum["average"]
+
+            # Transfer pressure (simplified - check free transfers)
+            my_info = self.api.fetch_team_basic_info(my_fpl_team_id) or {}
+            rival_info = self.api.fetch_team_basic_info(rival_fpl_team_id) or {}
+            my_free_transfers = my_info.get("entry_history", {}).get(
+                "event_transfers_cost", 0
+            )
+            rival_free_transfers = rival_info.get("entry_history", {}).get(
+                "event_transfers_cost", 0
+            )
+
+            return {
+                "expected_points": {
+                    "mine": round(my_expected_next, 1),
+                    "rival": round(rival_expected_next, 1),
+                    "difference": round(expected_diff, 1),
+                },
+                "captaincy": {
+                    "mine": my_captain,
+                    "rival": rival_captain,
+                    "difference": round(captain_diff, 1),
+                },
+                "fixture_difficulty": {
+                    "mine": round(my_fdr, 2),
+                    "rival": round(rival_fdr, 2),
+                    "mine_schedule": my_schedule,
+                    "rival_schedule": rival_schedule,
+                },
+                "momentum": {
+                    "mine": my_momentum,
+                    "rival": rival_momentum,
+                    "difference": round(momentum_diff, 1),
+                },
+                "transfers": {
+                    "mine_free": my_free_transfers,
+                    "rival_free": rival_free_transfers,
+                },
+                "current_gameweek": gw,
+            }
+        except Exception as e:
+            logger.exception("Quick compare failed: %s", e)
+            return {"error": str(e)}
+
+    def compare_teams(
+        self,
+        my_fpl_team_id: int,
+        rival_fpl_team_id: int,
+        include_models: Optional[Tuple[Team, Team]] = None,
+    ) -> Dict[str, Any]:
+        """
+        Compare two teams and produce comprehensive comparison dict.
+        """
+        self.ensure_data()
+        try:
+            gw = self.current_gw or self.api.fetch_current_gameweek()
+            my_picks = self.api.fetch_team_picks(my_fpl_team_id, gw)
+            rival_picks = self.api.fetch_team_picks(rival_fpl_team_id, gw)
+
+            if not my_picks or not rival_picks:
+                return {"error": "Team picks not found"}
+
+            my_info = self.api.fetch_team_basic_info(my_fpl_team_id) or {}
+            rival_info = self.api.fetch_team_basic_info(rival_fpl_team_id) or {}
+
+            my_analysis = self.analyze_squad_metrics(my_picks.get("picks", []))
+            rival_analysis = self.analyze_squad_metrics(rival_picks.get("picks", []))
+
+            my_summary = self.create_team_summary(my_info, my_picks, my_analysis)
+            rival_summary = self.create_team_summary(
+                rival_info, rival_picks, rival_analysis
+            )
+
+            if include_models:
+                my_model, rival_model = include_models
+                my_summary["django_team"] = {
+                    "id": my_model.id,
+                    "last_synced": (
+                        my_model.last_synced_at.isoformat()
+                        if my_model.last_synced_at
+                        else None
+                    ),
+                    "active": my_model.active,
+                }
+                rival_summary["django_team"] = {
+                    "id": rival_model.id,
+                    "last_synced": (
+                        rival_model.last_synced_at.isoformat()
+                        if rival_model.last_synced_at
+                        else None
+                    ),
+                    "active": rival_model.active,
+                }
+
+            pos_comparisons = self.compare_positions(
+                my_picks.get("picks", []), rival_picks.get("picks", [])
+            )
+            advantages, insights = self.generate_head_to_head_insights(
+                my_summary, rival_summary, pos_comparisons
+            )
+
+            # Get captain projections
+            my_captain = self.get_captain_projection(my_picks.get("picks", []))
+            rival_captain = self.get_captain_projection(rival_picks.get("picks", []))
+
+            # Get momentum
+            my_model = include_models[0] if include_models else None
+            rival_model = include_models[1] if include_models else None
+            my_momentum = (
+                self.calculate_momentum(my_model)
+                if my_model
+                else {"average": 0.0, "trend": "neutral"}
+            )
+            rival_momentum = (
+                self.calculate_momentum(rival_model)
+                if rival_model
+                else {"average": 0.0, "trend": "neutral"}
+            )
+
+            # Get fixture schedules (squad aggregate)
+            my_fixtures = self.calculate_squad_difficulty_schedule(
+                my_picks.get("picks", []), gw, 6
+            )
+            rival_fixtures = self.calculate_squad_difficulty_schedule(
+                rival_picks.get("picks", []), gw, 6
+            )
+
+            # Transfer recommendations
+            my_transfer_recs = self.analyze_transfer_priorities(
+                my_picks.get("picks", []), top_k=3
+            )
+            rival_transfer_recs = self.analyze_transfer_priorities(
+                rival_picks.get("picks", []), top_k=3
+            )
+
+            # Projected GW outcome
+            my_expected_next = (
+                (my_analysis["total_expected_points"] / 5.0)
+                if my_analysis.get("total_expected_points")
+                else 0
+            )
+            rival_expected_next = (
+                (rival_analysis["total_expected_points"] / 5.0)
+                if rival_analysis.get("total_expected_points")
+                else 0
+            )
+            projected_diff = my_expected_next - rival_expected_next
+
+            return {
+                "my_team": my_summary,
+                "rival_team": rival_summary,
+                "position_comparisons": pos_comparisons,
+                "head_to_head_advantages": advantages,
+                "key_insights": insights,
+                "captaincy": {
+                    "mine": my_captain,
+                    "rival": rival_captain,
+                },
+                "momentum": {
+                    "mine": my_momentum,
+                    "rival": rival_momentum,
+                },
+                "fixture_schedules": {
+                    "mine": my_fixtures,
+                    "rival": rival_fixtures,
+                },
+                "transfer_recommendations": {
+                    "mine": my_transfer_recs,
+                    "rival": rival_transfer_recs,
+                },
+                "projected_gw_outcome": {
+                    "my_expected": round(my_expected_next, 1),
+                    "rival_expected": round(rival_expected_next, 1),
+                    "difference": round(projected_diff, 1),
+                },
+                "current_gameweek": gw,
+                "analysis_timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            }
+        except Exception as e:
+            logger.exception("Compare teams failed: %s", e)
+            return {"error": str(e)}

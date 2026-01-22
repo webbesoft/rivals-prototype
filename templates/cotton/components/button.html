@@ -1,5 +1,5 @@
 <button
-  class="{% if variant == 'primary' %} bg-blue-600 hover:bg-blue-700 text-white {% elif variant == 'secondary' %} bg-gray-200 hover:bg-gray-300 text-gray-900 {% endif %} {% if size == 'sm' %} px-3 py-1.5 text-sm {% elif size == 'md' %} px-4 py-2 text-base {% elif size == 'lg' %} px-6 py-3 text-lg {% endif %} rounded-md font-medium transition-colors duration-200"
+  class="cursor-pointer {% if variant == 'primary' %} bg-accent text-pitch font-black uppercase tracking-wide shadow-lg shadow-accent/20 hover:bg-white hover:text-pitch hover:scale-105 active:scale-95 border border-transparent {% elif variant == 'secondary' %} bg-surface text-text-main border border-gray-200 hover:border-accent hover:text-accent hover:shadow-md active:scale-95 {% endif %} {% if size == 'sm' %} px-3 py-1.5 text-xs rounded-lg {% elif size == 'md' %} px-5 py-2.5 text-sm rounded-xl {% elif size == 'lg' %} px-8 py-4 text-base rounded-2xl {% endif %} transition-all duration-150 inline-flex items-center justify-center"
 >
   {{ text }}
 </button>

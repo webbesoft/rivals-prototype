@@ -1,148 +1,133 @@
-<c-layouts.base title="Dashboard - RivalSpy">
+<c-layouts.base title="War Room - RivalSpy">
   {% load humanize %}
 
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <div class="mb-8 text-center">
-      <h1 class="text-3xl sm:text-4xl font-extrabold text-gray-900">
-        Your Dashboard
-      </h1>
-      <p class="text-gray-600 mt-2">
-        Track your rivals, mini-leagues, and teams all in one place.
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div class="mb-12 text-center relative">
+      <div class="absolute inset-x-0 top-1/2 -z-10 h-px bg-gradient-to-r from-transparent via-accent/20 to-transparent"></div>
+      <span class="bg-surface-alt px-4 relative z-10 inline-block">
+        <h1 class="text-4xl sm:text-6xl font-black text-text-main uppercase italic tracking-tighter transform -skew-x-6">
+          War <span class="text-accent">Room</span>
+        </h1>
+      </span>
+      <p class="text-muted mt-2 font-medium uppercase tracking-widest text-xs">
+        Tactical Analysis & Rival Surveillance
       </p>
     </div>
 
     {% if messages %}
-    <div class="mb-6 space-y-4">
+    <div class="mb-8 space-y-4">
       {% for message in messages %}
-      <div
-        class="p-4 rounded-lg border text-sm {% if message.tags == 'error' %} bg-red-100 text-red-700 border-red-300 {% endif %} {% if message.tags == 'success' %} bg-green-100 text-green-700 border-green-300 {% endif %}"
-      >
+      <div class="p-4 rounded-xl border-l-4 text-sm font-bold shadow-sm flex items-center gap-3 {% if message.tags == 'error' %} bg-white text-danger border-danger {% endif %} {% if message.tags == 'success' %} bg-white text-success border-success {% endif %}">
+        {% if message.tags == 'success' %}<span>⚽</span>{% else %}<span>🚩</span>{% endif %}
         {{ message }}
       </div>
       {% endfor %}
     </div>
     {% endif %}
 
-    <div class="mb-10">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-xl font-bold text-gray-900">Mini-Leagues</h2>
-        <a
-          href="{% url 'rivals:minileagues.create' %}"
-          class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm font-medium"
-        >
-          + Add League
-        </a>
+    <div class="mb-16">
+      <div class="flex items-center justify-between mb-6 border-b border-gray-200 pb-2">
+        <h2 class="text-2xl font-black text-text-main uppercase tracking-tight flex items-center gap-2">
+          <span class="w-2 h-8 bg-highlight skew-x-12 rounded-sm"></span>
+          Mini-Leagues
+        </h2>
+        <c-components.button url="rivals:minileagues.create" text="Create League" variant="secondary" size="sm" />
       </div>
 
       {% if not mini_leagues %}
-      <p class="text-gray-500">No mini-leagues yet. Add one to get started.</p>
+      <div class="bg-surface rounded-2xl shadow-sm p-8 text-center border-2 border-dashed border-gray-200">
+        <p class="text-muted font-medium mb-4">No leagues found. Scouting report empty.</p>
+        <c-components.button url="rivals:minileagues.create" text="Start Scouting" variant="primary" />
+      </div>
       {% else %}
-      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {% for league in mini_leagues %}
-        <a
-          href="{% url 'rivals:minileagues.show' league.id %}"
-          class="bg-white rounded-lg shadow p-4 hover:shadow-md transition"
-        >
-          <h3 class="font-semibold text-gray-900 truncate">
-            {{ league.mini_league.name }}
-          </h3>
-          <p class="text-sm text-gray-600">
-            Teams: {{ league.mini_league_teams.count }}
-          </p>
-          <p class="text-xs text-gray-400 mt-2">
-            Last synced: {% if league.last_synced_at %}{{
-            league.last_synced_at|timesince }} ago{% else %}Never{% endif %}
-          </p>
-        </a>
+        {% url 'rivals:minileagues.show' league.mini_league.id as league_url %}
+        <c-components.card title="{{ league.mini_league.name }}" :url="league_url">
+           <div class="space-y-2">
+             <div class="flex justify-between items-center text-sm">
+                <span class="text-muted">Teams Monitored</span>
+                <span class="font-bold text-text-main bg-gray-100 px-2 py-0.5 rounded-md">{{ league.mini_league.mini_league_teams.count }}</span>
+             </div>
+             <div class="flex justify-between items-center text-xs text-muted">
+                <span>Last Scan</span>
+                <span>{% if league.mini_league.last_synced_at %}{{ league.mini_league.last_synced_at|timesince }} ago{% else %}Pending...{% endif %}</span>
+             </div>
+           </div>
+        </c-components.card>
         {% endfor %}
       </div>
-
       {% endif %}
     </div>
 
     <div>
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-xl font-bold text-gray-900">Tracked Teams</h2>
-        {#
-        <a
-          href="{% url 'rivals:teams.index' %}"
-          class="text-sm text-green-700 font-medium hover:underline"
-        >
-          View All
-        </a>
-        #}
+      <div class="flex items-center justify-between mb-6 border-b border-gray-200 pb-2">
+        <h2 class="text-2xl font-black text-text-main uppercase tracking-tight flex items-center gap-2">
+          <span class="w-2 h-8 bg-success skew-x-12 rounded-sm"></span>
+          Tracked Rivals
+        </h2>
       </div>
 
       {% if not tracked_teams %}
-      <p class="text-gray-500">
-        You’re not tracking any teams yet. Start from a mini-league or search
-        directly.
-      </p>
-      {% else %}
-      <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200 text-sm">
-          <thead class="bg-gray-50">
-            <tr>
-              <th class="px-4 py-2 text-left font-medium text-gray-600">
-                Team
-              </th>
-              <th class="px-4 py-2 text-left font-medium text-gray-600">
-                Manager
-              </th>
-              <th class="px-4 py-2 text-left font-medium text-gray-600">
-                Points
-              </th>
-              <th class="px-4 py-2 text-left font-medium text-gray-600">
-                Rank
-              </th>
-              <th class="px-4 py-2"></th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-200 bg-white">
-            {% for team in tracked_teams %}
-            <tr class="hover:bg-gray-50">
-              <td class="px-4 py-2 font-medium text-gray-900">
-                <a
-                  href="{% url 'rivals:teams.show' team.team.id %}"
-                  class="hover:text-green-700"
-                >
-                  {{ team.team.team_name }}
-                </a>
-              </td>
-              <td class="px-4 py-2">{{ team.team.manager_name }}</td>
-              {# The `intcomma` filter adds thousand separators #}
-              <td class="px-4 py-2 font-semibold">
-                {{ team.team.current_total_points|intcomma }}
-              </td>
-              <td class="px-4 py-2">
-                {% if team.team.current_overall_rank %} #{{
-                team.team.current_overall_rank|intcomma }} {% else %}
-                <span class="text-gray-400">N/A</span>
-                {% endif %}
-              </td>
-              <td class="px-4 py-2 text-right">
-                <form
-                  method="POST"
-                  action="{% url 'rivals:teams.untrack' team.team.id %}"
-                >
-                  {% csrf_token %} {# In Django, forms for deletion are
-                  typically POST requests handled by the view #}
-                  <button
-                    type="submit"
-                    class="text-red-600 text-xs hover:underline"
-                  >
-                    Untrack
-                  </button>
-                </form>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+      <div class="bg-surface rounded-2xl shadow-sm p-8 text-center border-2 border-dashed border-gray-200">
+        <p class="text-muted font-medium mb-4">No rivals being tracked. Time to find some opponents.</p>
       </div>
-
-      <div class="mt-4">
-        <c-components.pagination paginator="tracked_teams" />
+      {% else %}
+      <div class="bg-surface rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="min-w-full w-full">
+            <thead class="bg-gray-50 border-b border-gray-100">
+              <tr>
+                <th class="px-6 py-4 text-left text-xs font-black text-muted uppercase tracking-widest">Team</th>
+                <th class="px-6 py-4 text-left text-xs font-black text-muted uppercase tracking-widest">Manager</th>
+                <th class="px-6 py-4 text-left text-xs font-black text-muted uppercase tracking-widest">Points</th>
+                <th class="px-6 py-4 text-left text-xs font-black text-muted uppercase tracking-widest">Rank</th>
+                <th class="px-6 py-4"></th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              {% for team in tracked_teams %}
+              <tr class="hover:bg-surface-alt/80 transition-colors group">
+                <td class="px-6 py-4">
+                  <a href="{% url 'rivals:teams.show' team.team.id %}" class="font-bold text-text-main hover:text-accent transition-colors text-lg flex items-center gap-2">
+                    {{ team.team.team_name }}
+                    <span class="opacity-0 group-hover:opacity-100 transition-opacity text-accent">→</span>
+                  </a>
+                </td>
+                <td class="px-6 py-4 text-sm font-medium text-gray-500">{{ team.team.manager_name }}</td>
+                <td class="px-6 py-4">
+                  <div class="flex items-baseline gap-1">
+                     <span class="text-2xl font-black text-accent tracking-tighter">{{ team.team.current_total_points|intcomma }}</span>
+                     <span class="text-xs text-muted font-bold uppercase">pts</span>
+                  </div>
+                </td>
+                <td class="px-6 py-4">
+                  {% if team.team.current_overall_rank %}
+                  <span class="bg-gray-100 text-gray-600 font-mono font-bold px-2 py-1 rounded-md text-sm border border-gray-200 shadow-sm">
+                    #{{ team.team.current_overall_rank|intcomma }}
+                  </span>
+                  {% else %}
+                  <span class="text-gray-300 font-black text-xl">-</span>
+                  {% endif %}
+                </td>
+                <td class="px-6 py-4 text-right">
+                  <form method="POST" action="{% url 'rivals:teams.untrack' team.team.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="text-gray-300 hover:text-danger p-2 transition-colors rounded-full hover:bg-danger/10" title="Untrack Rival">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                      </svg>
+                    </button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div class="p-4 border-t border-gray-100 bg-gray-50">
+          <c-components.pagination paginator="tracked_teams" />
+        </div>
       </div>
       {% endif %}
     </div>

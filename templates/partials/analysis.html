@@ -1,83 +1,117 @@
-{% load date_filters %}
-<div class="p-6 bg-white rounded-lg shadow">
+<div class="p-8 bg-surface rounded-2xl shadow-lg border border-gray-100 relative overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+  <div class="absolute top-0 right-0 p-24 bg-accent/5 blur-3xl rounded-full -z-10"></div>
+  
   {% if analysis.error %}
-  <div class="text-red-600 font-medium">
-    Analysis error: {{ analysis.error }}
+  <div class="flex items-center gap-4 text-danger font-bold p-4 bg-danger/10 rounded-xl border border-danger/20">
+    <span class="text-2xl">⚠️</span>
+    <div>
+       <div class="uppercase tracking-wide text-xs opacity-75">Analysis Failed</div>
+       <div>{{ analysis.error }}</div>
+    </div>
   </div>
   {% else %}
-  <div class="mb-4">
-    <h3 class="text-lg font-semibold">
-      Team Analysis — GW {{ analysis.current_gameweek }}
-    </h3>
-    <div class="text-sm text-gray-600">
-      Generated: {{ analysis.analysis_timestamp }}
-    </div>
-  </div>
-
-  <div class="mb-4">
-    <h4 class="font-medium">Summary</h4>
-    <div class="text-sm text-gray-700">
-      <strong>{{ analysis.team_summary.team_name }}</strong> ({{
-      analysis.team_summary.manager_name }}) — {{
-      analysis.team_summary.total_points }} pts — Bank £{{
-      analysis.team_summary.bank }}M
-    </div>
-  </div>
-
-  <div class="mb-6">
-    <h4 class="font-medium">Smart transfer recommendations</h4>
-    {% if analysis.transfer_recommendations %}
-    <ul class="space-y-3 mt-3">
-      {% for rec in analysis.transfer_recommendations %}
-      <li class="border rounded p-3">
-        <div class="flex justify-between items-start">
-          <div>
-            <div class="text-sm text-gray-600">
-              Out: <strong>{{ rec.transfer_out.name }}</strong> ({{
-              rec.transfer_out.position }})
-            </div>
-            <div class="text-sm text-gray-600 mt-1">
-              In: <strong>{{ rec.transfer_in.0.name }}</strong> — {{
-              rec.transfer_in.0.team }}
-            </div>
-            <div class="text-xs text-gray-500 mt-1">{{ rec.reasoning }}</div>
-          </div>
-          <div class="text-right text-sm">
-            <div class="font-semibold">Priority {{ rec.priority_score }}</div>
-          </div>
+  <div class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-100 pb-6">
+    <div>
+        <div class="flex items-center gap-2 mb-1">
+             <span class="w-2 h-2 bg-success rounded-full animate-pulse"></span>
+             <h3 class="text-xl font-black text-text-main uppercase tracking-tight">Tactical Analysis</h3>
         </div>
-      </li>
-      {% endfor %}
-    </ul>
-    {% else %}
-    <div class="text-sm text-gray-500">No transfer recommendations found.</div>
-    {% endif %}
-  </div>
-
-  <div class="mb-4">
-    <h4 class="font-medium">Captain suggestions</h4>
-    <div class="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-3">
-      {% for c in analysis.captain_suggestions %}
-      <div class="border rounded p-3 text-center">
-        <div class="font-semibold">{{ c.name }}</div>
-        <div class="text-xs text-gray-500">{{ c.team }} — {{ c.position }}</div>
-        <div class="text-sm text-gray-700">
-          {{ c.expected_points_next_gw|floatformat:0 }} pts (proj)
-        </div>
-      </div>
-      {% empty %}
-      <div class="text-sm text-gray-500">No captain candidates</div>
-      {% endfor %}
+        <p class="text-xs font-bold text-muted uppercase tracking-widest">Gameweek {{ analysis.current_gameweek }} Report</p>
+    </div>
+    <div class="text-right">
+       <span class="text-xs font-mono text-muted block">{{ analysis.analysis_timestamp }}</span>
+       <div class="text-sm font-medium text-text-main mt-1">
+          <span class="font-bold">{{ analysis.team_summary.total_points }}pts</span> <span class="text-gray-300">|</span> 
+          <span class="font-bold">£{{ analysis.team_summary.bank }}m</span> Bank
+       </div>
     </div>
   </div>
 
-  <div class="mt-4 text-sm text-gray-600">
-    <strong>Budget insights:</strong>
-    <ul class="list-disc list-inside mt-2">
-      {% for insight in analysis.budget_insights %}
-      <li>{{ insight }}</li>
-      {% endfor %}
-    </ul>
+  <div class="grid lg:grid-cols-2 gap-8">
+    <!-- Recommendations -->
+    <div>
+        <h4 class="font-black text-text-main uppercase tracking-wide text-sm mb-4 flex items-center gap-2">
+            <span class="text-accent">→</span> Transfer Targets
+        </h4>
+        
+        {% if analysis.transfer_recommendations %}
+        <ul class="space-y-4">
+          {% for rec in analysis.transfer_recommendations %}
+          <li class="group bg-surface-alt rounded-xl p-4 border border-gray-100 hover:border-accent hover:shadow-md transition-all relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-1 h-full bg-gradient-to-b from-accent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            
+            <div class="flex justify-between items-start mb-3">
+               <div class="bg-gray-900 text-white text-[10px] font-black uppercase px-2 py-1 rounded tracking-wider">Priority {{ rec.priority_score }}</div>
+            </div>
+
+            <div class="flex items-center gap-3 mb-3">
+               <div class="flex-1 p-2 bg-danger/5 rounded border border-danger/10">
+                  <div class="text-[10px] font-bold text-danger uppercase mb-0.5">Out</div>
+                  <div class="text-sm font-bold text-gray-700">{{ rec.transfer_out.name }}</div>
+                  <div class="text-[10px] text-muted">{{ rec.transfer_out.position }}</div>
+               </div>
+               <div class="text-muted">→</div>
+               <div class="flex-1 p-2 bg-success/5 rounded border border-success/10">
+                  <div class="text-[10px] font-bold text-success uppercase mb-0.5">In</div>
+                  <div class="text-sm font-bold text-gray-900">{{ rec.transfer_in.0.name }}</div>
+                  <div class="text-[10px] text-muted">{{ rec.transfer_in.0.team }}</div>
+               </div>
+            </div>
+            
+            <div class="text-xs text-gray-500 italic border-l-2 border-accent/20 pl-3 leading-relaxed">
+               "{{ rec.reasoning }}"
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <div class="p-4 rounded-xl bg-surface-alt border border-dashed border-gray-200 text-center text-sm text-muted">
+           No immediate transfer actions recommended. Hold the line.
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Right Column -->
+    <div class="space-y-8">
+         <!-- Captains -->
+         <div>
+            <h4 class="font-black text-text-main uppercase tracking-wide text-sm mb-4 flex items-center gap-2">
+                <span class="text-highlight">©</span> Captaincy Options
+            </h4>
+            <div class="grid grid-cols-1 gap-3">
+              {% for c in analysis.captain_suggestions %}
+              <div class="flex items-center justify-between p-3 rounded-xl border border-gray-100 hover:bg-surface-alt transition-colors">
+                 <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center font-black text-xs text-gray-500">{{ forloop.counter }}</div>
+                    <div>
+                        <div class="font-bold text-text-main text-sm">{{ c.name }}</div>
+                        <div class="text-[10px] uppercase font-bold text-muted">{{ c.team }} • {{ c.position }}</div>
+                    </div>
+                 </div>
+                 <div class="text-right">
+                    <div class="text-lg font-black text-accent">{{ c.expected_points_next_gw|floatformat:1 }}</div>
+                    <div class="text-[10px] text-muted uppercase font-bold">Proj. Pts</div>
+                 </div>
+              </div>
+              {% empty %}
+              <div class="text-sm text-muted italic">No captain data available.</div>
+              {% endfor %}
+            </div>
+         </div>
+
+         <!-- Budget -->
+         <div class="bg-surface-alt rounded-xl p-5 border border-gray-100">
+            <h4 class="font-black text-text-main uppercase tracking-wide text-xs mb-3">Finance & Budget</h4>
+            <ul class="space-y-2">
+              {% for insight in analysis.budget_insights %}
+              <li class="flex items-start gap-2 text-xs text-gray-600">
+                <span class="text-accent mt-0.5">•</span>
+                {{ insight }}
+              </li>
+              {% endfor %}
+            </ul>
+         </div>
+    </div>
   </div>
   {% endif %}
 </div>

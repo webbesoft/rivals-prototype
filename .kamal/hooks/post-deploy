@@ -1,0 +1,27 @@
+#!/bin/bash
+# Post-deploy hook for Kamal
+# Runs migrations and syncs players after container is deployed
+
+set -e
+
+echo "🔧 Running post-deploy tasks..."
+
+# Get the container name/ID from Kamal
+# Kamal sets KAMAL_VERSION and other env vars
+CONTAINER_NAME="rivals-web"
+
+# Run deployment tasks inside the container
+# Using kamal app exec to run commands in the deployed container
+kamal app exec "uv run python manage.py migrate --noinput" || {
+    echo "❌ Migration failed!"
+    exit 1
+}
+
+echo "✅ Migrations completed"
+
+kamal app exec "uv run python manage.py sync_players" || {
+    echo "⚠️  Player sync had errors, but continuing..."
+    # Don't fail deployment if player sync has issues
+}
+
+echo "✅ Post-deploy tasks completed!"

@@ -1,12 +1,42 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
-@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
-@source '../../storage/framework/views/*.php';
-@source '../**/*.blade.php';
-@source '../**/*.js';
+@source '../../templates/**/*.html';
+@source '../../rivals/**/*.py';
+
+:root {
+  --pitch: #0f4f2f;
+  --accent: #20c97a;
+  --highlight: #f1d555;
+  --surface: #ffffff;
+  --surface-alt: #f9faf9;
+  --text-main: #1a1a1a;
+  --muted: #a0bfae;
+  --danger: #ff5c5c;
+  --success: #25d385;
+}
 
 @theme {
-  --font-sans: "Instrument Sans", ui-sans-serif, system-ui, sans-serif,
-    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-sans: "Instrument Sans", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  
+  --color-pitch: var(--pitch);
+  --color-accent: var(--accent);
+  --color-highlight: var(--highlight);
+  --color-surface: var(--surface);
+  --color-surface-alt: var(--surface-alt);
+  --color-text-main: var(--text-main);
+  --color-muted: var(--muted);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
+
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+}
+
+@layer base {
+  body {
+    background-color: var(--surface-alt);
+    color: var(--text-main);
+    font-family: var(--font-sans);
+  }
 }
