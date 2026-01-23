@@ -19,7 +19,7 @@ COPY pyproject.toml uv.lock ./
 # Use --network=host workaround for networking issues during build
 RUN apt-get update \
   && apt-get install -y --no-install-recommends gcc build-essential libpq-dev ca-certificates curl \
-  && rm -rf /var/lib/apt/lists/*
+  && apt-get clean
 
 # Sync the project into the image (creates system-installed packages because UV_PROJECT_ENVIRONMENT=system)
 # --locked uses uv.lock, giving reproducible installs (recommended).
@@ -70,15 +70,6 @@ RUN chown -R app:app /app
 USER app
 
 EXPOSE ${PORT}
-
-# Simple healthcheck - checks that the server responds on the configured port
-# Install curl in runtime stage for healthcheck
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends curl \
-  && rm -rf /var/lib/apt/lists/*
-
-HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-  CMD curl -f http://127.0.0.1:${PORT}/healthz || exit 1
 
 # Production entrypoint:
 # Use `uv run` to run uvicorn from the uv-managed environment.
