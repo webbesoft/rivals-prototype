@@ -73,4 +73,4 @@ EXPOSE ${PORT}
 
 # Production entrypoint:
 # Use `uv run` to run uvicorn from the uv-managed environment.
-CMD ["uv", "run", "uvicorn", "rivalspy.asgi:application", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+CMD ["uv", "run", "uvicorn", "rivalspy.asgi:application", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
