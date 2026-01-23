@@ -1,4 +1,5 @@
 from django.shortcuts import render
+from django.http import HttpResponse
 
 from rivals.services.landing_data_service import LandingDataService
 
