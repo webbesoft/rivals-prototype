@@ -17,7 +17,7 @@ COPY pyproject.toml uv.lock ./
 
 # Install system build tools minimal (if you need wheels/build deps)
 # Use --network=host workaround for networking issues during build
-RUN --network=host apt-get update \
+RUN apt-get update \
   && apt-get install -y --no-install-recommends gcc build-essential libpq-dev ca-certificates curl \
   && rm -rf /var/lib/apt/lists/*
 

@@ -48,7 +48,7 @@ DJANGO_CORE_APPS = [
 
 THIRD_PARTY_APPS = ["django_cotton", "debug_toolbar"]
 
-LOCAL_APPS = ["accounts", "rivals", "core"]
+LOCAL_APPS = ["accounts", "rivals", "core", "background_task"]
 
 INSTALLED_APPS = []
 INSTALLED_APPS += DJANGO_CORE_APPS
@@ -92,7 +92,7 @@ WSGI_APPLICATION = "rivalspy.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "NAME": BASE_DIR / "dbs/db.sqlite3",
     }
 }
 
@@ -165,3 +165,50 @@ EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
 EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "False").lower() in ("1", "true", "yes")
 EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "False").lower() in ("1", "true", "yes")
+
+# Background Tasks Configuration
+# Run tasks synchronously in development for easier debugging
+BACKGROUND_TASK_RUN_ASYNC = os.getenv("BACKGROUND_TASK_RUN_ASYNC", "False").lower() in (
+    "1",
+    "true",
+    "yes",
+)
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "{levelname} {asctime} {module} {message}",
+            "style": "{",
+        },
+        "simple": {
+            "format": "{levelname} {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "console": {
+            "level": "INFO",
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
+        },
+    },
+    "loggers": {
+        "accounts": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": True,
+        },
+        "rivals": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": True,
+        },
+        "django": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+    },
+}

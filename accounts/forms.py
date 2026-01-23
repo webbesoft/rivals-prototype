@@ -49,48 +49,67 @@ class SignUpForm(UserCreationForm):
         user.fpl_id = self.cleaned_data["fpl_id"]
 
         if commit:
+            # Validate FPL ID and fetch basic info
             fpl_api_service = FplApiService()
             basic_info = fpl_api_service.fetch_team_basic_info(user.fpl_id)
 
             if not basic_info:
                 raise ValidationError("Invalid FPL Team ID. Please try again.")
 
+            # Set basic user info from FPL
             user.team_name = basic_info["name"]
             user.manager_name = (
                 basic_info["player_first_name"] + " " + basic_info["player_last_name"]
             )
             user.active = True
+            user.is_verified = False  # Explicitly set to False until email is verified
 
+            # Save user first
             user.save()
-            user_init_service = InitUserService(user)
-            user_init_service.save_user_info(basic_info=basic_info)
 
-            # Send verification email
+            # Send verification email immediately
+            import logging
+            import json
+            from .tasks import init_user_data_task
+            from .emails import EmailService
+
+            logger = logging.getLogger(__name__)
+
             try:
                 token = default_token_generator.make_token(user)
                 uid = urlsafe_base64_encode(force_bytes(user.pk))
                 verify_path = reverse("accounts:verify_email", args=[uid, token])
                 verify_url = f"{settings.SITE_URL.rstrip('/')}{verify_path}"
 
-                subject = "Verify your email"
-                message = (
-                    f"Hi {user.manager_name or user.email},\n\n"
-                    "Thanks for registering. Please verify your email by clicking the link below:\n\n"
-                    f"{verify_url}\n\n"
-                    "If you didn't sign up, you can ignore this email.\n\n"
-                    "Cheers,\nThe Team"
+                # Use EmailService for HTML email
+                if EmailService.send_verification_email(user, verify_url):
+                    logger.info(f"Verification email sent to {user.email}")
+                else:
+                    logger.warning(f"EmailService returned False for {user.email}")
+            except Exception as e:
+                # Log the error but don't block user creation
+                logger.error(
+                    f"Failed to send verification email to {user.email}: {e}",
+                    exc_info=True,
                 )
 
-                send_mail(
-                    subject,
-                    message,
-                    settings.DEFAULT_FROM_EMAIL,
-                    [user.email],
-                    fail_silently=False,
+            # Queue the InitUserService to run in the background
+            try:
+                basic_info_json = json.dumps(basic_info)
+
+                # Check if we should run async (background task) or sync (immediately)
+                if getattr(settings, "BACKGROUND_TASK_RUN_ASYNC", False):
+                    # Run asynchronously via django-background-tasks
+                    init_user_data_task(user.id, basic_info_json)
+                else:
+                    # Run synchronously for development/debugging
+                    init_user_data_task.now(user.id, basic_info_json)
+
+            except Exception as e:
+                logger.error(
+                    f"Failed to process initialization for user {user.id}: {e}",
+                    exc_info=True,
                 )
-            except Exception:
-                # Do not block user creation on email sending failure
-                pass
 
         return user
 

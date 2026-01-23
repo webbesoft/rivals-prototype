@@ -5,13 +5,12 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.shortcuts import redirect, render
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 
 from .forms import LoginForm, PasswordResetForm, SignUpForm
-
-# from .tasks import send_verification_email, send_welcome_email
+from .tasks import send_verification_email_task
 
 User = get_user_model()
 
@@ -24,11 +23,13 @@ def signup_view(request):
         form = SignUpForm(request.POST)
         if form.is_valid():
             user = form.save()
+            # Store user email in session for verification page
+            request.session["pending_verification_email"] = user.email
             messages.success(
                 request,
                 "Account created! Please check your email to verify your account.",
             )
-            return redirect("accounts:login")
+            return redirect("accounts:verification_pending")
     else:
         form = SignUpForm()
 
@@ -44,11 +45,13 @@ def login_view(request):
         if form.is_valid():
             user = form.get_user()
             if not user.is_verified:
-                messages.error(
+                # Store email in session and redirect to verification page
+                request.session["pending_verification_email"] = user.email
+                messages.warning(
                     request,
-                    "Your email address is not verified. Please check your inbox for a verification link.",
+                    "Your email address is not verified. Please check your inbox.",
                 )
-                return render(request, "accounts/login.html", {"form": form})
+                return redirect("accounts:verification_pending")
             login(request, user)
 
             next_url = request.GET.get("next", "rivals:dashboard")
@@ -117,3 +120,58 @@ def verify_email(request, uidb64, token):
     else:
         messages.error(request, "Invalid verification link.")
         return redirect("accounts:signup")
+
+
+def verification_pending_view(request):
+    """
+    Show verification pending page with option to resend email.
+    """
+    # Get email from session (set during signup or failed login)
+    email = request.session.get("pending_verification_email")
+
+    if not email:
+        # If no email in session, redirect to login
+        messages.info(request, "Please log in to continue.")
+        return redirect("accounts:login")
+
+    return render(request, "accounts/verification_pending.html", {"email": email})
+
+
+def resend_verification_email(request):
+    """
+    Resend verification email to the user.
+    """
+    if request.method != "POST":
+        return redirect("accounts:verification_pending")
+
+    email = request.session.get("pending_verification_email")
+
+    if not email:
+        messages.error(request, "Session expired. Please try logging in again.")
+        return redirect("accounts:login")
+
+    try:
+        user = User.objects.get(email=email)
+
+        if user.is_verified:
+            messages.info(
+                request, "Your email is already verified. You can log in now."
+            )
+            return redirect("accounts:login")
+
+        # Check if we should run async (background task) or sync (immediately)
+        if getattr(settings, "BACKGROUND_TASK_RUN_ASYNC", False):
+            # Queue the email sending task async
+            send_verification_email_task(user.id)
+        else:
+            # Run synchronously for development
+            send_verification_email_task.now(user.id)
+
+        messages.success(
+            request, "Verification email has been resent. Please check your inbox."
+        )
+    except User.DoesNotExist:
+        messages.error(request, "User not found. Please sign up again.")
+        return redirect("accounts:signup")
+
+    return redirect("accounts:verification_pending")

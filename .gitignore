@@ -10,6 +10,8 @@ wheels/
 .venv
 
 .env
+.env.production
+.env.local
 
 *.sqlite3
 *.db
