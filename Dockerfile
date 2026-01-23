@@ -38,7 +38,8 @@ RUN tailwindcss -i assets/css/input.css -o assets/css/output.css --minify
 
 # Collect static files into /app/staticfiles (adjust STATIC_ROOT in settings accordingly)
 # Run migrations as part of build only if you prefer baked DB state (commonly migrations are run at deploy time).
-RUN uv run python manage.py collectstatic --noinput
+# Verify that we ignore the input.css which contains invalid css for whitenoise
+RUN uv run python manage.py collectstatic --noinput --ignore "css/input.css"
 
 # (Optional) Compile optimized .pyc files
 RUN uv run python -OO -m compileall -q /app
