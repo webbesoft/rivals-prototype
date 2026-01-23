@@ -16,3 +16,7 @@ def index(request):
     }
 
     return render(request, "pages/index.html", context)
+
+
+def health_check(request):
+    return HttpResponse("OK")
