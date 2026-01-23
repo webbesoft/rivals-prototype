@@ -21,12 +21,20 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends gcc build-essential libpq-dev ca-certificates curl \
   && apt-get clean
 
+# Install Tailwind CSS standalone CLI for linux-x64
+RUN curl -sLO https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-x64 \
+  && chmod +x tailwindcss-linux-x64 \
+  && mv tailwindcss-linux-x64 /usr/local/bin/tailwindcss
+
 # Sync the project into the image (creates system-installed packages because UV_PROJECT_ENVIRONMENT=system)
 # --locked uses uv.lock, giving reproducible installs (recommended).
 RUN uv sync --locked
 
 # Copy the rest of the app
 COPY . /app
+
+# Compile Tailwind CSS
+RUN tailwindcss -i assets/css/input.css -o assets/css/output.css --minify
 
 # Collect static files into /app/staticfiles (adjust STATIC_ROOT in settings accordingly)
 # Run migrations as part of build only if you prefer baked DB state (commonly migrations are run at deploy time).
@@ -37,7 +45,7 @@ RUN uv run python -OO -m compileall -q /app
 
 # ---- Final stage: minimal runtime image ----
 # Use a slim python base and copy installed system packages from builder
-FROM python:3.12-slim-trixie
+FROM python:3.12-slim-trixie AS runner
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -69,7 +77,7 @@ RUN chown -R app:app /app
 
 USER app
 
-EXPOSE ${PORT}
+EXPOSE 8000
 
 # Production entrypoint:
 # Use `uv run` to run uvicorn from the uv-managed environment.
