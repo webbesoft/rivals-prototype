@@ -33,6 +33,12 @@ DEBUG = os.getenv("DEBUG", False)
 
 ALLOWED_HOSTS = [os.getenv("ALLOWED_HOSTS", "*")]
 
+CSRF_TRUSTED_ORIGINS = os.getenv("CSRF_TRUSTED_ORIGINS", "http://localhost:8000").split(
+    ","
+)
+
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
 
 # Application definition
 
