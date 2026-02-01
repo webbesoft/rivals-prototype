@@ -140,6 +140,23 @@ class DashboardView(APIView):
             "tracked_teams_count": user.tracked_teams.count(),
         }
 
+        # Calculate best league position
+        if team:
+            try:
+                # Get all mini league standings for this team, exclude system leagues if desired
+                # For now getting all, ordered by current_rank
+                best_standing = (
+                    team.mini_league_teams.select_related("mini_league")
+                    .order_by("current_rank")
+                    .first()
+                )
+
+                if best_standing:
+                    data["best_league_rank"] = best_standing.current_rank
+                    data["best_league_name"] = best_standing.mini_league.name
+            except Exception:
+                pass
+
         return Response(data)
 
 

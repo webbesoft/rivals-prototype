@@ -488,3 +488,52 @@ class SquadHistory(models.Model):
         return (
             f"{self.player_name} in Gameweek {self.gameweek} for {self.team.team_name}"
         )
+
+
+class TransferPlan(models.Model):
+    """User's saved transfer plan for simulating future transfers."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="transfer_plans",
+    )
+    team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name="transfer_plans")
+    name = models.CharField(max_length=100, default="My Plan")
+    is_active = models.BooleanField(default=True)  # Current working plan
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-updated_at"]
+        indexes = [
+            models.Index(fields=["user", "is_active"]),
+        ]
+
+    def __str__(self):
+        return f"{self.name} - {self.team.team_name}"
+
+
+class PlannedTransfer(models.Model):
+    """Individual transfer within a transfer plan."""
+
+    plan = models.ForeignKey(
+        TransferPlan, on_delete=models.CASCADE, related_name="transfers"
+    )
+    player_out = models.ForeignKey(
+        Player, on_delete=models.CASCADE, related_name="planned_transfers_out"
+    )
+    player_in = models.ForeignKey(
+        Player, on_delete=models.CASCADE, related_name="planned_transfers_in"
+    )
+    gameweek = models.IntegerField()  # Target GW for this transfer
+    order = models.IntegerField(default=0)  # For multi-transfer sequencing
+
+    class Meta:
+        ordering = ["gameweek", "order"]
+        indexes = [
+            models.Index(fields=["plan", "gameweek"]),
+        ]
+
+    def __str__(self):
+        return f"GW{self.gameweek}: {self.player_out.web_name} → {self.player_in.web_name}"
