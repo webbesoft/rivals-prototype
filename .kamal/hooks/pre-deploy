@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# Pre-deploy hook for Kamal
+# Runs unit tests using uv before deployment proceeds
+
+echo "🧪 Running pre-deploy tests..."
+
+# Run tests using uv
+if uv run python manage.py test; then
+    echo "✅ Tests passed! Proceeding with deployment."
+    exit 0
+else
+    echo "❌ Tests failed! Aborting deployment."
+    exit 1
+fi
