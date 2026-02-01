@@ -29,7 +29,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv("SECRET_KEY", "secret-key-should-be-changed")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv("DEBUG", False)
+DEBUG = os.getenv("DEBUG", "False").lower() in ("1", "true", "yes")
 
 ALLOWED_HOSTS = [os.getenv("ALLOWED_HOSTS", "*")]
 
@@ -52,9 +52,15 @@ DJANGO_CORE_APPS = [
     "django.contrib.humanize",
 ]
 
-THIRD_PARTY_APPS = ["django_cotton", "debug_toolbar"]
+THIRD_PARTY_APPS = [
+    "django_cotton",
+    "debug_toolbar",
+    "rest_framework",
+    "rest_framework.authtoken",
+    "corsheaders",
+]
 
-LOCAL_APPS = ["accounts", "rivals", "core", "background_task"]
+LOCAL_APPS = ["accounts", "rivals", "core", "background_task", "api"]
 
 INSTALLED_APPS = []
 INSTALLED_APPS += DJANGO_CORE_APPS
@@ -64,6 +70,7 @@ INSTALLED_APPS += LOCAL_APPS
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -229,3 +236,18 @@ LOGGING = {
         },
     },
 }
+
+# Django REST Framework
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.TokenAuthentication",
+        "rest_framework.authentication.SessionAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+}
+
+# CORS Settings
+CORS_ALLOW_ALL_ORIGINS = DEBUG  # Allow all origins in development
+CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "").split(",") if not DEBUG else []

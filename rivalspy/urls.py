@@ -24,4 +24,6 @@ urlpatterns = [
     path("accounts/", include("accounts.urls", namespace="accounts")),
     path("", include("core.urls", namespace="core")),
     path("dashboard/", include("rivals.urls", namespace="rivals")),
+    path("api/", include("api.urls", namespace="api")),
 ] + debug_toolbar_urls()
+

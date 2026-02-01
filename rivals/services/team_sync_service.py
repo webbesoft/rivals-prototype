@@ -36,12 +36,16 @@ class TeamSyncService:
         )
         self.team.current_total_points = data["summary_overall_points"]
         self.team.current_overall_rank = data["summary_overall_rank"]
+        self.team.current_event_points = data["summary_event_points"]
+        self.team.total_transfers = data["last_deadline_total_transfers"]
         self.team.save(
             update_fields=[
                 "team_name",
                 "manager_name",
                 "current_total_points",
                 "current_overall_rank",
+                "current_event_points",
+                "total_transfers",
             ]
         )
 
