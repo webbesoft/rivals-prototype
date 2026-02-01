@@ -1,3 +1,5 @@
+import logging
+
 from django.contrib.auth import authenticate, get_user_model
 from rest_framework import status
 from rest_framework.authtoken.models import Token
@@ -7,17 +9,13 @@ from rest_framework.views import APIView
 
 from rivals.models import MiniLeague, Team
 
-from .serializers import (
-    GameweekDataSerializer,
-    MiniLeagueDetailSerializer,
-    MiniLeagueSerializer,
-    SquadHistorySerializer,
-    TeamSerializer,
-    TransferSerializer,
-    UserSerializer,
-)
+from .serializers import (GameweekDataSerializer, MiniLeagueDetailSerializer,
+                          MiniLeagueSerializer, SquadHistorySerializer,
+                          TeamSerializer, TransferSerializer, UserSerializer)
 
 User = get_user_model()
+
+logger = logging.getLogger(__name__)
 
 
 class LoginView(APIView):
@@ -63,8 +61,9 @@ class SignUpView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        from .serializers import SignUpSerializer
         from accounts.forms import SignUpForm
+
+        from .serializers import SignUpSerializer
 
         serializer = SignUpSerializer(data=request.data)
         if not serializer.is_valid():
@@ -155,9 +154,30 @@ class DashboardView(APIView):
                     data["best_league_rank"] = best_standing.current_rank
                     data["best_league_name"] = best_standing.mini_league.name
             except Exception:
-                pass
-
-        return Response(data)
+                logger.exception("Failed to compute best league position for user %s", getattr(request.user, 'id', None))
+            try:
+                success = MiniLeagueSyncService(league).sync()
+                if success:
+                    # Refresh from DB
+                    league.refresh_from_db()
+                    return Response({
+                        "success": True,
+                        "message": "League synced successfully.",
+                        "league": MiniLeagueDetailSerializer(league).data,
+                    })
+                else:
+                    return Response(
+                        {"success": False, "error": "Failed to sync league data."},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    )
+            except Exception as e:
+                logger.exception("Error syncing league %s", getattr(league, 'id', None))
+                return Response(
+                    {"success": False, "error": "Internal server error"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+        serializer = MiniLeagueSerializer(leagues, many=True)
+        return Response(serializer.data)
 
 
 class LeaguesView(APIView):
@@ -200,6 +220,55 @@ class LeagueDetailView(APIView):
 
         serializer = MiniLeagueDetailSerializer(league)
         return Response(serializer.data)
+
+
+class LeagueSyncView(APIView):
+    """
+    Triggers a sync of mini-league data from FPL API.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, league_id):
+        try:
+            league = MiniLeague.objects.get(id=league_id)
+        except MiniLeague.DoesNotExist:
+            return Response(
+                {"error": "League not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # Check if user has access to this league
+        if not request.user.mini_leagues.filter(id=league_id).exists():
+            return Response(
+                {"error": "You do not have access to this league."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        # Import sync service
+        from rivals.services.mini_league_sync_service import \
+            MiniLeagueSyncService
+
+        try:
+            success = MiniLeagueSyncService(league).sync()
+            if success:
+                # Refresh from DB
+                league.refresh_from_db()
+                return Response({
+                    "success": True,
+                    "message": "League synced successfully.",
+                    "league": MiniLeagueDetailSerializer(league).data,
+                })
+            else:
+                return Response(
+                    {"success": False, "error": "Failed to sync league data."},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+        except Exception as e:
+            return Response(
+                {"success": False, "error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
 
 class TeamDetailView(APIView):
@@ -360,8 +429,9 @@ class TeamSyncView(APIView):
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 )
         except Exception as e:
+            logger.exception("Error syncing team %s", getattr(team, 'id', None))
             return Response(
-                {"success": False, "error": str(e)},
+                {"success": False, "error": "Internal server error"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 

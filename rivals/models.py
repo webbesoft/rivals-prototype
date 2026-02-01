@@ -521,10 +521,10 @@ class PlannedTransfer(models.Model):
         TransferPlan, on_delete=models.CASCADE, related_name="transfers"
     )
     player_out = models.ForeignKey(
-        Player, on_delete=models.CASCADE, related_name="planned_transfers_out"
+        Player, on_delete=models.SET_NULL, null=True, blank=True, related_name="planned_transfers_out"
     )
     player_in = models.ForeignKey(
-        Player, on_delete=models.CASCADE, related_name="planned_transfers_in"
+        Player, on_delete=models.SET_NULL, null=True, blank=True, related_name="planned_transfers_in"
     )
     gameweek = models.IntegerField()  # Target GW for this transfer
     order = models.IntegerField(default=0)  # For multi-transfer sequencing
@@ -536,4 +536,6 @@ class PlannedTransfer(models.Model):
         ]
 
     def __str__(self):
-        return f"GW{self.gameweek}: {self.player_out.web_name} → {self.player_in.web_name}"
+        out_name = getattr(self.player_out, "web_name", "Unknown")
+        in_name = getattr(self.player_in, "web_name", "Unknown")
+        return f"GW{self.gameweek}: {out_name} → {in_name}"
