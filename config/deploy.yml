@@ -55,6 +55,8 @@ env:
     DEBUG: False
   secret:
     - ALLOWED_HOSTS
+    - CSRF_TRUSTED_ORIGINS
+    - CORS_ALLOWED_ORIGINS
     - SECRET_KEY
     - EMAIL_HOST
     - EMAIL_PORT

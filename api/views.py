@@ -55,6 +55,62 @@ class LoginView(APIView):
         )
 
 
+class SignUpView(APIView):
+    """
+    Signup endpoint that creates a new user account.
+    """
+
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        from .serializers import SignUpSerializer
+        from accounts.forms import SignUpForm
+
+        serializer = SignUpSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(
+                {"success": False, "errors": serializer.errors},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Use the existing SignUpForm to handle user creation
+        # (it includes FPL validation and initialization logic)
+        form = SignUpForm(
+            data={
+                "fpl_id": serializer.validated_data["fpl_id"],
+                "email": serializer.validated_data["email"],
+                "password1": serializer.validated_data["password1"],
+                "password2": serializer.validated_data["password2"],
+            }
+        )
+
+        if form.is_valid():
+            try:
+                user = form.save()
+                return Response(
+                    {
+                        "success": True,
+                        "message": "Account created! Please check your email to verify your account.",
+                        "user": UserSerializer(user).data,
+                    },
+                    status=status.HTTP_201_CREATED,
+                )
+            except Exception as e:
+                return Response(
+                    {"success": False, "error": str(e)},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+        else:
+            # Convert form errors to API format
+            errors = {}
+            for field, error_list in form.errors.items():
+                errors[field] = [str(e) for e in error_list]
+            return Response(
+                {"success": False, "errors": errors},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+
 class MeView(APIView):
     """
     Returns the current authenticated user's profile.

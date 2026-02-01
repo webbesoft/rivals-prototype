@@ -31,6 +31,23 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class SignUpSerializer(serializers.Serializer):
+    fpl_id = serializers.IntegerField(required=True)
+    email = serializers.EmailField(required=True)
+    password1 = serializers.CharField(write_only=True, required=True, min_length=8)
+    password2 = serializers.CharField(write_only=True, required=True, min_length=8)
+
+    def validate_email(self, value):
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("A user with this email already exists.")
+        return value
+
+    def validate(self, data):
+        if data['password1'] != data['password2']:
+            raise serializers.ValidationError({"password2": "Passwords do not match."})
+        return data
+
+
 class TeamSerializer(serializers.ModelSerializer):
     bank_in_millions = serializers.FloatField(read_only=True)
     value_in_millions = serializers.FloatField(read_only=True)
