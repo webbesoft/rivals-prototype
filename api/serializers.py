@@ -45,7 +45,7 @@ class SignUpSerializer(serializers.Serializer):
         return value
 
     def validate(self, data):
-        if data['password1'] != data['password2']:
+        if data["password1"] != data["password2"]:
             raise serializers.ValidationError({"password2": "Passwords do not match."})
         return data
 
@@ -209,24 +209,37 @@ class SquadHistorySerializer(serializers.ModelSerializer):
             "total_points_at_time",
         ]
 
+
 class PlannedTransferSerializer(serializers.ModelSerializer):
-    player_out_name = serializers.CharField(source='player_out.web_name', read_only=True)
-    player_in_name = serializers.CharField(source='player_in.web_name', read_only=True)
-    player_out_team = serializers.CharField(source='player_out.team', read_only=True)
-    player_in_team = serializers.CharField(source='player_in.team', read_only=True)
-    player_in_cost = serializers.FloatField(source='player_in.now_cost', read_only=True)
-    player_out_cost = serializers.FloatField(source='player_out.now_cost', read_only=True)
+    player_out_name = serializers.CharField(
+        source="player_out.web_name", read_only=True
+    )
+    player_in_name = serializers.CharField(source="player_in.web_name", read_only=True)
+    player_out_team = serializers.CharField(source="player_out.team", read_only=True)
+    player_in_team = serializers.CharField(source="player_in.team", read_only=True)
+    player_in_cost = serializers.FloatField(source="player_in.now_cost", read_only=True)
+    player_out_cost = serializers.FloatField(
+        source="player_out.now_cost", read_only=True
+    )
 
     class Meta:
         model = PlannedTransfer
         fields = [
-            'id', 'plan', 'player_out', 'player_in',
-            'gameweek', 'order',
-            'player_out_name', 'player_in_name',
-            'player_out_team', 'player_in_team',
-            'player_in_cost', 'player_out_cost'
+            "id",
+            "plan",
+            "player_out",
+            "player_in",
+            "gameweek",
+            "order",
+            "player_out_name",
+            "player_in_name",
+            "player_out_team",
+            "player_in_team",
+            "player_in_cost",
+            "player_out_cost",
         ]
-        read_only_fields = ['plan']
+        read_only_fields = ["plan"]
+
 
 class TransferPlanSerializer(serializers.ModelSerializer):
     transfers = PlannedTransferSerializer(many=True, read_only=True)
@@ -234,13 +247,18 @@ class TransferPlanSerializer(serializers.ModelSerializer):
     class Meta:
         model = TransferPlan
         fields = [
-            'id', 'user', 'team', 'name',
-            'is_active', 'created_at', 'updated_at',
-            'transfers',
+            "id",
+            "user",
+            "team",
+            "name",
+            "is_active",
+            "created_at",
+            "updated_at",
+            "transfers",
         ]
-        read_only_fields = ['user', 'created_at', 'updated_at']
+        read_only_fields = ["user", "created_at", "updated_at"]
 
     def create(self, validated_data):
-        user = self.context['request'].user
-        validated_data['user'] = user
+        user = self.context["request"].user
+        validated_data["user"] = user
         return super().create(validated_data)

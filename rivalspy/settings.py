@@ -250,4 +250,6 @@ REST_FRAMEWORK = {
 
 # CORS Settings
 CORS_ALLOW_ALL_ORIGINS = DEBUG  # Allow all origins in development
-CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "").split(",") if not DEBUG else []
+CORS_ALLOWED_ORIGINS = (
+    os.getenv("CORS_ALLOWED_ORIGINS", "").split(",") if not DEBUG else []
+)

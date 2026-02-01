@@ -498,7 +498,9 @@ class TransferPlan(models.Model):
         on_delete=models.CASCADE,
         related_name="transfer_plans",
     )
-    team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name="transfer_plans")
+    team = models.ForeignKey(
+        Team, on_delete=models.CASCADE, related_name="transfer_plans"
+    )
     name = models.CharField(max_length=100, default="My Plan")
     is_active = models.BooleanField(default=True)  # Current working plan
     created_at = models.DateTimeField(auto_now_add=True)
@@ -521,10 +523,18 @@ class PlannedTransfer(models.Model):
         TransferPlan, on_delete=models.CASCADE, related_name="transfers"
     )
     player_out = models.ForeignKey(
-        Player, on_delete=models.SET_NULL, null=True, blank=True, related_name="planned_transfers_out"
+        Player,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="planned_transfers_out",
     )
     player_in = models.ForeignKey(
-        Player, on_delete=models.SET_NULL, null=True, blank=True, related_name="planned_transfers_in"
+        Player,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="planned_transfers_in",
     )
     gameweek = models.IntegerField()  # Target GW for this transfer
     order = models.IntegerField(default=0)  # For multi-transfer sequencing

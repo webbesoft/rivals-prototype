@@ -26,4 +26,3 @@ urlpatterns = [
     path("dashboard/", include("rivals.urls", namespace="rivals")),
     path("api/", include("api.urls", namespace="api")),
 ] + debug_toolbar_urls()
-

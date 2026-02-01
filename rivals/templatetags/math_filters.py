@@ -12,7 +12,7 @@ def sub(value, arg):
         return ""
 
 
-@register.filter(name='abs')
+@register.filter(name="abs")
 def absolute(value):
     """Returns the absolute value of a number."""
     try:

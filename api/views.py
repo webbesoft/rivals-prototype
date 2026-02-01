@@ -9,9 +9,15 @@ from rest_framework.views import APIView
 
 from rivals.models import MiniLeague, Team
 
-from .serializers import (GameweekDataSerializer, MiniLeagueDetailSerializer,
-                          MiniLeagueSerializer, SquadHistorySerializer,
-                          TeamSerializer, TransferSerializer, UserSerializer)
+from .serializers import (
+    GameweekDataSerializer,
+    MiniLeagueDetailSerializer,
+    MiniLeagueSerializer,
+    SquadHistorySerializer,
+    TeamSerializer,
+    TransferSerializer,
+    UserSerializer,
+)
 
 User = get_user_model()
 
@@ -154,30 +160,11 @@ class DashboardView(APIView):
                     data["best_league_rank"] = best_standing.current_rank
                     data["best_league_name"] = best_standing.mini_league.name
             except Exception:
-                logger.exception("Failed to compute best league position for user %s", getattr(request.user, 'id', None))
-            try:
-                success = MiniLeagueSyncService(league).sync()
-                if success:
-                    # Refresh from DB
-                    league.refresh_from_db()
-                    return Response({
-                        "success": True,
-                        "message": "League synced successfully.",
-                        "league": MiniLeagueDetailSerializer(league).data,
-                    })
-                else:
-                    return Response(
-                        {"success": False, "error": "Failed to sync league data."},
-                        status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    )
-            except Exception as e:
-                logger.exception("Error syncing league %s", getattr(league, 'id', None))
-                return Response(
-                    {"success": False, "error": "Internal server error"},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                logger.exception(
+                    "Failed to compute best league position for user %s",
+                    getattr(request.user, "id", None),
                 )
-        serializer = MiniLeagueSerializer(leagues, many=True)
-        return Response(serializer.data)
+        return Response(data)
 
 
 class LeaguesView(APIView):
@@ -202,9 +189,9 @@ class LeagueDetailView(APIView):
 
     def get(self, request, league_id):
         try:
-            league = MiniLeague.objects.prefetch_related(
-                "mini_league_teams__team"
-            ).get(id=league_id)
+            league = MiniLeague.objects.prefetch_related("mini_league_teams__team").get(
+                id=league_id
+            )
         except MiniLeague.DoesNotExist:
             return Response(
                 {"error": "League not found."},
@@ -246,19 +233,20 @@ class LeagueSyncView(APIView):
             )
 
         # Import sync service
-        from rivals.services.mini_league_sync_service import \
-            MiniLeagueSyncService
+        from rivals.services.mini_league_sync_service import MiniLeagueSyncService
 
         try:
             success = MiniLeagueSyncService(league).sync()
             if success:
                 # Refresh from DB
                 league.refresh_from_db()
-                return Response({
-                    "success": True,
-                    "message": "League synced successfully.",
-                    "league": MiniLeagueDetailSerializer(league).data,
-                })
+                return Response(
+                    {
+                        "success": True,
+                        "message": "League synced successfully.",
+                        "league": MiniLeagueDetailSerializer(league).data,
+                    }
+                )
             else:
                 return Response(
                     {"success": False, "error": "Failed to sync league data."},
@@ -418,18 +406,20 @@ class TeamSyncView(APIView):
             if success:
                 # Refresh team from database
                 team.refresh_from_db()
-                return Response({
-                    "success": True,
-                    "message": "Team data synced successfully.",
-                    "team": TeamSerializer(team).data,
-                })
+                return Response(
+                    {
+                        "success": True,
+                        "message": "Team data synced successfully.",
+                        "team": TeamSerializer(team).data,
+                    }
+                )
             else:
                 return Response(
                     {"success": False, "error": "Failed to sync team data."},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 )
         except Exception as e:
-            logger.exception("Error syncing team %s", getattr(team, 'id', None))
+            logger.exception("Error syncing team %s", getattr(team, "id", None))
             return Response(
                 {"success": False, "error": "Internal server error"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -464,13 +454,16 @@ class TeamTrackView(APIView):
 
         # Sync the team data when tracking
         from rivals.services.team_sync_service import TeamSyncService
+
         TeamSyncService(team).sync_full_data()
 
-        return Response({
-            "success": True,
-            "message": "Team is now being tracked.",
-            "team": TeamSerializer(team).data,
-        })
+        return Response(
+            {
+                "success": True,
+                "message": "Team is now being tracked.",
+                "team": TeamSerializer(team).data,
+            }
+        )
 
     def delete(self, request, team_id):
         try:
@@ -483,8 +476,9 @@ class TeamTrackView(APIView):
 
         request.user.tracked_teams.filter(team=team).delete()
 
-        return Response({
-            "success": True,
-            "message": "Team untracked successfully.",
-        })
-
+        return Response(
+            {
+                "success": True,
+                "message": "Team untracked successfully.",
+            }
+        )
