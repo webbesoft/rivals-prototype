@@ -1,0 +1,125 @@
+<c-layouts.base title="Profile & FPL Settings - RivalSpy">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div class="mb-8 text-center relative">
+      <div class="absolute inset-x-0 top-1/2 -z-10 h-px bg-gradient-to-r from-transparent via-accent/20 to-transparent"></div>
+      <span class="bg-surface-alt px-4 relative z-10 inline-block">
+        <h1 class="text-4xl sm:text-5xl font-black text-text-main uppercase italic tracking-tighter transform -skew-x-6">
+          Profile & <span class="text-accent">Settings</span>
+        </h1>
+      </span>
+      <p class="text-muted mt-2 font-medium uppercase tracking-widest text-xs">
+        Manage your FPL Account & Tactical Data
+      </p>
+    </div>
+
+    {% if messages %}
+    <div class="mb-8 space-y-4">
+      {% for message in messages %}
+      <div class="p-4 rounded-xl border-l-4 text-sm font-bold shadow-sm flex items-center gap-3 {% if message.tags == 'error' %} bg-white text-danger border-danger {% endif %} {% if message.tags == 'success' %} bg-white text-success border-success {% endif %}">
+        {% if message.tags == 'success' %}<span>⚽</span>{% else %}<span>🚩</span>{% endif %}
+        {{ message }}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if new_season_available %}
+    <div class="mb-8 p-6 rounded-2xl bg-amber-500/10 border-2 border-amber-500/30 text-amber-900 shadow-md">
+      <div class="flex items-start gap-4">
+        <span class="text-3xl">🏆</span>
+        <div>
+          <h3 class="text-lg font-black uppercase tracking-tight text-amber-700">New FPL Season Detected!</h3>
+          <p class="text-sm font-medium mt-1 text-amber-800">
+            A new Fantasy Premier League season has started. If your FPL Team ID changed for the new season, please update it below to refresh your squad and leagues. Old season data is safely stored in your <a href="{% if user.team %}{% url 'rivals:teams.show' user.team.id %}{% else %}#{% endif %}" class="underline font-bold hover:text-accent">History</a> tab.
+          </p>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="grid gap-8 md:grid-cols-3">
+      <!-- Account Info Panel -->
+      <div class="md:col-span-1 bg-surface rounded-2xl p-6 shadow-sm border border-gray-100 space-y-6">
+        <h2 class="text-lg font-black uppercase tracking-tight text-text-main flex items-center gap-2 border-b border-gray-100 pb-3">
+          <span class="w-1.5 h-5 bg-accent skew-x-12 rounded-sm"></span>
+          Manager Identity
+        </h2>
+
+        <div class="space-y-4 text-sm">
+          <div>
+            <span class="text-xs uppercase font-bold text-muted block">Email</span>
+            <span class="font-bold text-text-main">{{ user.email }}</span>
+          </div>
+
+          <div>
+            <span class="text-xs uppercase font-bold text-muted block">Manager Name</span>
+            <span class="font-bold text-text-main">{{ user.manager_name|default:"Not set" }}</span>
+          </div>
+
+          <div>
+            <span class="text-xs uppercase font-bold text-muted block">Current Team Name</span>
+            <span class="font-bold text-accent">{{ user.team_name|default:"Not set" }}</span>
+          </div>
+
+          <div>
+            <span class="text-xs uppercase font-bold text-muted block">Current FPL Team ID</span>
+            <span class="font-mono font-bold bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-sm">{{ user.fpl_id|default:"None" }}</span>
+          </div>
+
+          {% if user.team and user.team.current_season %}
+          <div>
+            <span class="text-xs uppercase font-bold text-muted block">Active Season</span>
+            <span class="font-bold text-success">{{ user.team.current_season }}</span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Update FPL ID Form -->
+      <div class="md:col-span-2 bg-surface rounded-2xl p-6 shadow-sm border border-gray-100">
+        <h2 class="text-lg font-black uppercase tracking-tight text-text-main flex items-center gap-2 border-b border-gray-100 pb-3 mb-6">
+          <span class="w-1.5 h-5 bg-highlight skew-x-12 rounded-sm"></span>
+          Update / Refresh FPL Team ID
+        </h2>
+
+        <p class="text-sm text-muted mb-6">
+          If a new season has started or you are using a new FPL account, enter your FPL Team ID below. We will verify your ID with Fantasy Premier League and sync your new squad and mini-leagues.
+        </p>
+
+        <form method="POST" action="{% url 'accounts:update_fpl_id' %}" class="space-y-6">
+          {% csrf_token %}
+
+          <div>
+            <label for="id_fpl_id_update" class="block text-xs font-bold uppercase tracking-wide text-text-main mb-2">
+              FPL Team ID <span class="text-danger">*</span>
+            </label>
+            <input
+              type="number"
+              id="id_fpl_id_update"
+              name="fpl_id"
+              value="{{ form.fpl_id.value|default:user.fpl_id|default:'' }}"
+              class="block w-full px-4 py-3 rounded-xl bg-surface-alt border border-gray-300 text-text-main focus:ring-2 focus:ring-accent focus:border-accent font-mono text-lg transition-all"
+              placeholder="e.g. 1234567"
+              required
+            />
+            {% if form.fpl_id.errors %}
+            <p class="text-xs text-danger font-bold mt-1 uppercase">{{ form.fpl_id.errors.0 }}</p>
+            {% endif %}
+            <p class="text-xs text-muted mt-2">
+              Find your team ID in the FPL website URL: <code class="bg-gray-100 px-1 py-0.5 rounded text-gray-700">fantasy.premierleague.com/entry/<b>ID</b>/event/1</code>
+            </p>
+          </div>
+
+          <div class="pt-4">
+            <button
+              type="submit"
+              class="w-full sm:w-auto px-6 py-3.5 bg-accent text-pitch font-black uppercase tracking-wide text-sm rounded-xl hover:bg-pitch hover:text-white transition-all duration-200 shadow-md shadow-accent/20"
+            >
+              Verify & Sync FPL Team
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</c-layouts.base>

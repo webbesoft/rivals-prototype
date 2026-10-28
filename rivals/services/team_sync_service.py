@@ -2,7 +2,7 @@ import logging
 
 from django.utils import timezone
 
-from rivals.models import GameweekData, Player, SquadHistory, Team, Transfer
+from rivals.models import GameweekData, Player, SeasonHistory, SquadHistory, Team, Transfer
 from rivals.services.fpl_api_service import FplApiService
 
 logger = logging.getLogger(__name__)
@@ -15,6 +15,9 @@ class TeamSyncService:
 
     def sync_full_data(self) -> bool:
         try:
+            # Detect a season change before syncing any data
+            self.detect_and_handle_season_transition()
+
             self.sync_basic_info()
             self.sync_history()
             self.sync_transfers()
@@ -25,6 +28,71 @@ class TeamSyncService:
         except Exception as e:
             logger.error(f"Team Sync Error: {e}", exc_info=True)
             return False
+
+    # ------------------------------------------------------------------
+    # Season transition
+    # ------------------------------------------------------------------
+
+    def detect_and_handle_season_transition(self) -> bool:
+        """
+        Compares the live FPL season against the team's recorded season.
+        If they differ, the current-season counters are reset so we start fresh.
+        The old gameweek/transfer/squad data is preserved via the `season` field.
+
+        Returns True if a transition was detected, False otherwise.
+        """
+        live_season = self.fpl_api_service.fetch_current_season()
+        if not live_season:
+            logger.warning("Could not fetch current season — skipping transition check.")
+            return False
+
+        # Stamp existing records that have no season so history is not lost
+        if not self.team.current_season:
+            self._backfill_season(live_season)
+            self.team.current_season = live_season
+            self.team.save(update_fields=["current_season"])
+            return False
+
+        if self.team.current_season == live_season:
+            return False  # Same season, nothing to do
+
+        logger.info(
+            f"Season transition detected for team {self.team.fpl_team_id}: "
+            f"{self.team.current_season} → {live_season}"
+        )
+
+        # Reset current-season aggregates
+        self.team.current_total_points = 0
+        self.team.current_overall_rank = None
+        self.team.current_event_points = 0
+        self.team.bank = 0
+        self.team.current_season = live_season
+        self.team.save(
+            update_fields=[
+                "current_total_points",
+                "current_overall_rank",
+                "current_event_points",
+                "bank",
+                "current_season",
+            ]
+        )
+        return True
+
+    def _backfill_season(self, season: str) -> None:
+        """Stamp all existing season-less records with the given season label."""
+        GameweekData.objects.filter(team=self.team, season__isnull=True).update(
+            season=season
+        )
+        Transfer.objects.filter(team=self.team, season__isnull=True).update(
+            season=season
+        )
+        SquadHistory.objects.filter(team=self.team, season__isnull=True).update(
+            season=season
+        )
+
+    # ------------------------------------------------------------------
+    # Standard sync methods
+    # ------------------------------------------------------------------
 
     def sync_basic_info(self) -> None:
         data = self.fpl_api_service.fetch_team_basic_info(self.team.fpl_team_id)
@@ -54,9 +122,13 @@ class TeamSyncService:
         if not data or "current" not in data:
             return
 
+        current_season = self.team.current_season
+
         for gw in data["current"]:
             gw_data, _ = GameweekData.objects.get_or_create(
-                team=self.team, gameweek=gw["event"]
+                team=self.team,
+                gameweek=gw["event"],
+                season=current_season,
             )
             gw_data.points = gw["points"]
             gw_data.total_points = gw["total_points"]
@@ -69,18 +141,34 @@ class TeamSyncService:
 
             self.sync_gameweek_picks(gw["event"])
 
-        self.team.bank = data["current"][-1]["bank"]
-        self.team.save(update_fields=["bank"])
+        if data["current"]:
+            self.team.bank = data["current"][-1]["bank"]
+            self.team.save(update_fields=["bank"])
+
+        # Sync past-season summaries
+        for past in data.get("past", []):
+            SeasonHistory.objects.update_or_create(
+                team=self.team,
+                season_name=past["season_name"],
+                defaults={
+                    "total_points": past["total_points"],
+                    "overall_rank": past.get("rank"),
+                    "rank": past.get("rank"),
+                },
+            )
 
     def sync_transfers(self) -> None:
         transfers = self.fpl_api_service.fetch_team_transfers(self.team.fpl_team_id)
         if not transfers:
             return
 
+        current_season = self.team.current_season
+
         for t in transfers:
             exists = Transfer.objects.filter(
                 team=self.team,
                 gameweek=t["event"],
+                season=current_season,
                 player_in__fpl_id=t["element_in"],
                 player_out__fpl_id=t["element_out"],
             ).exists()
@@ -94,6 +182,7 @@ class TeamSyncService:
             Transfer.objects.create(
                 team=self.team,
                 gameweek=t["event"],
+                season=current_season,
                 player_in_name=(
                     f"{player_in.first_name} {player_in.second_name}"
                     if player_in
@@ -116,7 +205,11 @@ class TeamSyncService:
         if not picks or "picks" not in picks:
             return
 
-        gw_data = GameweekData.objects.filter(team=self.team, gameweek=gameweek).first()
+        gw_data = GameweekData.objects.filter(
+            team=self.team,
+            gameweek=gameweek,
+            season=self.team.current_season,
+        ).first()
         if not gw_data:
             return
 
@@ -150,7 +243,11 @@ class TeamSyncService:
             self.sync_squad_for_gameweek(gw)
 
     def sync_squad_for_gameweek(self, gameweek: int) -> None:
-        if SquadHistory.objects.filter(team=self.team, gameweek=gameweek).exists():
+        if SquadHistory.objects.filter(
+            team=self.team,
+            gameweek=gameweek,
+            season=self.team.current_season,
+        ).exists():
             return
 
         picks = self.fpl_api_service.fetch_team_picks(self.team.fpl_team_id, gameweek)
@@ -166,6 +263,7 @@ class TeamSyncService:
             SquadHistory.objects.create(
                 team=self.team,
                 gameweek=gameweek,
+                season=self.team.current_season,
                 player_fpl_id=pick["element"],
                 position=pick["position"],
                 multiplier=pick["multiplier"],

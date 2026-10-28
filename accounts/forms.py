@@ -142,3 +142,46 @@ class PasswordResetForm(forms.Form):
             }
         )
     )
+
+
+class UpdateFplIdForm(forms.Form):
+    """
+    Lets a returning user update their FPL team ID (e.g. they created a new
+    FPL account for a new season).  The ID is validated against the live API.
+    """
+
+    fpl_id = forms.IntegerField(
+        label="FPL Team ID",
+        widget=forms.TextInput(
+            attrs={"placeholder": "e.g. 1234567", "id": "id_fpl_id_update"}
+        ),
+        help_text=(
+            "Find your team ID in the FPL website URL: "
+            "fantasy.premierleague.com/entry/<strong>ID</strong>/event/1"
+        ),
+    )
+
+    def __init__(self, *args, **kwargs):
+        self._fpl_data: dict | None = None
+        super().__init__(*args, **kwargs)
+
+    def clean_fpl_id(self):
+        fpl_id = self.cleaned_data.get("fpl_id")
+        if not fpl_id:
+            raise forms.ValidationError("FPL Team ID is required.")
+
+        fpl_api = FplApiService()
+        data = fpl_api.fetch_team_basic_info(fpl_id)
+        if not data:
+            raise forms.ValidationError(
+                "Could not find an FPL team with that ID. Please double-check it."
+            )
+
+        # Cache the fetched data so the view can use it without a second API call
+        self._fpl_data = data
+        return fpl_id
+
+    @property
+    def fpl_data(self) -> dict | None:
+        """Return the validated FPL API response (only available after is_valid())."""
+        return self._fpl_data

@@ -21,4 +21,6 @@ urlpatterns = [
         views.resend_verification_email,
         name="resend_verification",
     ),
+    path("profile/", views.profile_view, name="profile"),
+    path("profile/update-fpl-id/", views.update_fpl_id_view, name="update_fpl_id"),
 ]

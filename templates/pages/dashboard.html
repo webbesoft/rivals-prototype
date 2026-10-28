@@ -23,6 +23,31 @@
       </div>
       {% endfor %}
     </div>
+    {% if new_season_detected %}
+    <div class="mb-8 p-6 rounded-2xl bg-accent/10 border-2 border-accent/30 text-text-main shadow-md flex items-center justify-between gap-4 flex-wrap">
+      <div class="flex items-center gap-3">
+        <span class="text-3xl">🏆</span>
+        <div>
+          <h3 class="text-lg font-black uppercase tracking-tight text-accent">New FPL Season Ready</h3>
+          <p class="text-sm font-medium text-muted">
+            The new Fantasy Premier League season has begun. Sync your team or verify your FPL Team ID to kick off the new campaign.
+          </p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        {% if user_team %}
+        <form action="{% url 'rivals:teams.sync' user_team.id %}" method="POST">
+          {% csrf_token %}
+          <button type="submit" class="px-4 py-2 bg-accent text-pitch font-black uppercase text-xs rounded-xl hover:bg-pitch hover:text-white transition-all shadow-sm">
+            Sync New Season
+          </button>
+        </form>
+        {% endif %}
+        <a href="{% url 'accounts:profile' %}" class="px-4 py-2 bg-surface text-text-main border border-gray-200 font-bold uppercase text-xs rounded-xl hover:bg-gray-100 transition-all">
+          Profile Settings
+        </a>
+      </div>
+    </div>
     {% endif %}
 
     <div class="mb-16">

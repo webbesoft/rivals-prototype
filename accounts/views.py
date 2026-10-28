@@ -9,7 +9,7 @@ from django.urls import reverse, reverse_lazy
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 
-from .forms import LoginForm, PasswordResetForm, SignUpForm
+from .forms import LoginForm, PasswordResetForm, SignUpForm, UpdateFplIdForm
 from .tasks import send_verification_email_task
 
 User = get_user_model()
@@ -175,3 +175,86 @@ def resend_verification_email(request):
         return redirect("accounts:signup")
 
     return redirect("accounts:verification_pending")
+
+
+# ---------------------------------------------------------------------------
+# Profile / FPL ID management
+# ---------------------------------------------------------------------------
+
+
+@login_required
+def profile_view(request):
+    """Display the user's profile and FPL settings."""
+    from rivals.services.fpl_api_service import FplApiService
+
+    form = UpdateFplIdForm(initial={"fpl_id": request.user.fpl_id})
+
+    # Check if the live FPL season differs from the user's team season
+    new_season_available = False
+    if request.user.team and request.user.team.current_season:
+        try:
+            live_season = FplApiService().fetch_current_season()
+            if live_season and live_season != request.user.team.current_season:
+                new_season_available = True
+        except Exception:
+            pass
+
+    return render(
+        request,
+        "accounts/profile.html",
+        {
+            "form": form,
+            "new_season_available": new_season_available,
+        },
+    )
+
+
+@login_required
+def update_fpl_id_view(request):
+    """Handle FPL ID update form submission."""
+    import json
+    from .tasks import init_user_data_task
+
+    if request.method != "POST":
+        return redirect("accounts:profile")
+
+    form = UpdateFplIdForm(request.POST)
+    if form.is_valid():
+        new_fpl_id = str(form.cleaned_data["fpl_id"])
+        fpl_data = form.fpl_data  # already fetched in clean_fpl_id
+
+        # Update the fpl_id on the user
+        request.user.fpl_id = new_fpl_id
+        request.user.team_name = fpl_data.get("name", "")
+        request.user.manager_name = (
+            fpl_data.get("player_first_name", "")
+            + " "
+            + fpl_data.get("player_last_name", "")
+        ).strip()
+        # Unlink old team (it stays in the DB for history purposes)
+        request.user.team = None
+        request.user.save(update_fields=["fpl_id", "team_name", "manager_name", "team"])
+
+        # Re-run InitUserService to create/link new team and leagues
+        try:
+            basic_info_json = json.dumps(fpl_data)
+            if getattr(__import__("django.conf", fromlist=["settings"]).settings, "BACKGROUND_TASK_RUN_ASYNC", False):
+                init_user_data_task(request.user.id, basic_info_json)
+            else:
+                init_user_data_task.now(request.user.id, basic_info_json)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(
+                f"Failed to reinitialise user {request.user.id} after FPL ID update: {e}",
+                exc_info=True,
+            )
+
+        messages.success(
+            request,
+            f"FPL team updated to \"{fpl_data.get('name', '')}\" successfully! "
+            "Your leagues and stats are being refreshed.",
+        )
+        return redirect("rivals:dashboard")
+
+    # Form invalid — re-render profile page with errors
+    return render(request, "accounts/profile.html", {"form": form})

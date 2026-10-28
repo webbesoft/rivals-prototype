@@ -228,6 +228,53 @@
       </div>
     </div>
 
+    <!-- Past Seasons History -->
+    <div class="bg-surface rounded-2xl shadow-sm border border-gray-100 mb-12 overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+        <h2 class="text-lg font-black text-text-main uppercase tracking-tight flex items-center gap-2">
+          <span class="w-1.5 h-5 bg-accent skew-x-12 rounded-sm"></span>
+          Past Seasons History
+        </h2>
+        <span class="text-xs font-bold text-muted bg-gray-100 px-2 py-1 rounded">FPL Career Archive</span>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="bg-surface-alt text-xs uppercase font-black text-muted tracking-wider">
+            <tr>
+              <th class="px-6 py-4 text-left">Season</th>
+              <th class="px-6 py-4 text-left">Total Points</th>
+              <th class="px-6 py-4 text-left">Overall Rank</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100">
+            {% for history in season_histories %}
+            <tr class="hover:bg-surface-alt/50 transition-colors">
+              <td class="px-6 py-4 font-bold text-text-main flex items-center gap-2">
+                <span class="text-accent font-black">#</span> {{ history.season_name }}
+              </td>
+              <td class="px-6 py-4 font-black text-lg text-text-main">
+                {{ history.total_points }}
+              </td>
+              <td class="px-6 py-4 font-mono font-bold text-gray-700">
+                {% if history.overall_rank %}
+                #{{ history.overall_rank }}
+                {% else %}
+                -
+                {% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="3" class="px-6 py-8 text-center text-muted italic">
+                No past season history recorded yet. Sync team data to import FPL history.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <c-components.squad_history_carousel :team="{{ team }}"></c-components.squad_history_carousel>
 
     <div class="grid md:grid-cols-2 gap-8 mb-12">

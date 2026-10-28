@@ -21,10 +21,18 @@ def dashboard(request):
     recent_activity = fetch_recent_activity(request.user)
 
     user_gameweek_data = None
+    new_season_detected = False
+
     if request.user.team_id:
         user_gameweek_data = request.user.team.gameweek_data.filter(
             rank__isnull=False
         ).order_by("gameweek")
+
+        # Check if FPL API reports a newer season than the user team's active season
+        from rivals.services.fpl_api_service import FplApiService
+        live_season = FplApiService().fetch_current_season()
+        if live_season and user_team.current_season and live_season != user_team.current_season:
+            new_season_detected = True
 
     return render(
         request,
@@ -36,6 +44,7 @@ def dashboard(request):
             "tracked_teams": tracked_teams,
             "recent_activity": recent_activity,
             "user_gameweek_data": user_gameweek_data,
+            "new_season_detected": new_season_detected,
         },
     )
 

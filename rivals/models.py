@@ -21,6 +21,8 @@ class Team(models.Model):
     started_event = models.IntegerField(null=True)
     current_event_points = models.IntegerField(default=0)
     current_event_rank = models.IntegerField(null=True)
+    # Season tracking — set to the FPL season string e.g. "2025/26"
+    current_season = models.CharField(max_length=20, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -192,6 +194,7 @@ class GameweekData(models.Model):
         Team, on_delete=models.CASCADE, related_name="gameweek_data"
     )
     gameweek = models.IntegerField()
+    season = models.CharField(max_length=20, null=True, blank=True)
     points = models.IntegerField(default=0)
     total_points = models.IntegerField(default=0)
     bench_points = models.IntegerField(default=0)
@@ -208,11 +211,12 @@ class GameweekData(models.Model):
 
     class Meta:
         models.UniqueConstraint(
-            fields=["team", "gameweek"], name="unique_team_gameweek"
+            fields=["team", "gameweek", "season"], name="unique_team_gameweek_season"
         )
         indexes = [
             models.Index(fields=["team"]),
             models.Index(fields=["gameweek"]),
+            models.Index(fields=["team", "season"]),
         ]
 
     def __str__(self):
@@ -229,6 +233,7 @@ class MiniLeagueTeam(models.Model):
     current_rank = models.IntegerField()
     previous_rank = models.IntegerField(null=True, blank=True)
     total_points = models.IntegerField()
+    season = models.CharField(max_length=20, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -261,6 +266,7 @@ class MiniLeagueTeam(models.Model):
 class Transfer(models.Model):
     team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name="transfers")
     gameweek = models.IntegerField()
+    season = models.CharField(max_length=20, null=True, blank=True)
     player_in_name = models.CharField(max_length=255)
     player_out_name = models.CharField(max_length=255)
     player_in_cost = models.DecimalField(
@@ -425,6 +431,7 @@ class SquadHistory(models.Model):
         Team, on_delete=models.CASCADE, related_name="squad_histories"
     )
     gameweek = models.IntegerField()
+    season = models.CharField(max_length=20, null=True, blank=True)
     player_fpl_id = models.IntegerField()
     position = models.IntegerField()
     multiplier = models.IntegerField()
@@ -488,6 +495,34 @@ class SquadHistory(models.Model):
         return (
             f"{self.player_name} in Gameweek {self.gameweek} for {self.team.team_name}"
         )
+
+
+class SeasonHistory(models.Model):
+    """Per-season summary for a team, sourced from FPL history.past endpoint."""
+
+    team = models.ForeignKey(
+        Team, on_delete=models.CASCADE, related_name="season_histories"
+    )
+    season_name = models.CharField(max_length=20)  # e.g. "2024/25"
+    total_points = models.IntegerField(default=0)
+    overall_rank = models.IntegerField(null=True, blank=True)
+    rank = models.IntegerField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["team", "season_name"], name="unique_team_season"
+            )
+        ]
+        ordering = ["-season_name"]
+        indexes = [
+            models.Index(fields=["team", "season_name"]),
+        ]
+
+    def __str__(self):
+        return f"{self.team.team_name} — {self.season_name}"
 
 
 class TransferPlan(models.Model):

@@ -47,6 +47,25 @@ class FplApiService:
         current_event = next((e for e in response["events"] if e["is_current"]), None)
         return current_event["id"] if current_event else 1
 
+    def fetch_current_season(self) -> str | None:
+        """
+        Derive the current FPL season label (e.g. "2025/26") from bootstrap-static.
+        The season is built from the deadline year of the first event.
+        Returns None if the API is unavailable.
+        """
+        response = self.make_request(f"{self.BASE_URL}/bootstrap-static/")
+        if not response or not response.get("events"):
+            return None
+        try:
+            first_event = response["events"][0]
+            deadline = first_event["deadline_time"]  # e.g. "2025-08-15T17:30:00Z"
+            start_year = int(deadline[:4])  # e.g. 2025
+            end_year = (start_year + 1) % 100  # e.g. 26
+            return f"{start_year}/{end_year:02d}"  # e.g. "2025/26"
+        except (KeyError, ValueError, IndexError) as e:
+            logger.error(f"Could not determine current season: {e}")
+            return None
+
     def fetch_team_basic_info(self, team_id: int) -> dict | None:
         return self.make_request(f"{self.BASE_URL}/entry/{team_id}/")
 

@@ -21,6 +21,7 @@ def team_show(request, team_id):
 
     mini_league_performance = calculate_mini_league_performance(team)
     recent_news = get_recent_player_news(transfers)
+    season_histories = team.season_histories.all()
 
     return render(
         request,
@@ -31,6 +32,7 @@ def team_show(request, team_id):
             "transfers": transfers,
             "mini_league_performance": mini_league_performance,
             "recent_news": recent_news,
+            "season_histories": season_histories,
         },
     )
 

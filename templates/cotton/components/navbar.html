@@ -4,6 +4,7 @@
   {% if user.team %}
   <a href="{% url 'rivals:teams.show' user.team.id %}" class="px-3 py-1.5 font-bold uppercase tracking-wide text-sm text-muted hover:text-accent transition-colors duration-200 hover:bg-white/5 rounded-lg">My Squad</a>
   {% endif %}
+  <a href="{% url 'accounts:profile' %}" class="px-3 py-1.5 font-bold uppercase tracking-wide text-sm text-muted hover:text-accent transition-colors duration-200 hover:bg-white/5 rounded-lg">Profile</a>
   <form action="{% url 'accounts:logout' %}" method="POST" class="inline">
     {% csrf_token %}
     <button type="submit" class="px-3 py-1.5 font-bold uppercase tracking-wide text-sm text-danger hover:text-danger/80 transition-colors duration-200 hover:bg-white/5 rounded-lg ml-2">Logout</button>
