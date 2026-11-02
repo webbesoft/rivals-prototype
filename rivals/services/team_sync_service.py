@@ -169,18 +169,23 @@ class TeamSyncService:
 
         current_season = self.team.current_season
 
-        # Batch check existing transfers to avoid N+1 queries
+        # Batch check existing transfers to avoid N+1 queries.
+        # Use (gameweek, transfer_time) as the de-dup key; transfer_time is a
+        # stable value stored on every row and does not depend on FK resolution.
         existing_signatures = set(
             Transfer.objects.filter(
                 team=self.team,
                 season=current_season,
-            ).values_list("gameweek", "player_in__fpl_id", "player_out__fpl_id")
+            ).values_list("gameweek", "transfer_time")
         )
 
         new_transfers_data = []
         needed_elements = set()
         for t in transfers:
-            sig = (t["event"], t["element_in"], t["element_out"])
+            # Match the (gameweek, transfer_time) signature used by existing rows
+            from django.utils.dateparse import parse_datetime
+            t_time = parse_datetime(t["time"]) if t.get("time") else None
+            sig = (t["event"], t_time)
             if sig not in existing_signatures:
                 existing_signatures.add(sig)
                 new_transfers_data.append(t)

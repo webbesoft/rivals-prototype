@@ -1,4 +1,6 @@
 <c-layouts.base title="{{ team.team_name }} - Team">
+  {% load humanize %}
+  {% load math_filters %}
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <div class="mb-8 rounded-2xl shadow-xl overflow-hidden relative group">
       <div class="absolute inset-0 bg-pitch"></div>
@@ -20,15 +22,24 @@
             <div class="bg-black/40 backdrop-blur-sm rounded-xl p-4 border border-white/10 min-w-[120px]">
               <div class="text-xs uppercase text-muted font-bold tracking-wider mb-1">Overall Rank</div>
               <div class="text-3xl font-black text-accent shadow-black drop-shadow-md">
-                {% if team.current_overall_rank %} #{{ team.current_overall_rank|floatformat:0 }} {% else %} - {% endif %}
+                {% if team.current_overall_rank %} #{{ team.current_overall_rank|intcomma }} {% else %} - {% endif %}
               </div>
             </div>
             <div class="bg-black/40 backdrop-blur-sm rounded-xl p-4 border border-white/10 min-w-[120px]">
               <div class="text-xs uppercase text-muted font-bold tracking-wider mb-1">Total Points</div>
               <div class="text-3xl font-black text-white">
-                {{ team.current_total_points|floatformat:0 }}
+                {{ team.current_total_points|intcomma }}
               </div>
             </div>
+            {% if projection %}
+            <div class="bg-black/40 backdrop-blur-sm rounded-xl p-4 border border-accent/40 min-w-[130px]">
+              <div class="text-xs uppercase text-accent font-bold tracking-wider mb-1">Projected Total</div>
+              <div class="text-2xl font-black text-accent tabular-nums">
+                {{ projection.projected_points|intcomma }}<span class="text-xs font-normal text-muted ml-0.5">pts</span>
+              </div>
+              <div class="text-[10px] text-gray-300 font-mono mt-0.5">Proj #{{ projection.projected_overall_rank|intcomma }}</div>
+            </div>
+            {% endif %}
             <div class="bg-black/40 backdrop-blur-sm rounded-xl p-4 border border-white/10 min-w-[120px]">
               <div class="text-xs uppercase text-muted font-bold tracking-wider mb-1">Team Value</div>
               <div class="text-xl font-bold text-white">
@@ -155,6 +166,57 @@
         <p class="text-sm text-gray-300 mt-1 max-w-md mx-auto">
           Click "Compare" to see head-to-head analysis with {{ team.team_name }}.
         </p>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Season Finish Projection -->
+    {% if projection %}
+    <div class="bg-surface rounded-2xl shadow-sm border border-gray-100 mb-12 p-6 relative overflow-hidden">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-6 border-b border-gray-100 gap-2">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-6 bg-accent skew-x-12 rounded-sm"></span>
+          <h2 class="text-lg font-black text-text-main uppercase tracking-tight">Season Finish Projection</h2>
+        </div>
+        <span class="text-xs font-bold text-muted bg-gray-100 px-3 py-1 rounded-full self-start sm:self-auto">
+          {{ projection.completed_gameweeks }}/38 Gameweeks • {{ projection.remaining_gameweeks }} Remaining
+        </span>
+      </div>
+
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="p-4 rounded-xl bg-surface-alt/70 border border-gray-100">
+          <p class="text-xs uppercase text-muted font-bold tracking-wider mb-1">Projected Points</p>
+          <p class="text-2xl sm:text-3xl font-black text-text-main tabular-nums">{{ projection.projected_points|intcomma }}</p>
+          <p class="text-xs text-muted mt-1">Range: {{ projection.projected_points_min|intcomma }} – {{ projection.projected_points_max|intcomma }}</p>
+        </div>
+
+        <div class="p-4 rounded-xl bg-surface-alt/70 border border-gray-100">
+          <p class="text-xs uppercase text-muted font-bold tracking-wider mb-1">Projected Overall Rank</p>
+          <p class="text-2xl sm:text-3xl font-black text-accent tabular-nums">#{{ projection.projected_overall_rank|intcomma }}</p>
+          <p class="text-xs font-bold text-accent mt-1">{{ projection.projected_rank_tier }} Tier</p>
+        </div>
+
+        <div class="p-4 rounded-xl bg-surface-alt/70 border border-gray-100">
+          <p class="text-xs uppercase text-muted font-bold tracking-wider mb-1">Points Pace</p>
+          <p class="text-2xl sm:text-3xl font-black text-text-main tabular-nums">{{ projection.projected_ppg }} <span class="text-sm font-normal text-muted">PPG</span></p>
+          <p class="text-xs text-muted mt-1">Season: {{ projection.season_ppg }} | Last 5: {{ projection.recent_ppg }}</p>
+        </div>
+
+        <div class="p-4 rounded-xl bg-surface-alt/70 border border-gray-100">
+          <p class="text-xs uppercase text-muted font-bold tracking-wider mb-1">Rank Trajectory</p>
+          <p class="text-xl sm:text-2xl font-black tabular-nums mt-0.5 flex items-center gap-1.5 {% if projection.rank_change > 0 %}text-success{% elif projection.rank_change < 0 %}text-danger{% else %}text-muted{% endif %}">
+            {% if projection.rank_change > 0 %}
+              ↑ +{{ projection.rank_change|intcomma }} spots
+            {% elif projection.rank_change < 0 %}
+              ↓ {{ projection.rank_change|abs|intcomma }} spots
+            {% else %}
+              — Steady
+            {% endif %}
+          </p>
+          <p class="text-xs text-muted mt-1">
+            {% if projection.current_overall_rank %}Current: #{{ projection.current_overall_rank|intcomma }}{% else %}Unranked{% endif %}
+          </p>
+        </div>
       </div>
     </div>
     {% endif %}

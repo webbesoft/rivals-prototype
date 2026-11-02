@@ -223,7 +223,7 @@ def update_fpl_id_view(request):
         new_fpl_id = str(form.cleaned_data["fpl_id"])
         fpl_data = form.fpl_data  # already fetched in clean_fpl_id
 
-        # Update the fpl_id on the user
+        # Update user profile fields (but keep the existing team link for now)
         request.user.fpl_id = new_fpl_id
         request.user.team_name = fpl_data.get("name", "")
         request.user.manager_name = (
@@ -231,17 +231,24 @@ def update_fpl_id_view(request):
             + " "
             + fpl_data.get("player_last_name", "")
         ).strip()
-        # Unlink old team (it stays in the DB for history purposes)
-        request.user.team = None
-        request.user.save(update_fields=["fpl_id", "team_name", "manager_name", "team"])
+        request.user.save(update_fields=["fpl_id", "team_name", "manager_name"])
 
-        # Re-run InitUserService to create/link new team and leagues
+        # Re-run InitUserService to create/link new team and leagues.
+        # Only unlink the old team once we know the task will be dispatched
+        # (or has completed synchronously) so the existing link stays intact
+        # on failure.
         try:
             basic_info_json = json.dumps(fpl_data)
             if getattr(__import__("django.conf", fromlist=["settings"]).settings, "BACKGROUND_TASK_RUN_ASYNC", False):
+                # Async path: unlink now; the task will create the new link
+                request.user.team = None
+                request.user.save(update_fields=["team"])
                 init_user_data_task(request.user.id, basic_info_json)
             else:
+                # Synchronous path: run first; only unlink on success
                 init_user_data_task.now(request.user.id, basic_info_json)
+                request.user.team = None
+                request.user.save(update_fields=["team"])
         except Exception as e:
             import logging
             logging.getLogger(__name__).error(

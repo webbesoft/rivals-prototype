@@ -28,7 +28,7 @@ class Migration(migrations.Migration):
         migrations.AddConstraint(
             model_name="squadhistory",
             constraint=models.UniqueConstraint(
-                fields=("team", "gameweek", "player_fpl_id"),
+                fields=("team", "gameweek", "player_fpl_id", "season"),
                 name="unique_team_gameweek_player_fpl_id",
             ),
         ),

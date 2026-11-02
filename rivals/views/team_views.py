@@ -6,6 +6,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
 from rivals.models import Player, Team
+from rivals.services.projection_service import ProjectionService
 from rivals.services.team_analysis_service import TeamAnalysisService
 from rivals.services.team_sync_service import TeamSyncService
 
@@ -25,6 +26,7 @@ def team_show(request, team_id):
     mini_league_performance = calculate_mini_league_performance(team)
     recent_news = get_recent_player_news(transfers)
     season_histories = team.season_histories.all()
+    projection = ProjectionService().project_team_finish(team)
 
     return render(
         request,
@@ -36,6 +38,7 @@ def team_show(request, team_id):
             "mini_league_performance": mini_league_performance,
             "recent_news": recent_news,
             "season_histories": season_histories,
+            "projection": projection,
         },
     )
 

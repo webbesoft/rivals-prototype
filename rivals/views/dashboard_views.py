@@ -22,8 +22,22 @@ def dashboard(request):
 
     user_gameweek_data = None
     new_season_detected = False
+    user_projection = None
+    mini_league_projections = []
 
     if request.user.team_id:
+        from rivals.services.projection_service import ProjectionService
+
+        projection_service = ProjectionService()
+        user_projection = projection_service.project_team_finish(user_team)
+
+        for uml in mini_leagues_qs[:5]:
+            ml_proj = projection_service.get_team_mini_league_summary(
+                user_team, uml.mini_league
+            )
+            if ml_proj:
+                mini_league_projections.append(ml_proj)
+
         gw_qs = request.user.team.gameweek_data.filter(rank__isnull=False)
         if user_team and user_team.current_season:
             gw_qs = gw_qs.filter(season=user_team.current_season)
@@ -47,6 +61,8 @@ def dashboard(request):
         {
             "mini_leagues": mini_leagues,
             "user_team": user_team,
+            "user_projection": user_projection,
+            "mini_league_projections": mini_league_projections,
             "recent_leagues": recent_leagues,
             "tracked_teams": tracked_teams,
             "recent_activity": recent_activity,

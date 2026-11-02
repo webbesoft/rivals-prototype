@@ -1,5 +1,6 @@
 <c-layouts.base title="{{ mini_league.name }} - Mini League">
   {% load math_filters %}
+  {% load humanize %}
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <div class="flex flex-col md:flex-row md:items-end md:justify-between mb-8 pb-8 border-b border-gray-100">
       <div>
@@ -26,6 +27,46 @@
       </div>
     </div>
 
+    {% if user_league_projection %}
+    <div class="mb-8 p-6 bg-pitch rounded-2xl text-white border border-white/10 shadow-lg relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div class="absolute top-0 right-0 p-24 bg-accent/10 blur-2xl rounded-full pointer-events-none"></div>
+      <div class="relative z-10">
+        <div class="flex items-center gap-2 mb-1">
+          <span class="w-2 h-2 rounded-full bg-accent animate-pulse"></span>
+          <p class="text-xs font-bold uppercase tracking-widest text-accent">Your Mini-League Projection</p>
+        </div>
+        <p class="text-xl sm:text-2xl font-black text-white">
+          Projected to finish <span class="text-accent italic font-black">#{{ user_league_projection.projected_rank }}</span> 
+          {% if user_league_projection.rank_change > 0 %}
+          <span class="text-success text-xs font-bold bg-success/20 px-2 py-0.5 rounded ml-1">↑ {{ user_league_projection.rank_change }} spots</span>
+          {% elif user_league_projection.rank_change < 0 %}
+          <span class="text-danger text-xs font-bold bg-danger/20 px-2 py-0.5 rounded ml-1">↓ {{ user_league_projection.rank_change|abs }} spots</span>
+          {% endif %}
+        </p>
+        <p class="text-xs text-gray-300 mt-1">
+          Projected Total: <span class="font-bold text-white">{{ user_league_projection.projected_points|intcomma }} pts</span>
+          {% if user_league_projection.gap_to_leader > 0 %}
+          • <span class="text-muted">{{ user_league_projection.gap_to_leader }} pts behind projected winner</span>
+          {% else %}
+          • <span class="text-accent font-bold">Projected to WIN this league! 🏆</span>
+          {% endif %}
+        </p>
+      </div>
+
+      <div class="flex items-center gap-3 shrink-0 relative z-10">
+        <div class="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-center">
+          <p class="text-[10px] text-muted uppercase font-bold tracking-wider">Current</p>
+          <p class="text-xl font-black text-white">#{{ user_league_projection.current_rank }}</p>
+        </div>
+        <span class="text-muted font-bold">→</span>
+        <div class="bg-accent/20 border border-accent/40 rounded-xl px-4 py-2 text-center">
+          <p class="text-[10px] text-accent uppercase font-bold tracking-wider">Projected</p>
+          <p class="text-xl font-black text-accent">#{{ user_league_projection.projected_rank }}</p>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
     <div class="bg-surface rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
       <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
         <h2 class="text-lg font-black text-text-main uppercase tracking-tight">League Standings</h2>
@@ -38,6 +79,7 @@
               <th class="px-6 py-4 text-left">Rank</th>
               <th class="px-6 py-4 text-left">Team & Manager</th>
               <th class="px-6 py-4 text-left">Points</th>
+              <th class="px-6 py-4 text-left">Projected Finish</th>
               <th class="px-6 py-4 text-left">Form</th>
               <th class="px-6 py-4 text-left">Status</th>
               <th class="px-6 py-4 text-left"></th>
@@ -58,6 +100,39 @@
               <td class="px-6 py-4">
                 <div class="font-black text-xl text-text-main">{{ standing.total_points|floatformat:0 }}</div>
               </td>
+              <td class="px-6 py-4">
+                <div class="flex items-baseline gap-2">
+                  <span class="font-black text-lg text-accent tabular-nums">#{{ standing.projected_rank }}</span>
+                  <span class="text-xs font-mono text-muted tabular-nums">({{ standing.projected_points|intcomma }} pts)</span>
+                </div>
+                {% if standing.projected_rank_change > 0 %}
+                  <span class="text-[11px] font-bold text-success">↑ {{ standing.projected_rank_change }} spots</span>
+                {% elif standing.projected_rank_change < 0 %}
+                  <span class="text-[11px] font-bold text-danger">↓ {{ standing.projected_rank_change|abs }} spots</span>
+                {% else %}
+                  <span class="text-[11px] text-muted">— Steady</span>
+                {% endif %}
+              </td>
+              <td class="px-6 py-4">
+                {% if standing.previous_rank %} 
+                    {% with change=standing.previous_rank|sub:standing.current_rank %} 
+                        {% if change > 0 %}
+                            <span class="inline-flex items-center gap-1 text-success font-bold bg-success/10 px-2 py-1 rounded">
+                                ↑ {{ change }}
+                            </span>
+                        {% elif change < 0 %}
+                            <span class="inline-flex items-center gap-1 text-danger font-bold bg-danger/10 px-2 py-1 rounded">
+                                ↓ {{ change|abs }}
+                            </span>
+                        {% else %}
+                            <span class="text-muted font-medium">-</span>
+                        {% endif %} 
+                    {% endwith %} 
+                {% else %}
+                    <span class="text-muted font-medium">-</span>
+                {% endif %}
+              </td>
+              <td class="px-6 py-4">
               <td class="px-6 py-4">
                 {% if standing.previous_rank %} 
                     {% with change=standing.previous_rank|sub:standing.current_rank %} 

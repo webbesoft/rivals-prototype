@@ -5,6 +5,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from rivals.models import MiniLeague
 from rivals.services.fpl_api_service import FplApiService
 from rivals.services.mini_league_sync_service import MiniLeagueSyncService
+from rivals.services.projection_service import ProjectionService
 
 
 @login_required
@@ -28,6 +29,29 @@ def mini_league_show(request, mini_league_id):
     if request.user.team:
         user_standing = standings.filter(team=request.user.team).first()
 
+    league_projection = ProjectionService().project_mini_league(mini_league)
+    projected_by_team_id = {
+        s["team_id"]: s for s in league_projection.get("standings", [])
+    }
+
+    user_league_projection = (
+        projected_by_team_id.get(request.user.team.id) if request.user.team else None
+    )
+
+    # Attach projected metrics to standings objects for convenient template access
+    for standing in standings:
+        proj = projected_by_team_id.get(standing.team_id)
+        if proj:
+            standing.projected_rank = proj["projected_rank"]
+            standing.projected_points = proj["projected_points"]
+            standing.projected_rank_change = proj["rank_change"]
+            standing.projected_pace = proj["pace_ppg"]
+        else:
+            standing.projected_rank = standing.current_rank
+            standing.projected_points = standing.total_points
+            standing.projected_rank_change = 0
+            standing.projected_pace = 0.0
+
     return render(
         request,
         "pages/mini_leagues/show.html",
@@ -35,6 +59,8 @@ def mini_league_show(request, mini_league_id):
             "mini_league": mini_league,
             "standings": standings,
             "user_standing": user_standing,
+            "league_projection": league_projection,
+            "user_league_projection": user_league_projection,
         },
     )
 

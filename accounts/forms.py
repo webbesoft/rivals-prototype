@@ -9,6 +9,8 @@ from django.urls import reverse
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 
+import requests
+
 from rivals.services.fpl_api_service import FplApiService
 from rivals.services.init_user_service import InitUserService
 
@@ -171,7 +173,12 @@ class UpdateFplIdForm(forms.Form):
             raise forms.ValidationError("FPL Team ID is required.")
 
         fpl_api = FplApiService()
-        data = fpl_api.fetch_team_basic_info(fpl_id)
+        try:
+            data = fpl_api.fetch_team_basic_info(fpl_id)
+        except requests.RequestException:
+            raise forms.ValidationError(
+                "Could not reach the FPL service. Please try again in a moment."
+            )
         if not data:
             raise forms.ValidationError(
                 "Could not find an FPL team with that ID. Please double-check it."

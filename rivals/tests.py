@@ -172,3 +172,105 @@ class DataEngineeringAuditTests(TestCase):
         mlt = MiniLeagueTeam.objects.get(mini_league=league, team=self.team)
         self.assertEqual(mlt.season, "2025/26")
         self.assertEqual(mlt.current_rank, 1)
+
+
+class ProjectionServiceTests(TestCase):
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+        self.team = Team.objects.create(
+            fpl_team_id="88888",
+            team_name="Projection FC",
+            manager_name="Projection Manager",
+            current_total_points=600,
+            current_overall_rank=75000,
+            current_season="2025/26",
+        )
+        # Create 10 completed gameweeks (60 pts each = 600 total)
+        for gw in range(1, 11):
+            GameweekData.objects.create(
+                team=self.team,
+                gameweek=gw,
+                season="2025/26",
+                points=60,
+                total_points=gw * 60,
+                rank=75000,
+            )
+
+    def test_points_to_overall_rank(self):
+        from rivals.services.projection_service import ProjectionService
+
+        # High points benchmark
+        rank_top = ProjectionService.points_to_overall_rank(2500)
+        self.assertEqual(rank_top, 10000)
+
+        # Mid points
+        rank_mid = ProjectionService.points_to_overall_rank(2080)
+        self.assertEqual(rank_mid, 1000000)
+
+        # Monotonicity check
+        rank_higher = ProjectionService.points_to_overall_rank(2400)
+        rank_lower = ProjectionService.points_to_overall_rank(2200)
+        self.assertLess(rank_higher, rank_lower)
+
+    def test_project_team_finish(self):
+        from rivals.services.projection_service import ProjectionService
+
+        service = ProjectionService()
+        proj = service.project_team_finish(self.team)
+
+        # 10 completed GWs, 28 remaining. Pace is 60 PPG.
+        # Projected points = 600 + (28 * 60) = 2280
+        self.assertEqual(proj["completed_gameweeks"], 10)
+        self.assertEqual(proj["remaining_gameweeks"], 28)
+        self.assertEqual(proj["current_points"], 600)
+        self.assertEqual(proj["season_ppg"], 60.0)
+        self.assertEqual(proj["projected_points"], 2280)
+        self.assertGreater(proj["projected_points_max"], proj["projected_points"])
+        self.assertLess(proj["projected_points_min"], proj["projected_points"])
+        self.assertIsNotNone(proj["projected_overall_rank"])
+        self.assertIn("Top", proj["projected_rank_tier"])
+
+    def test_project_mini_league(self):
+        from rivals.models import MiniLeague, MiniLeagueTeam
+        from rivals.services.projection_service import ProjectionService
+
+        league = MiniLeague.objects.create(fpl_league_id="999", name="Premier Rival League")
+
+        team_b = Team.objects.create(
+            fpl_team_id="77777",
+            team_name="Rival FC",
+            manager_name="Rival Manager",
+            current_total_points=650,
+            current_overall_rank=40000,
+            current_season="2025/26",
+        )
+
+        MiniLeagueTeam.objects.create(
+            mini_league=league,
+            team=self.team,
+            current_rank=2,
+            total_points=600,
+        )
+        MiniLeagueTeam.objects.create(
+            mini_league=league,
+            team=team_b,
+            current_rank=1,
+            total_points=650,
+        )
+
+        service = ProjectionService()
+        result = service.project_mini_league(league, current_gw=11)
+
+        self.assertEqual(result["total_teams"], 2)
+        standings = result["standings"]
+        self.assertEqual(standings[0]["team_id"], team_b.id)
+        self.assertEqual(standings[0]["projected_rank"], 1)
+        self.assertEqual(standings[1]["team_id"], self.team.id)
+        self.assertEqual(standings[1]["projected_rank"], 2)
+
+        # Single team summary lookup
+        summary = service.get_team_mini_league_summary(self.team, league)
+        self.assertIsNotNone(summary)
+        self.assertEqual(summary["projected_rank"], 2)
+        self.assertGreater(summary["gap_to_leader"], 0)

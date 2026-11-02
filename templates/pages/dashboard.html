@@ -1,10 +1,11 @@
 <c-layouts.base title="Dashboard - RivalSpy">
   {% load humanize %}
+  {% load math_filters %}
 
   <div class="max-w-3xl mx-auto px-4 sm:px-6 py-12">
 
     <!-- Page header -->
-    <div class="mb-12">
+    <div class="mb-10">
       <p class="text-xs font-bold uppercase tracking-widest text-muted mb-2">Dashboard</p>
       <h1 class="text-3xl font-black text-text-main uppercase tracking-tight">War Room</h1>
     </div>
@@ -17,6 +18,80 @@
         {{ message }}
       </div>
       {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Season Finishing Projection -->
+    {% if user_projection %}
+    <div class="mb-12 bg-pitch rounded-2xl p-6 text-white border border-white/10 shadow-xl relative overflow-hidden">
+      <div class="absolute top-0 right-0 p-24 bg-accent/10 blur-2xl rounded-full pointer-events-none"></div>
+      
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-accent animate-pulse"></span>
+          <p class="text-xs font-bold uppercase tracking-widest text-accent">Season Projection</p>
+        </div>
+        <span class="text-xs font-mono text-gray-400 bg-white/10 px-2.5 py-0.5 rounded-full">
+          {{ user_projection.remaining_gameweeks }} GWs remaining
+        </span>
+      </div>
+
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+        <div>
+          <p class="text-xs uppercase text-muted font-bold tracking-wider mb-1">Projected Total</p>
+          <p class="text-2xl sm:text-3xl font-black text-white tabular-nums">
+            {{ user_projection.projected_points|intcomma }}<span class="text-xs font-normal text-muted ml-1">pts</span>
+          </p>
+          <p class="text-[10px] text-gray-400 mt-0.5">Range: {{ user_projection.projected_points_min|intcomma }} – {{ user_projection.projected_points_max|intcomma }}</p>
+        </div>
+
+        <div>
+          <p class="text-xs uppercase text-muted font-bold tracking-wider mb-1">Projected Finish</p>
+          <p class="text-2xl sm:text-3xl font-black text-accent tabular-nums">
+            #{{ user_projection.projected_overall_rank|intcomma }}
+          </p>
+          <p class="text-[10px] text-accent font-bold mt-0.5">{{ user_projection.projected_rank_tier }} pace</p>
+        </div>
+
+        <div>
+          <p class="text-xs uppercase text-muted font-bold tracking-wider mb-1">Current Pace</p>
+          <p class="text-2xl sm:text-3xl font-black text-white tabular-nums">
+            {{ user_projection.projected_ppg }}<span class="text-xs font-normal text-muted ml-1">pts/GW</span>
+          </p>
+          <p class="text-[10px] text-gray-400 mt-0.5">Last 5: {{ user_projection.recent_ppg }} PPG</p>
+        </div>
+
+        <div>
+          <p class="text-xs uppercase text-muted font-bold tracking-wider mb-1">Rank Trajectory</p>
+          <p class="text-lg sm:text-xl font-black tabular-nums mt-1 flex items-center gap-1 {% if user_projection.rank_change > 0 %}text-success{% elif user_projection.rank_change < 0 %}text-danger{% else %}text-gray-300{% endif %}">
+            {% if user_projection.rank_change > 0 %}
+              ↑ +{{ user_projection.rank_change|intcomma }}
+            {% elif user_projection.rank_change < 0 %}
+              ↓ {{ user_projection.rank_change|abs|intcomma }}
+            {% else %}
+              — Steady
+            {% endif %}
+          </p>
+          <p class="text-[10px] text-gray-400 mt-0.5">vs current rank</p>
+        </div>
+      </div>
+
+      {% if mini_league_projections %}
+      <div class="pt-3 border-t border-white/10 flex flex-wrap items-center gap-2 text-xs text-gray-300">
+        <span class="font-bold text-muted uppercase tracking-wider text-[10px] mr-1">Mini-League Projections:</span>
+        {% for ml in mini_league_projections %}
+        <span class="inline-flex items-center gap-1.5 bg-white/5 border border-white/10 px-2.5 py-1 rounded-lg">
+          <span class="font-medium text-white truncate max-w-[130px]">{{ ml.league_name }}:</span>
+          <span class="font-bold text-accent">Proj #{{ ml.projected_rank }}</span>
+          {% if ml.rank_change > 0 %}
+          <span class="text-success text-[10px] font-bold">↑{{ ml.rank_change }}</span>
+          {% elif ml.rank_change < 0 %}
+          <span class="text-danger text-[10px] font-bold">↓{{ ml.rank_change|abs }}</span>
+          {% endif %}
+        </span>
+        {% endfor %}
+      </div>
+      {% endif %}
     </div>
     {% endif %}
 

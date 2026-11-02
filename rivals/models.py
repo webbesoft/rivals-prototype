@@ -492,7 +492,7 @@ class SquadHistory(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["team", "gameweek", "player_fpl_id"],
+                fields=["team", "gameweek", "player_fpl_id", "season"],
                 name="unique_team_gameweek_player_fpl_id",
             )
         ]
