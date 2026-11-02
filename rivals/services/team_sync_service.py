@@ -12,6 +12,8 @@ class TeamSyncService:
     def __init__(self, team: Team):
         self.team = team
         self.fpl_api_service = FplApiService()
+        self._history_data: dict | None = None
+        self._player_names_cache: dict[int, str | None] = {}
 
     def sync_full_data(self) -> bool:
         try:
@@ -19,9 +21,9 @@ class TeamSyncService:
             self.detect_and_handle_season_transition()
 
             self.sync_basic_info()
-            self.sync_history()
+            history_data = self.sync_history()
             self.sync_transfers()
-            self.sync_squad_histories()
+            self.sync_squad_histories(history_data=history_data)
             self.team.last_synced_at = timezone.now()
             self.team.save(update_fields=["last_synced_at"])
             return True
@@ -117,10 +119,12 @@ class TeamSyncService:
             ]
         )
 
-    def sync_history(self) -> None:
-        data = self.fpl_api_service.fetch_team_history(self.team.fpl_team_id)
+    def sync_history(self) -> dict | None:
+        if self._history_data is None:
+            self._history_data = self.fpl_api_service.fetch_team_history(self.team.fpl_team_id)
+        data = self._history_data
         if not data or "current" not in data:
-            return
+            return None
 
         current_season = self.team.current_season
 
@@ -156,6 +160,7 @@ class TeamSyncService:
                     "rank": past.get("rank"),
                 },
             )
+        return data
 
     def sync_transfers(self) -> None:
         transfers = self.fpl_api_service.fetch_team_transfers(self.team.fpl_team_id)
@@ -164,41 +169,62 @@ class TeamSyncService:
 
         current_season = self.team.current_season
 
+        # Batch check existing transfers to avoid N+1 queries
+        existing_signatures = set(
+            Transfer.objects.filter(
+                team=self.team,
+                season=current_season,
+            ).values_list("gameweek", "player_in__fpl_id", "player_out__fpl_id")
+        )
+
+        new_transfers_data = []
+        needed_elements = set()
         for t in transfers:
-            exists = Transfer.objects.filter(
-                team=self.team,
-                gameweek=t["event"],
-                season=current_season,
-                player_in__fpl_id=t["element_in"],
-                player_out__fpl_id=t["element_out"],
-            ).exists()
+            sig = (t["event"], t["element_in"], t["element_out"])
+            if sig not in existing_signatures:
+                existing_signatures.add(sig)
+                new_transfers_data.append(t)
+                needed_elements.add(t["element_in"])
+                needed_elements.add(t["element_out"])
 
-            if exists:
-                continue
+        if not new_transfers_data:
+            return
 
-            player_in = Player.objects.filter(fpl_id=t["element_in"]).first()
-            player_out = Player.objects.filter(fpl_id=t["element_out"]).first()
+        players_by_fpl_id = {
+            p.fpl_id: p
+            for p in Player.objects.filter(fpl_id__in=needed_elements)
+        }
 
-            Transfer.objects.create(
-                team=self.team,
-                gameweek=t["event"],
-                season=current_season,
-                player_in_name=(
-                    f"{player_in.first_name} {player_in.second_name}"
-                    if player_in
-                    else "Unavailable"
-                ),
-                player_out_name=(
-                    f"{player_out.first_name} {player_out.second_name}"
-                    if player_out
-                    else "Unavailable"
-                ),
-                player_in=player_in,
-                player_out=player_out,
-                player_in_cost=t["element_in_cost"],
-                player_out_cost=t["element_out_cost"],
-                transfer_time=t["time"],
+        transfers_to_create = []
+        for t in new_transfers_data:
+            player_in = players_by_fpl_id.get(t["element_in"])
+            player_out = players_by_fpl_id.get(t["element_out"])
+
+            transfers_to_create.append(
+                Transfer(
+                    team=self.team,
+                    gameweek=t["event"],
+                    season=current_season,
+                    player_in_name=(
+                        f"{player_in.first_name} {player_in.second_name}".strip()
+                        if player_in
+                        else "Unavailable"
+                    ),
+                    player_out_name=(
+                        f"{player_out.first_name} {player_out.second_name}".strip()
+                        if player_out
+                        else "Unavailable"
+                    ),
+                    player_in=player_in,
+                    player_out=player_out,
+                    player_in_cost=t["element_in_cost"],
+                    player_out_cost=t["element_out_cost"],
+                    transfer_time=t["time"],
+                )
             )
+
+        if transfers_to_create:
+            Transfer.objects.bulk_create(transfers_to_create, ignore_conflicts=True)
 
     def sync_gameweek_picks(self, gameweek: int) -> None:
         picks = self.fpl_api_service.fetch_team_picks(self.team.fpl_team_id, gameweek)
@@ -233,8 +259,11 @@ class TeamSyncService:
             ]
         )
 
-    def sync_squad_histories(self) -> None:
-        data = self.fpl_api_service.fetch_team_history(self.team.fpl_team_id)
+    def sync_squad_histories(self, history_data: dict | None = None) -> None:
+        data = history_data or self._history_data
+        if not data:
+            data = self.fpl_api_service.fetch_team_history(self.team.fpl_team_id)
+            self._history_data = data
         if not data or "current" not in data:
             return
 
@@ -254,31 +283,44 @@ class TeamSyncService:
         if not picks or "picks" not in picks:
             return
 
+        elements = [p["element"] for p in picks["picks"]]
+        players_by_fpl_id = {
+            p.fpl_id: p for p in Player.objects.filter(fpl_id__in=elements)
+        }
+
+        squad_records = []
         for pick in picks["picks"]:
-            player = Player.objects.filter(fpl_id=pick["element"]).first()
+            player = players_by_fpl_id.get(pick["element"])
             if not player:
                 logger.warning(f"Player not found for FPL ID {pick['element']}")
                 continue
 
-            SquadHistory.objects.create(
-                team=self.team,
-                gameweek=gameweek,
-                season=self.team.current_season,
-                player_fpl_id=pick["element"],
-                position=pick["position"],
-                multiplier=pick["multiplier"],
-                is_captain=pick["is_captain"],
-                is_vice_captain=pick["is_vice_captain"],
-                element_type=pick["element_type"],
-                player_name=player.web_name,
-                player_cost=player.now_cost,
-                form=player.form,
-                expected_goals=player.expected_goals,
-                expected_assists=player.expected_assists,
-                selected_by_percent=player.selected_by_percent,
-                total_points_at_time=player.total_points,
+            squad_records.append(
+                SquadHistory(
+                    team=self.team,
+                    gameweek=gameweek,
+                    season=self.team.current_season,
+                    player_fpl_id=pick["element"],
+                    position=pick["position"],
+                    multiplier=pick["multiplier"],
+                    is_captain=pick["is_captain"],
+                    is_vice_captain=pick["is_vice_captain"],
+                    element_type=pick["element_type"],
+                    player_name=player.web_name,
+                    player_cost=player.now_cost,
+                    form=player.form,
+                    expected_goals=player.expected_goals,
+                    expected_assists=player.expected_assists,
+                    selected_by_percent=player.selected_by_percent,
+                    total_points_at_time=player.total_points,
+                )
             )
 
+        if squad_records:
+            SquadHistory.objects.bulk_create(squad_records, ignore_conflicts=True)
+
     def get_player_name(self, fpl_id: int) -> str | None:
-        player = Player.objects.filter(fpl_id=fpl_id).first()
-        return player.web_name if player else None
+        if fpl_id not in self._player_names_cache:
+            player = Player.objects.filter(fpl_id=fpl_id).first()
+            self._player_names_cache[fpl_id] = player.web_name if player else None
+        return self._player_names_cache[fpl_id]

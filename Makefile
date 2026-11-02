@@ -1,2 +1,2 @@
 dev:
-	uv run python manage.py runserver
+	ALLOWED_HOSTS=localhost uv run python manage.py runserver

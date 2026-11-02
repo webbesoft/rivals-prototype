@@ -1,189 +1,128 @@
 {% load humanize %}
 <c-layouts.guest>
+  <!-- Hero Block -->
+  <div class="min-h-screen relative flex flex-col items-center justify-center p-6 text-center overflow-hidden bg-pitch">
+    <!-- Ambient Background -->
+    <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20 pointer-events-none"></div>
+    <div class="absolute inset-0 bg-gradient-to-b from-pitch via-pitch/90 to-black/80 pointer-events-none"></div>
+    <div class="absolute top-0 right-0 p-[30rem] bg-accent/5 blur-[100px] rounded-full pointer-events-none animate-pulse"></div>
 
-  <!-- Hero -->
-  <div class="bg-pitch text-white px-6 py-24 md:py-36">
-    <div class="max-w-3xl mx-auto">
-      <p class="text-accent text-sm font-bold uppercase tracking-widest mb-6">Gameweek {{ current_gameweek }} — Live</p>
-      <h1 class="text-5xl md:text-7xl font-black uppercase tracking-tight leading-none mb-8">
+    <div class="relative z-10 max-w-5xl mx-auto space-y-12">
+      <!-- Live Badge -->
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/10 bg-white/5 backdrop-blur-sm shadow-xl animate-in fade-in slide-in-from-top-4 duration-700">
+         <span class="w-2 h-2 rounded-full bg-accent animate-pulse"></span>
+         <span class="text-xs font-bold text-white tracking-widest uppercase">Gameweek {{ current_gameweek }} • Live Intel</span>
+      </div>
+
+      <!-- Hero Title -->
+      <h1 class="text-6xl md:text-9xl font-black italic tracking-tighter uppercase text-white leading-none drop-shadow-2xl animate-in fade-in zoom-in-50 duration-500">
+        <span class="block text-stroke-white text-transparent opacity-50 text-4xl md:text-7xl mb-2">Fantasy Premier League</span>
         <span class="text-white">Rival</span><span class="text-accent">Spy</span>
       </h1>
-      <p class="text-gray-300 text-lg md:text-xl max-w-xl mb-10 leading-relaxed">
-        Track mini-league activity, spy on opponent transfers before they happen, and master the ranks.
+      
+      <!-- Value Prop -->
+      <p class="text-xl md:text-2xl text-gray-300 font-medium max-w-2xl mx-auto leading-relaxed animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
+        Track mini-league activity, spy on opponent transfers before they happen, and <span class="text-white font-bold p-1 bg-highlight/20 -skew-x-6 inline-block border border-highlight/20">master the ranks</span> like a seasoned tactician.
       </p>
-      <div class="flex flex-col sm:flex-row gap-4">
-        <a href="{% url 'accounts:signup' %}" class="bg-accent text-pitch px-6 py-3 font-black uppercase tracking-wide text-base hover:bg-white transition-colors">
-          Get Started
+
+      <!-- CTA -->
+      <div class="flex flex-col sm:flex-row gap-6 justify-center items-center mt-12 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300">
+        <a href="{% url 'accounts:signup' %}" class="bg-accent hover:bg-white text-pitch px-8 py-4 rounded-xl font-black uppercase tracking-wide text-xl transition-all shadow-xl shadow-accent/20 hover:scale-105">
+          Enter the Dugout
         </a>
-        <a href="#intel" class="text-white border border-white/30 px-6 py-3 font-bold uppercase tracking-wide text-base hover:border-white transition-colors">
+        <a href="#preview" class="bg-white/10 hover:bg-white/20 text-white border-2 border-white/20 px-8 py-4 rounded-xl font-bold uppercase tracking-wide text-xl transition-all">
           See Live Intel
         </a>
       </div>
     </div>
   </div>
 
-  <!-- Live Intel -->
-  <section id="intel" class="bg-surface-alt border-t border-gray-200">
-    <div class="max-w-3xl mx-auto px-6 py-16">
-
-      <h2 class="text-xs font-bold uppercase tracking-widest text-muted mb-8">GW{{ current_gameweek }} Intelligence</h2>
-
-      <!-- Captain Picks -->
-      <div class="mb-12">
-        <div class="flex items-baseline justify-between border-b border-gray-200 pb-2 mb-4">
-          <h3 class="text-sm font-black uppercase tracking-wide text-text-main">Top Captain Picks</h3>
-          <span class="text-xs text-muted">% captained</span>
+  <!-- Live Gameweek Insights -->
+  <section id="preview" class="py-20 bg-surface-alt relative overflow-hidden">
+    <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/grid.png')] opacity-5"></div>
+    
+    <div class="max-w-7xl mx-auto px-6 relative z-10">
+      <div class="text-center mb-12">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-accent/20 bg-accent/10 mb-4">
+          <span class="w-2 h-2 rounded-full bg-accent animate-pulse"></span>
+          <span class="text-xs font-bold text-accent tracking-widest uppercase">Live Intelligence Feed</span>
         </div>
-        <ul>
-          {% for pick in captain_picks %}
-          <li class="flex items-baseline justify-between py-2.5 border-b border-gray-100 last:border-0">
-            <div class="flex items-baseline gap-3">
-              <span class="text-xs text-muted tabular-nums w-4">{{ forloop.counter }}</span>
-              <span class="font-semibold text-text-main">{{ pick.name }}</span>
-              <span class="text-xs text-muted">{{ pick.team }}</span>
-            </div>
-            <span class="font-black text-accent tabular-nums">{{ pick.captaincy_percent }}%</span>
-          </li>
-          {% empty %}
-          <li class="py-4 text-sm text-muted">No data available.</li>
-          {% endfor %}
-        </ul>
+        <h2 class="text-4xl md:text-6xl font-black text-text-main uppercase italic tracking-tighter mb-4">
+          This Week's <span class="text-accent">Intel</span>
+        </h2>
+        <p class="text-muted text-lg max-w-2xl mx-auto">
+          Real-time FPL data aggregated from millions of managers. No login required.
+        </p>
       </div>
-
-      <!-- Transfer Trends -->
-      <div class="mb-12">
-        <div class="flex items-baseline justify-between border-b border-gray-200 pb-2 mb-4">
-          <h3 class="text-sm font-black uppercase tracking-wide text-text-main">Transfer Watchlist</h3>
-          <span class="text-xs text-muted">net transfers</span>
-        </div>
-
-        <p class="text-xs font-bold uppercase tracking-widest text-success mb-3">Trending In</p>
-        <ul class="mb-6">
-          {% for player in transfer_trends.transfers_in %}
-          <li class="flex items-baseline justify-between py-2.5 border-b border-gray-100 last:border-0">
-            <div class="flex items-baseline gap-3">
-              <span class="font-semibold text-text-main">{{ player.name }}</span>
-              <span class="text-xs text-muted">{{ player.team }}</span>
-              <span class="text-xs text-muted tabular-nums">\${{ player.cost }}m</span>
-            </div>
-            <span class="font-black text-success tabular-nums">+{{ player.transfers_in_delta|intcomma }}</span>
-          </li>
-          {% empty %}
-          <li class="py-2 text-sm text-muted">No data.</li>
-          {% endfor %}
-        </ul>
-
-        <p class="text-xs font-bold uppercase tracking-widest text-danger mb-3">Trending Out</p>
-        <ul>
-          {% for player in transfer_trends.transfers_out %}
-          <li class="flex items-baseline justify-between py-2.5 border-b border-gray-100 last:border-0">
-            <div class="flex items-baseline gap-3">
-              <span class="font-semibold text-text-main">{{ player.name }}</span>
-              <span class="text-xs text-muted">{{ player.team }}</span>
-              <span class="text-xs text-muted tabular-nums">\${{ player.cost }}m</span>
-            </div>
-            <span class="font-black text-danger tabular-nums">-{{ player.transfers_out_delta|intcomma }}</span>
-          </li>
-          {% empty %}
-          <li class="py-2 text-sm text-muted">No data.</li>
-          {% endfor %}
-        </ul>
+      
+      <div class="grid md:grid-cols-3 gap-8">
+        <c-components.captain_picks_card :captain_picks="captain_picks" :gameweek="current_gameweek" />
+        <c-components.transfer_trends_card :transfers_in="transfer_trends.transfers_in" :transfers_out="transfer_trends.transfers_out" :gameweek="current_gameweek" />
+        <c-components.fixture_difficulty_card :best_fixtures="fixture_highlights.best_fixtures" :worst_fixtures="fixture_highlights.worst_fixtures" />
       </div>
-
-      <!-- Fixture Radar -->
-      <div>
-        <div class="flex items-baseline justify-between border-b border-gray-200 pb-2 mb-4">
-          <h3 class="text-sm font-black uppercase tracking-wide text-text-main">Fixture Radar</h3>
-          <span class="text-xs text-muted">next 3 GWs</span>
-        </div>
-
-        <p class="text-xs font-bold uppercase tracking-widest text-success mb-3">Green Lights</p>
-        <ul class="mb-6">
-          {% for fixture in fixture_highlights.best_fixtures %}
-          <li class="flex items-baseline justify-between py-2.5 border-b border-gray-100 last:border-0">
-            <div class="flex items-baseline gap-2">
-              <span class="font-semibold text-text-main">{{ fixture.team }}</span>
-              <span class="text-xs text-muted">vs {{ fixture.opponent }}</span>
-            </div>
-            <div class="flex gap-0.5">
-              {% for i in "12345" %}
-              <span class="w-2 h-2 rounded-full {% if forloop.counter <= fixture.difficulty %}bg-success{% else %}bg-gray-200{% endif %}"></span>
-              {% endfor %}
-            </div>
-          </li>
-          {% empty %}
-          <li class="py-2 text-sm text-muted">No data.</li>
-          {% endfor %}
-        </ul>
-
-        <p class="text-xs font-bold uppercase tracking-widest text-danger mb-3">Red Alerts</p>
-        <ul>
-          {% for fixture in fixture_highlights.worst_fixtures %}
-          <li class="flex items-baseline justify-between py-2.5 border-b border-gray-100 last:border-0">
-            <div class="flex items-baseline gap-2">
-              <span class="font-semibold text-text-main">{{ fixture.team }}</span>
-              <span class="text-xs text-muted">vs {{ fixture.opponent }}</span>
-            </div>
-            <div class="flex gap-0.5">
-              {% for i in "12345" %}
-              <span class="w-2 h-2 rounded-full {% if forloop.counter <= fixture.difficulty %}bg-danger{% else %}bg-gray-200{% endif %}"></span>
-              {% endfor %}
-            </div>
-          </li>
-          {% empty %}
-          <li class="py-2 text-sm text-muted">No data.</li>
-          {% endfor %}
-        </ul>
-      </div>
-
     </div>
   </section>
 
-  <!-- Demo Team -->
+  <!-- Demo Team Showcase -->
   {% if demo_team %}
-  <section class="bg-pitch text-white border-t border-accent/10">
-    <div class="max-w-3xl mx-auto px-6 py-16">
+  <section class="py-20 bg-pitch relative overflow-hidden">
+    <div class="absolute inset-0 bg-gradient-to-br from-pitch via-pitch/90 to-black/80"></div>
+    <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10"></div>
+    
+    <div class="max-w-7xl mx-auto px-6 relative z-10">
+      <div class="text-center mb-12">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/10 bg-white/5 mb-4">
+          <span class="text-xs font-bold text-white tracking-widest uppercase">Live Team Analysis</span>
+        </div>
+        <h2 class="text-4xl md:text-6xl font-black text-white uppercase italic tracking-tighter mb-4">
+          See What You're <span class="text-accent">Missing</span>
+        </h2>
+        <p class="text-gray-300 text-lg max-w-2xl mx-auto">
+          Here's what RivalSpy reveals about <span class="font-bold text-white">one of your rivals.</span>
+        </p>
+      </div>
 
-      <h2 class="text-xs font-bold uppercase tracking-widest text-muted mb-8">Live Team Analysis</h2>
-
-      <!-- Stats row -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-px bg-white/10 mb-12">
-        <div class="bg-pitch p-6">
-          <p class="text-xs uppercase text-muted font-bold tracking-wider mb-1">Overall Rank</p>
-          <p class="text-2xl font-black text-accent">#{{ demo_team.overall_rank|intcomma }}</p>
+      <!-- Team Stats Grid -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12">
+        <div class="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10">
+          <div class="text-xs uppercase text-muted font-bold tracking-wider mb-2">Overall Rank</div>
+          <div class="text-3xl font-black text-accent">#{{ demo_team.overall_rank|intcomma }}</div>
         </div>
-        <div class="bg-pitch p-6">
-          <p class="text-xs uppercase text-muted font-bold tracking-wider mb-1">Total Points</p>
-          <p class="text-2xl font-black text-white">{{ demo_team.total_points|intcomma }}</p>
+        <div class="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10">
+          <div class="text-xs uppercase text-muted font-bold tracking-wider mb-2">Total Points</div>
+          <div class="text-3xl font-black text-white">{{ demo_team.total_points|intcomma }}</div>
         </div>
-        <div class="bg-pitch p-6">
-          <p class="text-xs uppercase text-muted font-bold tracking-wider mb-1">Team Value</p>
-          <p class="text-2xl font-black text-highlight">£{{ demo_team.value }}m</p>
+        <div class="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10">
+          <div class="text-xs uppercase text-muted font-bold tracking-wider mb-2">Team Value</div>
+          <div class="text-3xl font-black text-highlight">£{{ demo_team.value }}m</div>
         </div>
-        <div class="bg-pitch p-6">
-          <p class="text-xs uppercase text-muted font-bold tracking-wider mb-1">In Bank</p>
-          <p class="text-2xl font-black text-success">£{{ demo_team.bank }}m</p>
+        <div class="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10">
+          <div class="text-xs uppercase text-muted font-bold tracking-wider mb-2">In Bank</div>
+          <div class="text-3xl font-black text-success">£{{ demo_team.bank }}m</div>
         </div>
       </div>
 
       <!-- Recent Performance -->
-      <div class="border-b border-white/10 pb-2 mb-4 flex items-baseline justify-between">
-        <h3 class="text-sm font-black uppercase tracking-wide">Recent Performance</h3>
-        <span class="text-xs text-muted">points</span>
+      <div class="bg-white/5 backdrop-blur-md rounded-2xl p-8 border border-white/10">
+        <h3 class="text-xl font-black text-white uppercase tracking-tight mb-6">Recent Performance</h3>
+        <div class="grid grid-cols-5 gap-4">
+          {% for gw in demo_team.recent_performance %}
+          <div class="text-center p-4 rounded-xl {% if gw.points > 60 %}bg-success/10 border border-success/20{% elif gw.points < 40 %}bg-danger/10 border border-danger/20{% else %}bg-white/5 border border-white/10{% endif %}">
+            <div class="text-xs text-muted uppercase font-bold mb-2">GW{{ gw.event }}</div>
+            <div class="text-2xl font-black {% if gw.points > 60 %}text-success{% elif gw.points < 40 %}text-danger{% else %}text-white{% endif %}">
+              {{ gw.points }}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
       </div>
-      <ul>
-        {% for gw in demo_team.recent_performance %}
-        <li class="flex items-baseline justify-between py-2.5 border-b border-white/10 last:border-0">
-          <span class="text-sm text-muted">GW{{ gw.event }}</span>
-          <span class="font-black tabular-nums {% if gw.points > 60 %}text-success{% elif gw.points < 40 %}text-danger{% else %}text-white{% endif %}">
-            {{ gw.points }}
-          </span>
-        </li>
-        {% endfor %}
-      </ul>
 
-      <div class="mt-10">
-        <a href="{% url 'accounts:signup' %}" class="bg-accent text-pitch px-6 py-3 font-black uppercase tracking-wide text-base hover:bg-white transition-colors inline-block">
+      <!-- CTA -->
+      <div class="mt-12 text-center">
+        <p class="text-gray-300 text-lg mb-6">
+          Want personalized insights? <span class="font-bold text-white">Sign up to unlock your team's full dossier.</span>
+        </p>
+        <a href="{% url 'accounts:signup' %}" class="inline-block bg-accent hover:bg-white text-pitch px-8 py-4 rounded-xl font-black uppercase tracking-wide text-xl transition-all shadow-xl shadow-accent/20 hover:scale-105">
           Unlock My Team
         </a>
       </div>
@@ -191,18 +130,68 @@
   </section>
   {% endif %}
 
-  <!-- CTA -->
-  <section class="bg-surface border-t border-gray-200">
-    <div class="max-w-3xl mx-auto px-6 py-16">
-      <p class="text-xs font-bold uppercase tracking-widest text-muted mb-4">Get started — it's free</p>
-      <h2 class="text-3xl md:text-4xl font-black uppercase tracking-tight text-text-main mb-8">
-        Ready to dominate your mini-league?
-      </h2>
-      <a href="{% url 'accounts:signup' %}" class="bg-pitch text-white px-6 py-3 font-black uppercase tracking-wide text-base hover:bg-accent hover:text-pitch transition-colors inline-block">
-        Create Free Account
-      </a>
-      <p class="text-xs text-muted mt-4">No credit card required.</p>
+  <!-- Why RivalSpy -->
+  <section class="py-20 bg-surface">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="text-center mb-16">
+        <h2 class="text-4xl md:text-6xl font-black text-text-main uppercase italic tracking-tighter mb-4">
+          Why <span class="text-accent">RivalSpy</span>?
+        </h2>
+        <p class="text-muted text-lg max-w-2xl mx-auto">
+          Built by FPL managers, for FPL managers. No corporate nonsense.
+        </p>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-8">
+        <div class="text-center p-8">
+          <div class="w-16 h-16 bg-accent/10 rounded-2xl flex items-center justify-center mx-auto mb-6 transform -rotate-6">
+            <span class="text-4xl">🎯</span>
+          </div>
+          <h3 class="text-xl font-black text-text-main uppercase tracking-tight mb-3">Player-First Design</h3>
+          <p class="text-muted leading-relaxed">
+            No bloat, no ads, no BS. Just the intel you need to beat your mates.
+          </p>
+        </div>
+
+        <div class="text-center p-8">
+          <div class="w-16 h-16 bg-accent/10 rounded-2xl flex items-center justify-center mx-auto mb-6 transform rotate-6">
+            <span class="text-4xl">🔍</span>
+          </div>
+          <h3 class="text-xl font-black text-text-main uppercase tracking-tight mb-3">Deep Intelligence</h3>
+          <p class="text-muted leading-relaxed">
+            AI-powered transfer recommendations based on fixtures, form, and your budget.
+          </p>
+        </div>
+
+        <div class="text-center p-8">
+          <div class="w-16 h-16 bg-accent/10 rounded-2xl flex items-center justify-center mx-auto mb-6 transform -rotate-3">
+            <span class="text-4xl">⚡</span>
+          </div>
+          <h3 class="text-xl font-black text-text-main uppercase tracking-tight mb-3">Real-Time Tracking</h3>
+          <p class="text-muted leading-relaxed">
+            Live rank updates, rival monitoring, and instant transfer alerts.
+          </p>
+        </div>
+      </div>
     </div>
   </section>
 
+  <!-- Final CTA -->
+  <section class="py-20 bg-pitch relative overflow-hidden">
+    <div class="absolute inset-0 bg-gradient-to-br from-pitch via-pitch/90 to-black/80"></div>
+    <div class="absolute top-0 left-0 p-[30rem] bg-accent/5 blur-[100px] rounded-full pointer-events-none"></div>
+    
+    <div class="max-w-4xl mx-auto px-6 text-center relative z-10">
+      <h2 class="text-4xl md:text-6xl font-black text-white uppercase italic tracking-tighter mb-6">
+        Ready to <span class="text-accent">Dominate</span>?
+      </h2>
+      <p class="text-xl text-gray-300 mb-10 leading-relaxed">
+        Join thousands of managers using RivalSpy to gain the edge in their mini-leagues.
+      </p>
+      <a href="{% url 'accounts:signup' %}" class="inline-block bg-accent hover:bg-white text-pitch px-10 py-5 rounded-xl font-black uppercase tracking-wide text-2xl transition-all shadow-2xl shadow-accent/30 hover:scale-105">
+        Start Free Today
+      </a>
+      <p class="text-sm text-gray-400 mt-6">No credit card required • Free forever</p>
+    </div>
+  </section>
 </c-layouts.guest>

@@ -14,7 +14,10 @@ from rivals.services.team_sync_service import TeamSyncService
 def team_show(request, team_id):
     team = get_object_or_404(Team, id=team_id)
 
-    gameweek_data = team.gameweek_data.order_by("-gameweek")[:10]
+    gw_qs = team.gameweek_data
+    if team.current_season:
+        gw_qs = gw_qs.filter(season=team.current_season)
+    gameweek_data = gw_qs.order_by("-gameweek")[:10]
     transfers = team.transfers.select_related("player_in", "player_out").order_by(
         "-gameweek"
     )[:20]
@@ -78,12 +81,32 @@ def team_sync(request, team_id):
 
 
 def calculate_mini_league_performance(team):
+    from collections import defaultdict
+    from rivals.models import MiniLeagueTeam
+
+    mlts = list(team.mini_league_teams.select_related("mini_league").all())
+    if not mlts:
+        return []
+
+    league_ids = [mlt.mini_league_id for mlt in mlts]
+    all_standings = MiniLeagueTeam.objects.filter(mini_league_id__in=league_ids).values(
+        "mini_league_id", "current_rank"
+    )
+
+    league_ranks = defaultdict(list)
+    for s in all_standings:
+        if s["current_rank"] is not None:
+            league_ranks[s["mini_league_id"]].append(s["current_rank"])
+
     results = []
-    for mlt in team.mini_league_teams.select_related("mini_league").all():
-        total_teams = mlt.mini_league.mini_league_teams.count()
-        better_ranks = mlt.mini_league.mini_league_teams.filter(
-            current_rank__lte=mlt.current_rank
-        ).count()
+    for mlt in mlts:
+        ranks = league_ranks.get(mlt.mini_league_id, [])
+        total_teams = len(ranks)
+        better_ranks = (
+            sum(1 for r in ranks if r <= mlt.current_rank)
+            if mlt.current_rank is not None
+            else 0
+        )
 
         results.append(
             {
@@ -98,15 +121,19 @@ def calculate_mini_league_performance(team):
             }
         )
 
-    return sorted(results, key=lambda r: r["current_rank"])
+    return sorted(
+        results,
+        key=lambda r: r["current_rank"] if r["current_rank"] is not None else 999999,
+    )
 
 
 def get_recent_player_news(transfers):
-    if not transfers.exists():
+    transfer_list = list(transfers[:5])
+    if not transfer_list:
         return []
 
     recent_player_ids = set()
-    for t in transfers[:5]:
+    for t in transfer_list:
         if t.player_in_id:
             recent_player_ids.add(t.player_in_id)
         if t.player_out_id:
@@ -125,7 +152,6 @@ def get_recent_player_news(transfers):
 
 @login_required
 def get_squad_history(request, team_id, gameweek):
-    print(team_id, gameweek)
     team = get_object_or_404(Team, id=team_id)
     squad = team.squad_histories.filter(gameweek=gameweek).order_by("position")
 
@@ -151,13 +177,11 @@ def get_squad_history(request, team_id, gameweek):
     return JsonResponse(data, safe=False)
 
 
-analysis_service = TeamAnalysisService()
-
-
 @require_http_methods(["GET"])
 @login_required
 def team_analysis(request, team_id):
     team = get_object_or_404(Team, id=team_id)
+    analysis_service = TeamAnalysisService()
     result = analysis_service.analyze_team(int(team.fpl_team_id), include_team_obj=team)
 
     return render(request, "partials/analysis.html", {"analysis": result, "team": team})
@@ -184,6 +208,7 @@ def team_quick_compare(request, team_id):
             {"error": "Cannot compare your team with itself."},
         )
 
+    analysis_service = TeamAnalysisService()
     result = analysis_service.quick_compare(
         int(my_team.fpl_team_id),
         int(rival_team.fpl_team_id),
@@ -216,6 +241,7 @@ def team_compare(request, team_id):
         messages.error(request, "Cannot compare your team with itself.")
         return redirect("rivals:teams.show", team_id=team_id)
 
+    analysis_service = TeamAnalysisService()
     result = analysis_service.compare_teams(
         int(my_team.fpl_team_id),
         int(rival_team.fpl_team_id),

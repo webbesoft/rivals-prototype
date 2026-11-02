@@ -108,25 +108,56 @@ class LandingDataService:
         return trends
 
     def get_fixture_difficulty_highlights(self) -> Dict[str, List[Dict]]:
-        """Get best and worst upcoming fixtures."""
+        """Get best and worst upcoming fixtures dynamically from live FPL fixture data."""
         cache_key = "landing_fixture_highlights"
         cached = cache.get(cache_key)
         if cached:
             return cached
 
-        # For now, return placeholder data
-        # TODO: Implement fixture difficulty calculation
+        fixtures = self.fpl_api.fetch_fixtures_data()
+        teams_map = self._get_teams_map()
+
+        if not fixtures or not teams_map:
+            return {"best_fixtures": [], "worst_fixtures": []}
+
+        # Filter for upcoming unfinished fixtures that have an event scheduled
+        upcoming = [f for f in fixtures if not f.get("finished") and f.get("event")]
+        if not upcoming:
+            return {"best_fixtures": [], "worst_fixtures": []}
+
+        # Find the next upcoming gameweek event id
+        next_event = min(f["event"] for f in upcoming)
+        next_gw_fixtures = [f for f in upcoming if f["event"] == next_event]
+
+        team_matchups = []
+        for fix in next_gw_fixtures:
+            home_id = fix.get("team_h")
+            away_id = fix.get("team_a")
+            h_diff = fix.get("team_h_difficulty", 3)
+            a_diff = fix.get("team_a_difficulty", 3)
+
+            home_team_name = self._get_team_name(home_id)
+            away_team_short = self._get_team_short_name(away_id)
+            away_team_name = self._get_team_name(away_id)
+            home_team_short = self._get_team_short_name(home_id)
+
+            team_matchups.append({
+                "team": home_team_name,
+                "opponent": away_team_short,
+                "difficulty": h_diff,
+            })
+            team_matchups.append({
+                "team": away_team_name,
+                "opponent": home_team_short,
+                "difficulty": a_diff,
+            })
+
+        best = sorted(team_matchups, key=lambda x: (x["difficulty"], x["team"]))[:3]
+        worst = sorted(team_matchups, key=lambda x: (-x["difficulty"], x["team"]))[:3]
+
         highlights = {
-            "best_fixtures": [
-                {"team": "Arsenal", "opponent": "SHU", "difficulty": 2},
-                {"team": "Man City", "opponent": "BUR", "difficulty": 2},
-                {"team": "Liverpool", "opponent": "BHA", "difficulty": 2},
-            ],
-            "worst_fixtures": [
-                {"team": "Sheffield Utd", "opponent": "ARS", "difficulty": 5},
-                {"team": "Burnley", "opponent": "MCI", "difficulty": 5},
-                {"team": "Brighton", "opponent": "LIV", "difficulty": 5},
-            ],
+            "best_fixtures": best,
+            "worst_fixtures": worst,
         }
 
         cache.set(cache_key, highlights, self.cache_timeout)
@@ -164,29 +195,35 @@ class LandingDataService:
         cache.set(cache_key, demo_data, self.cache_timeout)
         return demo_data
 
+    def _get_teams_map(self) -> Dict[int, Dict]:
+        """Cache and return mapping of team ID to team dictionary."""
+        cache_key = "landing_teams_map"
+        cached = cache.get(cache_key)
+        if cached:
+            return cached
+
+        teams = self.fpl_api.fetch_teams()
+        if not teams:
+            return {}
+
+        teams_map = {t["id"]: t for t in teams}
+        cache.set(cache_key, teams_map, 3600)  # 1 hour TTL
+        return teams_map
+
     def _get_team_short_name(self, team_id: Optional[int]) -> str:
-        """Get team short name from ID."""
-        # Mapping of team IDs to short names
-        team_names = {
-            1: "ARS",
-            2: "AVL",
-            3: "BOU",
-            4: "BRE",
-            5: "BHA",
-            6: "CHE",
-            7: "CRY",
-            8: "EVE",
-            9: "FUL",
-            10: "LIV",
-            11: "MCI",
-            12: "MUN",
-            13: "NEW",
-            14: "NFO",
-            15: "SOU",
-            16: "TOT",
-            17: "WHU",
-            18: "WOL",
-            19: "BUR",
-            20: "SHU",
-        }
-        return team_names.get(team_id, "UNK")
+        """Get team short name from ID dynamically from bootstrap data."""
+        if not team_id:
+            return "UNK"
+        teams_map = self._get_teams_map()
+        if team_id in teams_map:
+            return teams_map[team_id].get("short_name", "UNK")
+        return "UNK"
+
+    def _get_team_name(self, team_id: Optional[int]) -> str:
+        """Get team display name from ID dynamically from bootstrap data."""
+        if not team_id:
+            return "Unknown"
+        teams_map = self._get_teams_map()
+        if team_id in teams_map:
+            return teams_map[team_id].get("name", "Unknown")
+        return "Unknown"

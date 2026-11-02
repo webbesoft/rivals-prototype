@@ -47,31 +47,43 @@ class MiniLeagueSyncService:
         """
         Update or create teams in the league and track standings.
         """
+        current_season = self.fpl_api_service.fetch_current_season()
+        existing_mlts = {
+            mlt.team_id: mlt
+            for mlt in self.mini_league.mini_league_teams.all()
+        }
+
         for standing in standings:
             team = self._find_or_create_team(standing)
 
             if not team:
                 continue
 
-            mini_league_team = self.mini_league.mini_league_teams.filter(
-                team=team
-            ).first()
+            mini_league_team = existing_mlts.get(team.id)
 
             if mini_league_team:
                 previous_rank = mini_league_team.current_rank
                 mini_league_team.current_rank = standing["rank"]
                 mini_league_team.previous_rank = previous_rank
                 mini_league_team.total_points = standing["total"]
-                mini_league_team.save(
-                    update_fields=["current_rank", "previous_rank", "total_points"]
-                )
+                if current_season and not mini_league_team.season:
+                    mini_league_team.season = current_season
+                    mini_league_team.save(
+                        update_fields=["current_rank", "previous_rank", "total_points", "season"]
+                    )
+                else:
+                    mini_league_team.save(
+                        update_fields=["current_rank", "previous_rank", "total_points"]
+                    )
             else:
-                self.mini_league.mini_league_teams.create(
+                new_mlt = self.mini_league.mini_league_teams.create(
                     team=team,
+                    season=current_season,
                     current_rank=standing["rank"],
                     previous_rank=None,
                     total_points=standing["total"],
                 )
+                existing_mlts[team.id] = new_mlt
 
     def _find_or_create_team(self, standing: dict) -> Team | None:
         """

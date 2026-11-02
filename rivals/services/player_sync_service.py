@@ -1,17 +1,18 @@
 import logging
 from decimal import Decimal
 
-import requests
 from django.db import transaction
 from django.utils.dateparse import parse_datetime
 
 from rivals.models import Player
+from rivals.services.fpl_api_service import FplApiService
 
 logger = logging.getLogger(__name__)
 
 
 class PlayerSyncService:
-    def __init__(self):
+    def __init__(self, api: FplApiService | None = None):
+        self.api = api or FplApiService()
         self.new_count = 0
         self.updated_count = 0
         self.errors = []
@@ -40,15 +41,8 @@ class PlayerSyncService:
             return {"success": False, "error": str(e)}
 
     def _fetch_players_data(self) -> list | None:
-        try:
-            response = requests.get(
-                "https://fantasy.premierleague.com/api/elements/", timeout=10
-            )
-            response.raise_for_status()
-            return response.json()
-        except requests.RequestException as e:
-            logger.error(f"Failed to fetch players: {e}")
-            return None
+        # Fetch canonical elements list from bootstrap-static via shared FplApiService
+        return self.api.fetch_elements()
 
     def _sync_player(self, player_data: dict) -> None:
         try:

@@ -24,14 +24,21 @@ def dashboard(request):
     new_season_detected = False
 
     if request.user.team_id:
-        user_gameweek_data = request.user.team.gameweek_data.filter(
-            rank__isnull=False
-        ).order_by("gameweek")
+        gw_qs = request.user.team.gameweek_data.filter(rank__isnull=False)
+        if user_team and user_team.current_season:
+            gw_qs = gw_qs.filter(season=user_team.current_season)
+        user_gameweek_data = gw_qs.order_by("gameweek")
 
         # Check if FPL API reports a newer season than the user team's active season
         from rivals.services.fpl_api_service import FplApiService
+
         live_season = FplApiService().fetch_current_season()
-        if live_season and user_team.current_season and live_season != user_team.current_season:
+        if (
+            live_season
+            and user_team
+            and user_team.current_season
+            and live_season != user_team.current_season
+        ):
             new_season_detected = True
 
     return render(
@@ -55,8 +62,8 @@ def fetch_recent_activity(user):
     return {
         "transfers": Transfer.objects.filter(team_id__in=team_ids)
         .select_related("team", "player_in", "player_out")
-        .order_by("-created_at")[:10],
+        .order_by("-transfer_time", "-id")[:10],
         "gameweek_data": GameweekData.objects.filter(team_id__in=team_ids)
         .select_related("team")
-        .order_by("-created_at")[:10],
+        .order_by("-gameweek", "-id")[:10],
     }

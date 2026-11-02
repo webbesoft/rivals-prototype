@@ -51,20 +51,19 @@ class InitUserService:
         return team
 
     def _process_classic_leagues(self, classic_leagues: list[dict]) -> None:
-        for _ in range(10):
-            for league_data in classic_leagues:
-                if self._is_system_league(league_data):
-                    continue
+        for league_data in classic_leagues:
+            if self._is_system_league(league_data):
+                continue
 
-                if not league_data.get("rank_count") or league_data["rank_count"] <= 1:
-                    continue
+            if not league_data.get("rank_count") or league_data["rank_count"] <= 1:
+                continue
 
-                mini_league = self._create_or_update_mini_league(league_data)
-                if not mini_league:
-                    continue
+            mini_league = self._create_or_update_mini_league(league_data)
+            if not mini_league:
+                continue
 
-                self._create_user_league_association(mini_league)
-                self._sync_league_data(mini_league)
+            self._create_user_league_association(mini_league)
+            self._sync_league_data(mini_league)
 
     def _is_system_league(self, league_data: dict) -> bool:
         system_short_names = ["overall", "region-", "event-", "brd-", "sc", "top-"]

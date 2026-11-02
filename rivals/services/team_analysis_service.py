@@ -29,13 +29,13 @@ class TeamAnalysisService:
         self.current_gw: int = 1
 
     # ---------- Data loading / caching ----------
-    def refresh_data(self) -> bool:
+    def refresh_data(self, force_refresh: bool = False) -> bool:
         """
         Fetch bootstrap-static and fixtures. Returns True if success.
-        Call this from a management command or a periodic task if desired.
+        Uses cached data via FplApiService by default unless force_refresh=True.
         """
         try:
-            bootstrap = self.api.make_request(f"{self.api.BASE_URL}/bootstrap-static/")
+            bootstrap = self.api.fetch_bootstrap_static(force_refresh=force_refresh)
             if not bootstrap:
                 logger.error("FPL bootstrap-static fetch returned None")
                 return False
@@ -47,7 +47,7 @@ class TeamAnalysisService:
             current_event = next((e for e in self.events if e.get("is_current")), None)
             self.current_gw = current_event["id"] if current_event else 1
 
-            fixtures = self.api.fetch_fixtures_data()
+            fixtures = self.api.fetch_fixtures_data(force_refresh=force_refresh)
             self.fixtures = fixtures or []
             logger.info(
                 "FPL data refreshed: %d players, %d fixtures",

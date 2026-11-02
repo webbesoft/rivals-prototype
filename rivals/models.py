@@ -210,9 +210,11 @@ class GameweekData(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        models.UniqueConstraint(
-            fields=["team", "gameweek", "season"], name="unique_team_gameweek_season"
-        )
+        constraints = [
+            models.UniqueConstraint(
+                fields=["team", "gameweek", "season"], name="unique_team_gameweek_season"
+            )
+        ]
         indexes = [
             models.Index(fields=["team"]),
             models.Index(fields=["gameweek"]),
@@ -238,9 +240,11 @@ class MiniLeagueTeam(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        models.UniqueConstraint(
-            fields=["mini_league", "team"], name="unique_mini_league_team"
-        )
+        constraints = [
+            models.UniqueConstraint(
+                fields=["mini_league", "team"], name="unique_mini_league_team"
+            )
+        ]
         indexes = [
             models.Index(fields=["mini_league"]),
             models.Index(fields=["team"]),
@@ -388,9 +392,11 @@ class UserMiniLeague(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        models.UniqueConstraint(
-            fields=["user", "mini_league"], name="unique_user_mini_league"
-        )
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "mini_league"], name="unique_user_mini_league"
+            )
+        ]
         indexes = [
             models.Index(fields=["user"]),
             models.Index(fields=["mini_league"]),
@@ -416,7 +422,9 @@ class TrackedTeam(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        models.UniqueConstraint(fields=["user", "team"], name="unique_user_team")
+        constraints = [
+            models.UniqueConstraint(fields=["user", "team"], name="unique_user_team")
+        ]
         indexes = [
             models.Index(fields=["user"]),
             models.Index(fields=["team"]),
@@ -482,10 +490,12 @@ class SquadHistory(models.Model):
         return self.position > 11
 
     class Meta:
-        models.UniqueConstraint(
-            fields=["team", "gameweek", "player_fpl_id"],
-            name="unique_team_gameweek_player_fpl_id",
-        )
+        constraints = [
+            models.UniqueConstraint(
+                fields=["team", "gameweek", "player_fpl_id"],
+                name="unique_team_gameweek_player_fpl_id",
+            )
+        ]
         indexes = [
             models.Index(fields=["team", "gameweek"]),
             models.Index(fields=["player_fpl_id"]),

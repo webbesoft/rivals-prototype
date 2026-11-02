@@ -60,3 +60,115 @@ class SeasonTransitionTest(TestCase):
         )
         self.assertEqual(str(history), "FC Test — 2023/24")
         self.assertEqual(self.team.season_histories.count(), 1)
+
+
+class DataEngineeringAuditTests(TestCase):
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+        self.team = Team.objects.create(
+            fpl_team_id="99999",
+            team_name="Audit FC",
+            manager_name="Audit Manager",
+            current_season="2025/26",
+        )
+
+    @patch("rivals.services.fpl_api_service.requests.get")
+    def test_fpl_api_service_caches_bootstrap_static(self, mock_get):
+        from rivals.services.fpl_api_service import FplApiService
+
+        mock_get.return_value.json.return_value = {
+            "events": [{"id": 1, "is_current": True, "deadline_time": "2025-08-15T17:30:00Z"}],
+            "elements": [{"id": 10, "web_name": "Haaland", "team": 11}],
+            "teams": [{"id": 11, "name": "Man City", "short_name": "MCI"}],
+        }
+        mock_get.return_value.status_code = 200
+
+        api = FplApiService()
+        data1 = api.fetch_bootstrap_static()
+        data2 = api.fetch_bootstrap_static()
+
+        self.assertEqual(mock_get.call_count, 1)
+        self.assertEqual(data1, data2)
+        self.assertEqual(api.fetch_current_gameweek(), 1)
+        self.assertEqual(api.fetch_current_season(), "2025/26")
+        self.assertEqual(len(api.fetch_elements()), 1)
+
+    def test_squad_history_unique_constraint(self):
+        from django.db import IntegrityError
+        from rivals.models import SquadHistory
+
+        SquadHistory.objects.create(
+            team=self.team,
+            gameweek=1,
+            player_fpl_id=101,
+            position=1,
+            multiplier=1,
+            player_cost=50,
+            player_name="Player A",
+            element_type=1,
+        )
+
+        with self.assertRaises(IntegrityError):
+            SquadHistory.objects.create(
+                team=self.team,
+                gameweek=1,
+                player_fpl_id=101,
+                position=1,
+                multiplier=1,
+                player_cost=50,
+                player_name="Duplicate Player A",
+                element_type=1,
+            )
+
+    @patch("rivals.services.fpl_api_service.FplApiService.fetch_fixtures_data")
+    @patch("rivals.services.fpl_api_service.FplApiService.fetch_teams")
+    def test_landing_data_service_dynamic_fixtures(self, mock_teams, mock_fixtures):
+        from rivals.services.landing_data_service import LandingDataService
+
+        mock_teams.return_value = [
+            {"id": 1, "name": "Arsenal", "short_name": "ARS"},
+            {"id": 2, "name": "Chelsea", "short_name": "CHE"},
+        ]
+        mock_fixtures.return_value = [
+            {
+                "event": 2,
+                "finished": False,
+                "team_h": 1,
+                "team_a": 2,
+                "team_h_difficulty": 2,
+                "team_a_difficulty": 4,
+            }
+        ]
+
+        landing = LandingDataService()
+        highlights = landing.get_fixture_difficulty_highlights()
+
+        self.assertEqual(len(highlights["best_fixtures"]), 2)
+        self.assertEqual(highlights["best_fixtures"][0]["team"], "Arsenal")
+        self.assertEqual(highlights["best_fixtures"][0]["difficulty"], 2)
+        self.assertEqual(highlights["worst_fixtures"][0]["team"], "Chelsea")
+        self.assertEqual(highlights["worst_fixtures"][0]["difficulty"], 4)
+
+    @patch("rivals.services.fpl_api_service.FplApiService.fetch_mini_league")
+    @patch("rivals.services.fpl_api_service.FplApiService.fetch_current_season")
+    def test_mini_league_sync_sets_season(self, mock_season, mock_league):
+        from rivals.models import MiniLeague, MiniLeagueTeam
+        from rivals.services.mini_league_sync_service import MiniLeagueSyncService
+
+        mock_season.return_value = "2025/26"
+        mock_league.return_value = {
+            "league_info": {"name": "Test League"},
+            "standings": [
+                {"entry": 99999, "entry_name": "Audit FC", "player_name": "Audit Mgr", "rank": 1, "total": 120}
+            ],
+        }
+
+        league = MiniLeague.objects.create(fpl_league_id="111", name="Old Name")
+        sync_service = MiniLeagueSyncService(league)
+        success = sync_service.sync()
+
+        self.assertTrue(success)
+        mlt = MiniLeagueTeam.objects.get(mini_league=league, team=self.team)
+        self.assertEqual(mlt.season, "2025/26")
+        self.assertEqual(mlt.current_rank, 1)

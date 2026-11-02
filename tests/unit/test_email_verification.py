@@ -92,8 +92,9 @@ def test_login_blocked_before_verification(client):
     res = client.post(
         reverse("accounts:login"),
         {"username": "blocked@example.com", "password": "blockme123"},
+        follow=True,
     )
 
-    # Should render login page again with an error message
+    # Should redirect to verification pending page with message
     assert res.status_code == 200
     assert b"not verified" in res.content.lower()
