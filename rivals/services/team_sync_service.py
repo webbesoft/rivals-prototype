@@ -80,16 +80,38 @@ class TeamSyncService:
         )
         return True
 
-    def _backfill_season(self, season: str) -> None:
-        """Stamp all existing season-less records with the given season label."""
+    def _backfill_season(self, live_season: str) -> None:
+        """
+        Stamp existing season-less records with their correct season label.
+
+        When a team has no current_season yet (first sync), we try to derive the
+        season from the most recent SeasonHistory entry, which reflects the last
+        completed FPL season stored via FPL history.past.  Falling back to
+        last_synced_at lets us label records that pre-date the season label
+        migration with a best-effort estimate without incorrectly attributing
+        old data to the brand-new live season.
+
+        The live_season is used only when no historical signal is available.
+        """
+        # Prefer the most recently completed FPL season from stored history
+        latest_history = self.team.season_histories.order_by("-season_name").first()
+        if latest_history:
+            backfill_label = latest_history.season_name
+        elif self.team.last_synced_at:
+            # Records exist from a previous sync; assume they belong to live_season
+            # (best effort — the team was new when last seen)
+            backfill_label = live_season
+        else:
+            backfill_label = live_season
+
         GameweekData.objects.filter(team=self.team, season__isnull=True).update(
-            season=season
+            season=backfill_label
         )
         Transfer.objects.filter(team=self.team, season__isnull=True).update(
-            season=season
+            season=backfill_label
         )
         SquadHistory.objects.filter(team=self.team, season__isnull=True).update(
-            season=season
+            season=backfill_label
         )
 
     # ------------------------------------------------------------------

@@ -38,6 +38,10 @@ def mini_league_show(request, mini_league_id):
         projected_by_team_id.get(request.user.team.id) if request.user.team else None
     )
 
+    tracked_team_ids = set(
+        request.user.tracked_teams.values_list("team_id", flat=True)
+    )
+
     # Attach projected metrics to standings objects for convenient template access
     for standing in standings:
         proj = projected_by_team_id.get(standing.team_id)
@@ -61,6 +65,7 @@ def mini_league_show(request, mini_league_id):
             "user_standing": user_standing,
             "league_projection": league_projection,
             "user_league_projection": user_league_projection,
+            "tracked_team_ids": tracked_team_ids,
         },
     )
 

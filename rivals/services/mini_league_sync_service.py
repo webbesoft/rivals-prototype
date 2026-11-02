@@ -62,19 +62,28 @@ class MiniLeagueSyncService:
             mini_league_team = existing_mlts.get(team.id)
 
             if mini_league_team:
+                season_changed = (
+                    current_season is not None
+                    and mini_league_team.season != current_season
+                )
                 previous_rank = mini_league_team.current_rank
                 mini_league_team.current_rank = standing["rank"]
-                mini_league_team.previous_rank = previous_rank
                 mini_league_team.total_points = standing["total"]
-                if current_season and not mini_league_team.season:
+                if season_changed:
+                    # New season: keep the current rank but discard the stale
+                    # previous_rank from the old season so it is not displayed.
+                    mini_league_team.previous_rank = None
                     mini_league_team.season = current_season
                     mini_league_team.save(
                         update_fields=["current_rank", "previous_rank", "total_points", "season"]
                     )
                 else:
-                    mini_league_team.save(
-                        update_fields=["current_rank", "previous_rank", "total_points"]
-                    )
+                    mini_league_team.previous_rank = previous_rank
+                    update_fields = ["current_rank", "previous_rank", "total_points"]
+                    if current_season and not mini_league_team.season:
+                        mini_league_team.season = current_season
+                        update_fields.append("season")
+                    mini_league_team.save(update_fields=update_fields)
             else:
                 new_mlt = self.mini_league.mini_league_teams.create(
                     team=team,

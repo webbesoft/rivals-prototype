@@ -95,12 +95,13 @@ class DataEngineeringAuditTests(TestCase):
         self.assertEqual(len(api.fetch_elements()), 1)
 
     def test_squad_history_unique_constraint(self):
-        from django.db import IntegrityError
+        from django.db import IntegrityError, transaction
         from rivals.models import SquadHistory
 
         SquadHistory.objects.create(
             team=self.team,
             gameweek=1,
+            season="2025/26",
             player_fpl_id=101,
             position=1,
             multiplier=1,
@@ -109,17 +110,33 @@ class DataEngineeringAuditTests(TestCase):
             element_type=1,
         )
 
+        # Same team/gameweek/player/season → must raise
         with self.assertRaises(IntegrityError):
-            SquadHistory.objects.create(
-                team=self.team,
-                gameweek=1,
-                player_fpl_id=101,
-                position=1,
-                multiplier=1,
-                player_cost=50,
-                player_name="Duplicate Player A",
-                element_type=1,
-            )
+            with transaction.atomic():
+                SquadHistory.objects.create(
+                    team=self.team,
+                    gameweek=1,
+                    season="2025/26",
+                    player_fpl_id=101,
+                    position=1,
+                    multiplier=1,
+                    player_cost=50,
+                    player_name="Duplicate Player A",
+                    element_type=1,
+                )
+
+        # Same team/gameweek/player but different season → must succeed
+        SquadHistory.objects.create(
+            team=self.team,
+            gameweek=1,
+            season="2024/25",
+            player_fpl_id=101,
+            position=1,
+            multiplier=1,
+            player_cost=48,
+            player_name="Player A",
+            element_type=1,
+        )
 
     @patch("rivals.services.fpl_api_service.FplApiService.fetch_fixtures_data")
     @patch("rivals.services.fpl_api_service.FplApiService.fetch_teams")
@@ -274,3 +291,96 @@ class ProjectionServiceTests(TestCase):
         self.assertIsNotNone(summary)
         self.assertEqual(summary["projected_rank"], 2)
         self.assertGreater(summary["gap_to_leader"], 0)
+
+
+class DashboardViewTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from rivals.models import MiniLeague, MiniLeagueTeam, TrackedTeam, Transfer, UserMiniLeague
+
+        User = get_user_model()
+        self.user = User.objects.create_user(
+            username="dashmgr@example.com",
+            email="dashmgr@example.com",
+            password="password123",
+            first_name="Dash",
+            last_name="Manager",
+            is_verified=True,
+        )
+        self.team = Team.objects.create(
+            fpl_team_id="10101",
+            team_name="Command FC",
+            manager_name="Dash Manager",
+            current_total_points=850,
+            current_overall_rank=25000,
+            current_season="2025/26",
+        )
+        self.user.team = self.team
+        self.user.save()
+
+        # Mini league
+        self.league = MiniLeague.objects.create(fpl_league_id="500", name="Apex League")
+        UserMiniLeague.objects.create(user=self.user, mini_league=self.league)
+        MiniLeagueTeam.objects.create(
+            mini_league=self.league,
+            team=self.team,
+            current_rank=1,
+            total_points=850,
+            season="2025/26",
+        )
+
+        # Tracked rival
+        self.rival_team = Team.objects.create(
+            fpl_team_id="20202",
+            team_name="Rival XI",
+            manager_name="Rival Boss",
+            current_total_points=830,
+            current_overall_rank=31000,
+            current_season="2025/26",
+        )
+        TrackedTeam.objects.create(user=self.user, team=self.rival_team)
+
+        # Transfer activity by rival
+        Transfer.objects.create(
+            team=self.rival_team,
+            gameweek=15,
+            season="2025/26",
+            player_in_name="Cole Palmer",
+            player_out_name="Bukayo Saka",
+        )
+
+    def test_dashboard_renders_successfully(self):
+        from django.urls import reverse
+
+        self.client.login(username="dashmgr@example.com", password="password123")
+        response = self.client.get(reverse("rivals:dashboard"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Command FC")
+        self.assertContains(response, "Apex League")
+        self.assertContains(response, "Rival XI")
+        self.assertContains(response, "Cole Palmer")
+        self.assertContains(response, "Bukayo Saka")
+
+    def test_team_show_renders_successfully(self):
+        from django.urls import reverse
+
+        self.client.login(username="dashmgr@example.com", password="password123")
+        response = self.client.get(reverse("rivals:teams.show", kwargs={"team_id": self.team.id}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Command FC")
+        self.assertContains(response, "FPL Squad Dossier")
+        self.assertContains(response, "Mini-League Standings")
+        self.assertContains(response, "Apex League")
+
+    def test_mini_league_show_renders_successfully(self):
+        from django.urls import reverse
+
+        self.client.login(username="dashmgr@example.com", password="password123")
+        response = self.client.get(reverse("rivals:minileagues.show", kwargs={"mini_league_id": self.league.id}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Apex League")
+        self.assertContains(response, "Command FC")
+        self.assertContains(response, "League Standings & Projections")

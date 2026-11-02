@@ -1,177 +1,289 @@
 <c-layouts.base title="{{ mini_league.name }} - Mini League">
   {% load math_filters %}
   {% load humanize %}
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <div class="flex flex-col md:flex-row md:items-end md:justify-between mb-8 pb-8 border-b border-gray-100">
-      <div>
-        <div class="flex items-center gap-2 mb-2">
-            <span class="w-2 h-8 bg-highlight skew-x-12 rounded-sm"></span>
-            <h1 class="text-3xl md:text-5xl font-black text-text-main uppercase tracking-tighter italic">{{ mini_league.name }}</h1>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+
+    <!-- Flash messages -->
+    {% if messages %}
+    <div class="mb-6 space-y-2">
+      {% for message in messages %}
+      <div class="border-l-4 px-4 py-2.5 text-xs font-mono font-medium {% if message.tags == 'error' %}border-danger bg-danger/5 text-danger{% else %}border-success bg-success/5 text-pitch{% endif %}">
+        {{ message }}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- League Header / Masthead -->
+    <div class="bg-white border border-gray-200 shadow-sm mb-8">
+      <!-- Meta row -->
+      <div class="px-5 py-2.5 border-b border-gray-200 bg-gray-50/75 flex flex-wrap items-center justify-between text-xs font-mono gap-2">
+        <div class="flex items-center gap-2">
+          <span class="font-bold uppercase tracking-wider text-pitch">Mini-League Standings</span>
+          <span class="text-gray-300">/</span>
+          <span class="text-gray-500 font-mono">FPL ID: {{ mini_league.fpl_league_id }}</span>
+          {% if mini_league.scoring_type %}
+          <span class="text-gray-300">/</span>
+          <span class="text-gray-700 font-semibold uppercase">Classic Scoring</span>
+          {% endif %}
         </div>
-        <p class="text-muted font-bold tracking-wide text-xs uppercase ml-4">
-          Last Scan: <span class="text-text-main">{% if mini_league.last_synced_at %}{{ mini_league.last_synced_at|timesince }} ago{% else %}Never Scanned{% endif %}</span>
-        </p>
+        <div class="text-gray-500">
+          Last Synced: <span class="text-text-main font-semibold">{% if mini_league.last_synced_at %}{{ mini_league.last_synced_at|timesince }} ago{% else %}Pending{% endif %}</span>
+        </div>
       </div>
 
-      <div class="mt-6 md:mt-0 flex gap-3">
-        <form action="{% url 'rivals:minileagues.sync' mini_league.id %}" method="POST">
-          {% csrf_token %}
-          <button type="submit" class="bg-surface border-2 border-accent text-accent hover:bg-accent hover:text-pitch px-6 py-2 rounded-xl font-bold uppercase tracking-wide text-sm transition-all shadow-lg hover:shadow-accent/20 cursor-pointer flex items-center gap-2">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-            Sync League
-          </button>
-        </form>
-        <a href="{% url 'rivals:dashboard' %}" class="bg-surface text-muted hover:text-text-main px-6 py-2 rounded-xl font-bold uppercase tracking-wide text-sm transition-colors border border-gray-200 hover:border-gray-300 flex items-center">
-          Back to Base
-        </a>
+      <!-- Identity & Primary Actions -->
+      <div class="p-5 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div>
+          <h1 class="text-2xl sm:text-3xl font-black text-text-main uppercase tracking-tight font-sans">
+            {{ mini_league.name }}
+          </h1>
+          <p class="text-xs sm:text-sm text-gray-500 font-mono mt-1">
+            Competition: <span class="text-text-main font-bold">{{ standings|length }} Teams</span>
+            {% if mini_league.start_event %}
+            <span class="mx-2 text-gray-300">·</span>
+            Started GW{{ mini_league.start_event }}
+            {% endif %}
+          </p>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex items-center gap-2 shrink-0">
+          <form action="{% url 'rivals:minileagues.sync' mini_league.id %}" method="POST" class="inline-block">
+            {% csrf_token %}
+            <button
+              type="submit"
+              class="px-4 py-2 bg-pitch text-white font-mono text-xs font-bold uppercase tracking-wide hover:bg-pitch/90 transition-colors cursor-pointer flex items-center gap-1.5"
+            >
+              Sync Standings
+            </button>
+          </form>
+          <a
+            href="{% url 'rivals:dashboard' %}"
+            class="px-3.5 py-2 text-text-main border border-gray-300 font-mono text-xs font-bold uppercase tracking-wide hover:border-gray-500 transition-colors"
+          >
+            Dashboard →
+          </a>
+        </div>
       </div>
     </div>
 
+    <!-- User League Projection Strip -->
     {% if user_league_projection %}
-    <div class="mb-8 p-6 bg-pitch rounded-2xl text-white border border-white/10 shadow-lg relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-      <div class="absolute top-0 right-0 p-24 bg-accent/10 blur-2xl rounded-full pointer-events-none"></div>
-      <div class="relative z-10">
-        <div class="flex items-center gap-2 mb-1">
-          <span class="w-2 h-2 rounded-full bg-accent animate-pulse"></span>
-          <p class="text-xs font-bold uppercase tracking-widest text-accent">Your Mini-League Projection</p>
-        </div>
-        <p class="text-xl sm:text-2xl font-black text-white">
-          Projected to finish <span class="text-accent italic font-black">#{{ user_league_projection.projected_rank }}</span> 
-          {% if user_league_projection.rank_change > 0 %}
-          <span class="text-success text-xs font-bold bg-success/20 px-2 py-0.5 rounded ml-1">↑ {{ user_league_projection.rank_change }} spots</span>
-          {% elif user_league_projection.rank_change < 0 %}
-          <span class="text-danger text-xs font-bold bg-danger/20 px-2 py-0.5 rounded ml-1">↓ {{ user_league_projection.rank_change|abs }} spots</span>
-          {% endif %}
-        </p>
-        <p class="text-xs text-gray-300 mt-1">
-          Projected Total: <span class="font-bold text-white">{{ user_league_projection.projected_points|intcomma }} pts</span>
+    <div class="mb-8 bg-white border border-gray-200 shadow-sm">
+      <div class="px-5 py-2.5 border-b border-gray-200 bg-gray-50/75 flex flex-wrap items-center justify-between text-xs font-mono gap-2">
+        <span class="font-bold uppercase tracking-wider text-text-main">Your Projected League Campaign</span>
+        <span class="text-gray-500">
           {% if user_league_projection.gap_to_leader > 0 %}
-          • <span class="text-muted">{{ user_league_projection.gap_to_leader }} pts behind projected winner</span>
+            <span class="text-danger font-semibold font-mono">-{{ user_league_projection.gap_to_leader }} pts</span> behind projected winner
           {% else %}
-          • <span class="text-accent font-bold">Projected to WIN this league! 🏆</span>
+            <span class="text-pitch font-bold font-mono">Projected Champion Pace</span>
           {% endif %}
-        </p>
+        </span>
       </div>
 
-      <div class="flex items-center gap-3 shrink-0 relative z-10">
-        <div class="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-center">
-          <p class="text-[10px] text-muted uppercase font-bold tracking-wider">Current</p>
-          <p class="text-xl font-black text-white">#{{ user_league_projection.current_rank }}</p>
+      <div class="grid grid-cols-2 md:grid-cols-5 divide-y md:divide-y-0 md:divide-x divide-gray-200">
+        <!-- 1. Current Rank -->
+        <div class="p-4 sm:p-5">
+          <p class="text-[11px] font-mono uppercase tracking-wider text-gray-500 mb-1">Current Standing</p>
+          <p class="text-2xl font-black font-mono tabular-nums text-text-main">
+            #{{ user_league_projection.current_rank }}
+          </p>
+          <p class="text-xs text-gray-500 font-mono mt-0.5">
+            {% if user_standing %}{{ user_standing.total_points|intcomma }} pts{% else %}Active squad{% endif %}
+          </p>
         </div>
-        <span class="text-muted font-bold">→</span>
-        <div class="bg-accent/20 border border-accent/40 rounded-xl px-4 py-2 text-center">
-          <p class="text-[10px] text-accent uppercase font-bold tracking-wider">Projected</p>
-          <p class="text-xl font-black text-accent">#{{ user_league_projection.projected_rank }}</p>
+
+        <!-- 2. Projected Finish -->
+        <div class="p-4 sm:p-5">
+          <p class="text-[11px] font-mono uppercase tracking-wider text-gray-500 mb-1">Projected Finish</p>
+          <p class="text-2xl font-black font-mono tabular-nums text-pitch">
+            #{{ user_league_projection.projected_rank }}
+          </p>
+          <p class="text-xs text-gray-600 font-mono mt-0.5">
+            of {{ user_league_projection.total_teams }} teams
+          </p>
+        </div>
+
+        <!-- 3. Trajectory -->
+        <div class="p-4 sm:p-5">
+          <p class="text-[11px] font-mono uppercase tracking-wider text-gray-500 mb-1">Projected Trend</p>
+          <p class="text-2xl font-black font-mono tabular-nums {% if user_league_projection.rank_change > 0 %}text-success{% elif user_league_projection.rank_change < 0 %}text-danger{% else %}text-gray-500{% endif %}">
+            {% if user_league_projection.rank_change > 0 %}
+              ▲ +{{ user_league_projection.rank_change }}
+            {% elif user_league_projection.rank_change < 0 %}
+              ▼ {{ user_league_projection.rank_change|abs }}
+            {% else %}
+              — Steady
+            {% endif %}
+          </p>
+          <p class="text-xs text-gray-500 font-mono mt-0.5">
+            vs current rank
+          </p>
+        </div>
+
+        <!-- 4. Target Points -->
+        <div class="p-4 sm:p-5">
+          <p class="text-[11px] font-mono uppercase tracking-wider text-gray-500 mb-1">Target Total</p>
+          <p class="text-2xl font-black font-mono tabular-nums text-text-main">
+            {{ user_league_projection.projected_points|intcomma }} <span class="text-xs font-normal text-gray-400">pts</span>
+          </p>
+          <p class="text-xs text-gray-500 font-mono mt-0.5">
+            Forecasted points
+          </p>
+        </div>
+
+        <!-- 5. Gap to Podium / Leader -->
+        <div class="p-4 sm:p-5 col-span-2 md:col-span-1">
+          <p class="text-[11px] font-mono uppercase tracking-wider text-gray-500 mb-1">Title Gap</p>
+          <p class="text-xl sm:text-2xl font-black font-mono tabular-nums {% if user_league_projection.gap_to_leader > 0 %}text-gray-700{% else %}text-pitch{% endif %}">
+            {% if user_league_projection.gap_to_leader > 0 %}
+              -{{ user_league_projection.gap_to_leader }} <span class="text-xs font-normal text-gray-400">pts</span>
+            {% else %}
+              Leading
+            {% endif %}
+          </p>
+          <p class="text-xs text-gray-500 font-mono mt-0.5">
+            {% if user_league_projection.gap_to_podium > 0 %}-{{ user_league_projection.gap_to_podium }} pts to podium{% else %}In medal contention{% endif %}
+          </p>
         </div>
       </div>
     </div>
     {% endif %}
 
-    <div class="bg-surface rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-      <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
-        <h2 class="text-lg font-black text-text-main uppercase tracking-tight">League Standings</h2>
+    <!-- League Standings Table -->
+    <div class="bg-white border border-gray-200 shadow-sm mb-8">
+      <div class="px-5 py-3 border-b border-gray-200 flex items-center justify-between bg-gray-50/50">
+        <div class="flex items-center gap-3">
+          <h2 class="text-xs font-black uppercase tracking-wider text-text-main font-mono">League Standings & Projections</h2>
+          <span class="text-xs font-mono text-gray-500">{{ standings|length }} Teams Total</span>
+        </div>
+        <span class="text-[11px] font-mono text-gray-400">Official Standings</span>
       </div>
 
       <div class="overflow-x-auto">
-        <table class="min-w-full text-sm">
-          <thead class="bg-surface-alt text-xs uppercase font-black text-muted tracking-wider">
-            <tr>
-              <th class="px-6 py-4 text-left">Rank</th>
-              <th class="px-6 py-4 text-left">Team & Manager</th>
-              <th class="px-6 py-4 text-left">Points</th>
-              <th class="px-6 py-4 text-left">Projected Finish</th>
-              <th class="px-6 py-4 text-left">Form</th>
-              <th class="px-6 py-4 text-left">Status</th>
-              <th class="px-6 py-4 text-left"></th>
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="border-b border-gray-200 bg-gray-50/25 text-[11px] font-mono uppercase tracking-wider text-gray-500">
+              <th class="py-2.5 px-4 font-semibold text-center w-14">Rank</th>
+              <th class="py-2.5 px-4 font-semibold">Team & Manager</th>
+              <th class="py-2.5 px-3 font-semibold text-right">Points</th>
+              <th class="py-2.5 px-4 font-semibold text-right">Projected Finish</th>
+              <th class="py-2.5 px-3 font-semibold text-center">GW Form</th>
+              <th class="py-2.5 px-3 font-semibold text-center">Status</th>
+              <th class="py-2.5 px-4 font-semibold text-right">Actions</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-100">
+          <tbody class="divide-y divide-gray-100 text-xs">
             {% for standing in standings %}
-            <tr class="hover:bg-surface-alt/50 transition-colors group {% if user.team and user.team.id == standing.team.id %}bg-accent/5{% endif %}">
-              <td class="px-6 py-4">
-                 <div class="text-2xl font-black text-text-main italic">#{{ standing.current_rank }}</div>
+            <tr class="hover:bg-gray-50/75 transition-colors group {% if user.team and user.team.id == standing.team.id %}bg-pitch/5 border-l-4 border-pitch{% endif %}">
+              <!-- Rank -->
+              <td class="py-3 px-4 text-center font-mono font-black text-sm text-text-main tabular-nums">
+                #{{ standing.current_rank }}
               </td>
-              <td class="px-6 py-4">
-                <a href="{% url 'rivals:teams.show' standing.team.id %}" class="font-bold text-lg text-text-main hover:text-accent transition-colors block">
+
+              <!-- Team & Manager -->
+              <td class="py-3 px-4">
+                <a href="{% url 'rivals:teams.show' standing.team.id %}" class="font-bold text-text-main group-hover:text-pitch transition-colors block">
                   {{ standing.team.team_name }}
                 </a>
-                <span class="text-xs text-muted font-bold uppercase">{{ standing.team.manager_name }}</span>
+                <span class="text-[11px] text-gray-500 font-mono block">
+                  {{ standing.team.manager_name }}
+                </span>
               </td>
-              <td class="px-6 py-4">
-                <div class="font-black text-xl text-text-main">{{ standing.total_points|floatformat:0 }}</div>
+
+              <!-- Total Points -->
+              <td class="py-3 px-3 text-right font-mono tabular-nums font-bold text-sm text-text-main">
+                {{ standing.total_points|floatformat:0|intcomma }} <span class="text-[10px] text-gray-400 font-normal">pts</span>
               </td>
-              <td class="px-6 py-4">
-                <div class="flex items-baseline gap-2">
-                  <span class="font-black text-lg text-accent tabular-nums">#{{ standing.projected_rank }}</span>
-                  <span class="text-xs font-mono text-muted tabular-nums">({{ standing.projected_points|intcomma }} pts)</span>
+
+              <!-- Projected Finish -->
+              <td class="py-3 px-4 text-right">
+                <div class="font-mono tabular-nums font-bold text-pitch">
+                  #{{ standing.projected_rank }}
+                  <span class="text-[11px] text-gray-500 font-normal">({{ standing.projected_points|intcomma }} pts)</span>
                 </div>
-                {% if standing.projected_rank_change > 0 %}
-                  <span class="text-[11px] font-bold text-success">↑ {{ standing.projected_rank_change }} spots</span>
-                {% elif standing.projected_rank_change < 0 %}
-                  <span class="text-[11px] font-bold text-danger">↓ {{ standing.projected_rank_change|abs }} spots</span>
+                <div class="text-[10px] font-mono">
+                  {% if standing.projected_rank_change > 0 %}
+                    <span class="text-success font-semibold">▲ +{{ standing.projected_rank_change }} spots</span>
+                  {% elif standing.projected_rank_change < 0 %}
+                    <span class="text-danger font-semibold">▼ {{ standing.projected_rank_change|abs }} spots</span>
+                  {% else %}
+                    <span class="text-gray-400">— Steady</span>
+                  {% endif %}
+                </div>
+              </td>
+
+              <!-- GW Form (Rank Delta) -->
+              <td class="py-3 px-3 text-center font-mono tabular-nums text-xs">
+                {% if standing.previous_rank %}
+                  {% with change=standing.previous_rank|sub:standing.current_rank %}
+                    {% if change > 0 %}
+                      <span class="text-success font-bold">▲ +{{ change }}</span>
+                    {% elif change < 0 %}
+                      <span class="text-danger font-bold">▼ {{ change|abs }}</span>
+                    {% else %}
+                      <span class="text-gray-400">—</span>
+                    {% endif %}
+                  {% endwith %}
                 {% else %}
-                  <span class="text-[11px] text-muted">— Steady</span>
+                  <span class="text-gray-400 font-mono">—</span>
                 {% endif %}
               </td>
-              <td class="px-6 py-4">
-                {% if standing.previous_rank %} 
-                    {% with change=standing.previous_rank|sub:standing.current_rank %} 
-                        {% if change > 0 %}
-                            <span class="inline-flex items-center gap-1 text-success font-bold bg-success/10 px-2 py-1 rounded">
-                                ↑ {{ change }}
-                            </span>
-                        {% elif change < 0 %}
-                            <span class="inline-flex items-center gap-1 text-danger font-bold bg-danger/10 px-2 py-1 rounded">
-                                ↓ {{ change|abs }}
-                            </span>
-                        {% else %}
-                            <span class="text-muted font-medium">-</span>
-                        {% endif %} 
-                    {% endwith %} 
-                {% else %}
-                    <span class="text-muted font-medium">-</span>
-                {% endif %}
-              </td>
-              <td class="px-6 py-4">
-              <td class="px-6 py-4">
-                {% if standing.previous_rank %} 
-                    {% with change=standing.previous_rank|sub:standing.current_rank %} 
-                        {% if change > 0 %}
-                            <span class="inline-flex items-center gap-1 text-success font-bold bg-success/10 px-2 py-1 rounded">
-                                ↑ {{ change }}
-                            </span>
-                        {% elif change < 0 %}
-                            <span class="inline-flex items-center gap-1 text-danger font-bold bg-danger/10 px-2 py-1 rounded">
-                                ↓ {{ change|abs }}
-                            </span>
-                        {% else %}
-                            <span class="text-muted font-medium">-</span>
-                        {% endif %} 
-                    {% endwith %} 
-                {% else %}
-                    <span class="text-muted font-medium">-</span>
-                {% endif %}
-              </td>
-              <td class="px-6 py-4">
+
+              <!-- Status Tag -->
+              <td class="py-3 px-3 text-center whitespace-nowrap">
                 {% if user.team and user.team.id == standing.team.id %}
-                    <span class="px-2 py-1 bg-accent text-pitch text-xs font-black uppercase rounded tracking-wide">You</span>
-                {% elif standing.team.id in user.tracked_teams %}
-                    <span class="px-2 py-1 bg-surface-alt border border-gray-200 text-muted text-xs font-bold uppercase rounded tracking-wide">Tracking</span>
+                  <span class="px-2 py-0.5 bg-pitch text-white text-[10px] font-mono font-bold uppercase tracking-wider">
+                    You
+                  </span>
+                {% elif standing.team.id in tracked_team_ids %}
+                  <span class="px-2 py-0.5 bg-gray-100 border border-gray-300 text-gray-700 text-[10px] font-mono font-bold uppercase tracking-wider">
+                    Tracked
+                  </span>
                 {% else %}
-                    <span class="px-2 py-1 text-xs text-gray-300 font-bold uppercase">Scouted</span>
+                  <span class="text-[10px] font-mono text-gray-400 uppercase">
+                    Scouted
+                  </span>
                 {% endif %}
               </td>
-              <td class="px-6 py-4 text-right">
+
+              <!-- Actions -->
+              <td class="py-3 px-4 text-right whitespace-nowrap">
                 {% if user.team and user.team.id == standing.team.id %}
-                {% elif standing.team.id in user.tracked_teams %}
+                  <span class="text-[11px] font-mono text-gray-400">—</span>
+                {% elif standing.team.id in tracked_team_ids %}
+                  <div class="inline-flex items-center gap-2">
+                    <a href="{% url 'rivals:teams.compare' standing.team.id %}" class="text-xs font-mono font-semibold text-pitch hover:underline">
+                      Compare →
+                    </a>
+                    <form action="{% url 'rivals:teams.untrack' standing.team.id %}" method="POST" class="inline-block">
+                      {% csrf_token %}
+                      <button type="submit" class="text-gray-400 hover:text-danger font-mono text-[11px] transition-colors cursor-pointer" title="Untrack">
+                        Untrack
+                      </button>
+                    </form>
+                  </div>
                 {% else %}
-                <form action="{% url 'rivals:teams.track' standing.team.id %}" method="POST" onsubmit="this.querySelector('button').disabled=true; this.querySelector('button').innerText='...';">
-                  {% csrf_token %}
-                  <button type="submit" class="text-accent hover:text-white hover:bg-accent border border-accent/30 px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition-all shadow-sm hover:shadow-md">
-                    Track Rival
-                  </button>
-                </form>
+                  <div class="inline-flex items-center gap-2">
+                    <a href="{% url 'rivals:teams.compare' standing.team.id %}" class="text-xs font-mono font-semibold text-gray-500 hover:text-pitch hover:underline">
+                      Compare
+                    </a>
+                    <form action="{% url 'rivals:teams.track' standing.team.id %}" method="POST" class="inline-block" onsubmit="this.querySelector('button').disabled=true; this.querySelector('button').innerText='...';">
+                      {% csrf_token %}
+                      <button type="submit" class="text-pitch hover:underline font-mono text-xs font-bold uppercase transition-colors cursor-pointer">
+                        + Track
+                      </button>
+                    </form>
+                  </div>
                 {% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="7" class="py-8 px-4 text-center font-mono text-xs text-gray-400">
+                No teams registered in this mini-league yet. Run "Sync Standings" to fetch current table.
               </td>
             </tr>
             {% endfor %}
@@ -179,5 +291,6 @@
         </table>
       </div>
     </div>
+
   </div>
 </c-layouts.base>

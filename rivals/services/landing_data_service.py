@@ -120,8 +120,8 @@ class LandingDataService:
         if not fixtures or not teams_map:
             return {"best_fixtures": [], "worst_fixtures": []}
 
-        # Filter for upcoming unfinished fixtures that have an event scheduled
-        upcoming = [f for f in fixtures if not f.get("finished") and f.get("event")]
+        # Filter for upcoming fixtures: not started, not finished, and with a scheduled event
+        upcoming = [f for f in fixtures if not f.get("started") and not f.get("finished") and f.get("event")]
         if not upcoming:
             return {"best_fixtures": [], "worst_fixtures": []}
 

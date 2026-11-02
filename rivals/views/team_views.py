@@ -126,7 +126,7 @@ def calculate_mini_league_performance(team):
 
     return sorted(
         results,
-        key=lambda r: r["current_rank"] if r["current_rank"] is not None else 999999,
+        key=lambda r: (r["current_rank"] is None, r["current_rank"] or 0),
     )
 
 

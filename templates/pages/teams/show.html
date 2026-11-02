@@ -1,70 +1,64 @@
 <c-layouts.base title="{{ team.team_name }} - Team">
   {% load humanize %}
   {% load math_filters %}
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <div class="mb-8 rounded-2xl shadow-xl overflow-hidden relative group">
-      <div class="absolute inset-0 bg-pitch"></div>
-      <div class="absolute inset-0 bg-gradient-to-r from-black/50 to-transparent"></div>
-      <div class="absolute top-0 right-0 p-32 bg-accent/10 blur-3xl rounded-full"></div>
-      
-      <div class="relative p-8 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+
+    <!-- Flash messages -->
+    {% if messages %}
+    <div class="mb-6 space-y-2">
+      {% for message in messages %}
+      <div class="border-l-4 px-4 py-2.5 text-xs font-mono font-medium {% if message.tags == 'error' %}border-danger bg-danger/5 text-danger{% else %}border-success bg-success/5 text-pitch{% endif %}">
+        {{ message }}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Team Dossier Header -->
+    <div class="bg-white border border-gray-200 shadow-sm mb-8">
+      <!-- Meta row -->
+      <div class="px-5 py-2.5 border-b border-gray-200 bg-gray-50/75 flex flex-wrap items-center justify-between text-xs font-mono gap-2">
+        <div class="flex items-center gap-2">
+          <span class="font-bold uppercase tracking-wider text-pitch">FPL Squad Dossier</span>
+          <span class="text-gray-300">/</span>
+          <span class="text-gray-500 font-mono">ID: {{ team.fpl_team_id }}</span>
+          {% if team.current_season %}
+          <span class="text-gray-300">/</span>
+          <span class="text-gray-700 font-semibold uppercase">{{ team.current_season }} Season</span>
+          {% endif %}
+        </div>
+        <div class="text-gray-500">
+          Last Synced: <span class="text-text-main font-semibold">{% if team.last_synced_at %}{{ team.last_synced_at|timesince }} ago{% else %}Pending{% endif %}</span>
+        </div>
+      </div>
+
+      <!-- Identity & Tactical Actions -->
+      <div class="p-5 sm:p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div>
-          <div class="flex items-center gap-3 mb-2">
-            <span class="px-2 py-0.5 bg-accent/20 border border-accent/40 text-accent text-xs font-black uppercase tracking-wider rounded">FPL Manager</span>
-            <span class="text-xs text-muted font-mono uppercase">ID: {{ team.id }}</span>
-          </div>
-          <h1 class="text-4xl md:text-6xl font-black text-white uppercase italic tracking-tighter leading-none mb-1 shadow-black drop-shadow-lg">
+          <h1 class="text-2xl sm:text-3xl font-black text-text-main uppercase tracking-tight font-sans">
             {{ team.team_name }}
           </h1>
-          <p class="text-xl text-gray-300 font-medium font-mono uppercase tracking-widest">{{ team.manager_name }}</p>
-
-          <div class="mt-8 flex flex-wrap gap-4">
-            <div class="bg-black/40 backdrop-blur-sm rounded-xl p-4 border border-white/10 min-w-[120px]">
-              <div class="text-xs uppercase text-muted font-bold tracking-wider mb-1">Overall Rank</div>
-              <div class="text-3xl font-black text-accent shadow-black drop-shadow-md">
-                {% if team.current_overall_rank %} #{{ team.current_overall_rank|intcomma }} {% else %} - {% endif %}
-              </div>
-            </div>
-            <div class="bg-black/40 backdrop-blur-sm rounded-xl p-4 border border-white/10 min-w-[120px]">
-              <div class="text-xs uppercase text-muted font-bold tracking-wider mb-1">Total Points</div>
-              <div class="text-3xl font-black text-white">
-                {{ team.current_total_points|intcomma }}
-              </div>
-            </div>
-            {% if projection %}
-            <div class="bg-black/40 backdrop-blur-sm rounded-xl p-4 border border-accent/40 min-w-[130px]">
-              <div class="text-xs uppercase text-accent font-bold tracking-wider mb-1">Projected Total</div>
-              <div class="text-2xl font-black text-accent tabular-nums">
-                {{ projection.projected_points|intcomma }}<span class="text-xs font-normal text-muted ml-0.5">pts</span>
-              </div>
-              <div class="text-[10px] text-gray-300 font-mono mt-0.5">Proj #{{ projection.projected_overall_rank|intcomma }}</div>
-            </div>
+          <p class="text-xs sm:text-sm text-gray-500 font-mono mt-1">
+            Manager: <span class="text-text-main font-bold">{{ team.manager_name }}</span>
+            {% if team.years_active %}
+            <span class="mx-2 text-gray-300">·</span>
+            {{ team.years_active }} Season{{ team.years_active|pluralize }} Active
             {% endif %}
-            <div class="bg-black/40 backdrop-blur-sm rounded-xl p-4 border border-white/10 min-w-[120px]">
-              <div class="text-xs uppercase text-muted font-bold tracking-wider mb-1">Team Value</div>
-              <div class="text-xl font-bold text-white">
-                £{{ team.value_in_millions }}m
-              </div>
-            </div>
-            <div class="bg-black/40 backdrop-blur-sm rounded-xl p-4 border border-white/10 min-w-[120px]">
-              <div class="text-xs uppercase text-muted font-bold tracking-wider mb-1">In Bank</div>
-              <div class="text-xl font-bold text-highlight">
-                £{{ team.bank_in_millions }}m
-              </div>
-            </div>
-          </div>
+          </p>
         </div>
 
-        <div class="flex flex-col gap-3 min-w-[200px]">
+        <!-- Action Controls -->
+        <div class="flex flex-wrap items-center gap-2 shrink-0">
           {% if user.team_id == team.id %}
           <button
             hx-get="{% url 'rivals:teams.analysis' team.id %}"
             hx-target="#analysis-container"
             hx-indicator="#analysis-loading"
             hx-swap="innerHTML"
-            class="w-full bg-accent hover:bg-white hover:text-pitch text-pitch px-6 py-3 rounded-xl font-black uppercase tracking-wide transition-all shadow-lg shadow-accent/20 cursor-pointer"
+            class="px-4 py-2 bg-pitch text-white font-mono text-xs font-bold uppercase tracking-wide hover:bg-pitch/90 transition-colors cursor-pointer"
           >
-            Run Analysis
+            Run Tactical Analysis
           </button>
           {% elif user.team %}
           <button
@@ -72,216 +66,307 @@
             hx-target="#rival-comparison-container"
             hx-indicator="#comparison-loading"
             hx-swap="innerHTML"
-            class="w-full bg-accent hover:bg-white hover:text-pitch text-pitch px-6 py-3 rounded-xl font-black uppercase tracking-wide transition-all shadow-lg shadow-accent/20 cursor-pointer"
+            class="px-3.5 py-2 bg-pitch text-white font-mono text-xs font-bold uppercase tracking-wide hover:bg-pitch/90 transition-colors cursor-pointer"
           >
-            Compare
+            Compare Head-to-Head
           </button>
           <a
             href="{% url 'rivals:teams.compare' team.id %}"
-            class="w-full bg-white/5 hover:bg-white/10 text-white border border-white/20 px-6 py-2 rounded-xl font-bold uppercase tracking-wide text-xs transition-colors cursor-pointer text-center"
+            class="px-3 py-2 text-text-main border border-gray-300 font-mono text-xs font-bold uppercase tracking-wide hover:border-gray-500 transition-colors"
           >
             Full Comparison →
           </a>
-          {% elif team in user.tracked_teams.all %}
-          <form action="{% url 'rivals:teams.untrack' team.id %}" method="POST">
-            {% csrf_token %}
-            <button
-              type="submit"
-              class="w-full bg-danger/20 hover:bg-danger text-danger hover:text-white border border-danger/50 px-6 py-3 rounded-xl font-bold uppercase tracking-wide transition-all cursor-pointer"
-            >
-              Untrack Rival
-            </button>
-          </form>
-          {% else %}
-          <form
-            action="{% url 'rivals:teams.track' team.id %}"
-            method="POST"
-            onsubmit="this.querySelector('button').disabled=true; this.querySelector('button').innerText='Tracking...';"
-          >
-            {% csrf_token %}
-            <button
-              type="submit"
-              class="w-full bg-accent hover:bg-white hover:text-pitch text-pitch px-6 py-3 rounded-xl font-black uppercase tracking-wide transition-all shadow-lg shadow-accent/20 cursor-pointer"
-            >
-              Track Rival
-            </button>
-          </form>
           {% endif %}
 
-          <form action="{% url 'rivals:teams.sync' team.id %}" method="POST">
+          {% if user.team_id != team.id %}
+            {% if team in user.tracked_teams.all %}
+            <form action="{% url 'rivals:teams.untrack' team.id %}" method="POST" class="inline-block">
+              {% csrf_token %}
+              <button
+                type="submit"
+                class="px-3.5 py-2 bg-danger/10 text-danger border border-danger/30 font-mono text-xs font-bold uppercase tracking-wide hover:bg-danger hover:text-white transition-colors cursor-pointer"
+              >
+                Untrack Rival
+              </button>
+            </form>
+            {% else %}
+            <form
+              action="{% url 'rivals:teams.track' team.id %}"
+              method="POST"
+              class="inline-block"
+              onsubmit="this.querySelector('button').disabled=true; this.querySelector('button').innerText='Tracking...';"
+            >
+              {% csrf_token %}
+              <button
+                type="submit"
+                class="px-3.5 py-2 bg-pitch text-white font-mono text-xs font-bold uppercase tracking-wide hover:bg-pitch/90 transition-colors cursor-pointer"
+              >
+                + Track Rival
+              </button>
+            </form>
+            {% endif %}
+          {% endif %}
+
+          <form action="{% url 'rivals:teams.sync' team.id %}" method="POST" class="inline-block">
             {% csrf_token %}
             <button
               type="submit"
-              class="w-full bg-white/5 hover:bg-white/10 text-white border border-white/20 px-6 py-2 rounded-xl font-bold uppercase tracking-wide text-xs transition-colors cursor-pointer"
+              class="px-3 py-2 text-gray-600 border border-gray-200 font-mono text-xs font-bold uppercase tracking-wide hover:border-gray-400 hover:text-text-main transition-colors cursor-pointer"
+              title="Refresh FPL API data"
             >
-              Force Sync Data
+              Sync Data
             </button>
           </form>
         </div>
       </div>
+
+      <!-- Stat Ledger (Hairline-Divided Matrix) -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 divide-y sm:divide-y-0 sm:divide-x divide-gray-200 border-t border-gray-200 bg-gray-50/25">
+        <!-- 1. Overall Rank -->
+        <div class="p-4 sm:p-5">
+          <p class="text-[11px] font-mono uppercase tracking-wider text-gray-500 mb-1">Overall Rank</p>
+          <p class="text-xl sm:text-2xl font-black font-mono tabular-nums text-text-main">
+            {% if team.current_overall_rank %}#{{ team.current_overall_rank|intcomma }}{% else %}—{% endif %}
+          </p>
+          <p class="text-xs text-gray-500 font-mono mt-0.5">
+            <span class="font-bold text-text-main">{{ team.current_total_points|intcomma }}</span> pts
+          </p>
+        </div>
+
+        <!-- 2. Projected Finish -->
+        <div class="p-4 sm:p-5">
+          <p class="text-[11px] font-mono uppercase tracking-wider text-gray-500 mb-1">Projected Rank</p>
+          <p class="text-xl sm:text-2xl font-black font-mono tabular-nums text-pitch">
+            {% if projection %}#{{ projection.projected_overall_rank|intcomma }}{% else %}—{% endif %}
+          </p>
+          <p class="text-xs text-gray-600 font-mono mt-0.5 truncate">
+            {{ projection.projected_rank_tier|default:"Season Pace" }}
+          </p>
+        </div>
+
+        <!-- 3. Trajectory Delta -->
+        <div class="p-4 sm:p-5">
+          <p class="text-[11px] font-mono uppercase tracking-wider text-gray-500 mb-1">Trajectory</p>
+          <p class="text-xl sm:text-2xl font-black font-mono tabular-nums {% if projection and projection.rank_change > 0 %}text-success{% elif projection and projection.rank_change < 0 %}text-danger{% else %}text-gray-500{% endif %}">
+            {% if projection %}
+              {% if projection.rank_change > 0 %}
+                ▲ +{{ projection.rank_change|intcomma }}
+              {% elif projection.rank_change < 0 %}
+                ▼ {{ projection.rank_change|abs|intcomma }}
+              {% else %}
+                — Steady
+              {% endif %}
+            {% else %}
+              —
+            {% endif %}
+          </p>
+          <p class="text-xs text-gray-500 font-mono mt-0.5">
+            vs current rank
+          </p>
+        </div>
+
+        <!-- 4. Points Pace -->
+        <div class="p-4 sm:p-5">
+          <p class="text-[11px] font-mono uppercase tracking-wider text-gray-500 mb-1">Points Pace</p>
+          <p class="text-xl sm:text-2xl font-black font-mono tabular-nums text-text-main">
+            {% if projection %}{{ projection.projected_ppg }} <span class="text-xs font-normal text-gray-400">PPG</span>{% else %}—{% endif %}
+          </p>
+          <p class="text-xs text-gray-500 font-mono mt-0.5">
+            Last 5: <span class="text-text-main font-semibold">{{ projection.recent_ppg|default:"—" }}</span>
+          </p>
+        </div>
+
+        <!-- 5. Squad Value -->
+        <div class="p-4 sm:p-5">
+          <p class="text-[11px] font-mono uppercase tracking-wider text-gray-500 mb-1">Squad Value</p>
+          <p class="text-xl sm:text-2xl font-black font-mono tabular-nums text-text-main">
+            £{{ team.value_in_millions }}m
+          </p>
+          <p class="text-xs text-gray-500 font-mono mt-0.5">
+            {{ team.total_transfers }} transfer{{ team.total_transfers|pluralize }}
+          </p>
+        </div>
+
+        <!-- 6. In Bank -->
+        <div class="p-4 sm:p-5">
+          <p class="text-[11px] font-mono uppercase tracking-wider text-gray-500 mb-1">In Bank</p>
+          <p class="text-xl sm:text-2xl font-black font-mono tabular-nums text-pitch">
+            £{{ team.bank_in_millions }}m
+          </p>
+          <p class="text-xs text-gray-500 font-mono mt-0.5">
+            Available funds
+          </p>
+        </div>
+      </div>
     </div>
 
-    <div id="analysis-loading" class="hidden px-6 py-12">
-      <div class="flex flex-col items-center justify-center">
-        <div class="w-16 h-16 border-4 border-accent border-t-transparent rounded-full animate-spin mb-4"></div>
-        <div class="text-lg font-bold text-text-main animate-pulse">Running Tactical Analysis...</div>
-        <div class="text-sm text-muted">Calculating optimal transfers and fixture difficulties</div>
-      </div>
+    <!-- HTMX Interactive Tactical Dock -->
+    <div id="analysis-loading" class="hidden my-6 p-8 border border-gray-200 bg-white shadow-sm text-center font-mono">
+      <div class="inline-block w-6 h-6 border-2 border-pitch border-t-transparent rounded-full animate-spin mb-2"></div>
+      <p class="text-xs font-bold uppercase tracking-wider text-text-main">Running Tactical Analysis...</p>
+      <p class="text-[11px] text-gray-500 mt-0.5">Evaluating optimal transfer picks and fixture difficulty indices</p>
     </div>
 
     {% if user.team_id == team.id %}
-    <div id="analysis-container" class="min-h-32 mb-8">
-      <div class="bg-surface rounded-2xl shadow-sm border border-gray-100 p-8 text-center border-dashed">
-        <div class="w-16 h-16 bg-surface-alt rounded-full flex items-center justify-center mx-auto mb-4 text-muted">
-          <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-          </svg>
-        </div>
-        <p class="text-lg font-bold text-text-main">
-          Ready to Analyse
-        </p>
-        <p class="text-sm text-muted mt-1 max-w-md mx-auto">
-          Get smart transfer recommendations based on budget, free transfers, and upcoming fixtures.
-        </p>
-      </div>
-    </div>
+    <div id="analysis-container" class="mb-8 empty:hidden"></div>
     {% elif user.team %}
-    <div id="comparison-loading" class="hidden px-6 py-12">
-      <div class="flex flex-col items-center justify-center">
-        <div class="w-16 h-16 border-4 border-accent border-t-transparent rounded-full animate-spin mb-4"></div>
-        <div class="text-lg font-bold text-text-main animate-pulse">Comparing Squads...</div>
-        <div class="text-sm text-muted">Analyzing expected points, fixtures, and momentum</div>
-      </div>
+    <div id="comparison-loading" class="hidden my-6 p-8 border border-gray-200 bg-white shadow-sm text-center font-mono">
+      <div class="inline-block w-6 h-6 border-2 border-pitch border-t-transparent rounded-full animate-spin mb-2"></div>
+      <p class="text-xs font-bold uppercase tracking-wider text-text-main">Computing Head-to-Head Comparison...</p>
+      <p class="text-[11px] text-gray-500 mt-0.5">Analyzing squad differentials, form, and fixture trajectories</p>
     </div>
-    <div id="rival-comparison-container" class="min-h-32 mb-8">
-      <div class="bg-black/40 backdrop-blur-sm rounded-2xl shadow-xl border border-white/10 p-8 text-center">
-        <div class="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 text-muted">
-          <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-          </svg>
-        </div>
-        <p class="text-lg font-bold text-white">
-          Ready to Compare
-        </p>
-        <p class="text-sm text-gray-300 mt-1 max-w-md mx-auto">
-          Click "Compare" to see head-to-head analysis with {{ team.team_name }}.
-        </p>
-      </div>
-    </div>
+    <div id="rival-comparison-container" class="mb-8 empty:hidden"></div>
     {% endif %}
 
-    <!-- Season Finish Projection -->
-    {% if projection %}
-    <div class="bg-surface rounded-2xl shadow-sm border border-gray-100 mb-12 p-6 relative overflow-hidden">
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-6 border-b border-gray-100 gap-2">
-        <div class="flex items-center gap-2">
-          <span class="w-2 h-6 bg-accent skew-x-12 rounded-sm"></span>
-          <h2 class="text-lg font-black text-text-main uppercase tracking-tight">Season Finish Projection</h2>
+    <!-- Mini-League Standings Table -->
+    {% if mini_league_performance %}
+    <div class="bg-white border border-gray-200 shadow-sm mb-8">
+      <div class="px-5 py-3 border-b border-gray-200 flex items-center justify-between bg-gray-50/50">
+        <div class="flex items-center gap-3">
+          <h2 class="text-xs font-black uppercase tracking-wider text-text-main font-mono">Mini-League Standings</h2>
+          <span class="text-xs font-mono text-gray-500">
+            {{ mini_league_performance|length }} League{{ mini_league_performance|length|pluralize }}
+          </span>
         </div>
-        <span class="text-xs font-bold text-muted bg-gray-100 px-3 py-1 rounded-full self-start sm:self-auto">
-          {{ projection.completed_gameweeks }}/38 Gameweeks • {{ projection.remaining_gameweeks }} Remaining
-        </span>
+        <span class="text-[11px] font-mono text-gray-400">Competitive Placement</span>
       </div>
 
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div class="p-4 rounded-xl bg-surface-alt/70 border border-gray-100">
-          <p class="text-xs uppercase text-muted font-bold tracking-wider mb-1">Projected Points</p>
-          <p class="text-2xl sm:text-3xl font-black text-text-main tabular-nums">{{ projection.projected_points|intcomma }}</p>
-          <p class="text-xs text-muted mt-1">Range: {{ projection.projected_points_min|intcomma }} – {{ projection.projected_points_max|intcomma }}</p>
-        </div>
-
-        <div class="p-4 rounded-xl bg-surface-alt/70 border border-gray-100">
-          <p class="text-xs uppercase text-muted font-bold tracking-wider mb-1">Projected Overall Rank</p>
-          <p class="text-2xl sm:text-3xl font-black text-accent tabular-nums">#{{ projection.projected_overall_rank|intcomma }}</p>
-          <p class="text-xs font-bold text-accent mt-1">{{ projection.projected_rank_tier }} Tier</p>
-        </div>
-
-        <div class="p-4 rounded-xl bg-surface-alt/70 border border-gray-100">
-          <p class="text-xs uppercase text-muted font-bold tracking-wider mb-1">Points Pace</p>
-          <p class="text-2xl sm:text-3xl font-black text-text-main tabular-nums">{{ projection.projected_ppg }} <span class="text-sm font-normal text-muted">PPG</span></p>
-          <p class="text-xs text-muted mt-1">Season: {{ projection.season_ppg }} | Last 5: {{ projection.recent_ppg }}</p>
-        </div>
-
-        <div class="p-4 rounded-xl bg-surface-alt/70 border border-gray-100">
-          <p class="text-xs uppercase text-muted font-bold tracking-wider mb-1">Rank Trajectory</p>
-          <p class="text-xl sm:text-2xl font-black tabular-nums mt-0.5 flex items-center gap-1.5 {% if projection.rank_change > 0 %}text-success{% elif projection.rank_change < 0 %}text-danger{% else %}text-muted{% endif %}">
-            {% if projection.rank_change > 0 %}
-              ↑ +{{ projection.rank_change|intcomma }} spots
-            {% elif projection.rank_change < 0 %}
-              ↓ {{ projection.rank_change|abs|intcomma }} spots
-            {% else %}
-              — Steady
-            {% endif %}
-          </p>
-          <p class="text-xs text-muted mt-1">
-            {% if projection.current_overall_rank %}Current: #{{ projection.current_overall_rank|intcomma }}{% else %}Unranked{% endif %}
-          </p>
-        </div>
-      </div>
-    </div>
-    {% endif %}
-
-    <div class="bg-surface rounded-2xl shadow-sm border border-gray-100 mb-12 overflow-hidden">
-      <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-        <h2 class="text-lg font-black text-text-main uppercase tracking-tight">Recent Performance</h2>
-        <span class="text-xs font-bold text-muted bg-gray-100 px-2 py-1 rounded">Last 5 Gameweeks</span>
-      </div>
       <div class="overflow-x-auto">
-        <table class="min-w-full text-sm">
-          <thead class="bg-surface-alt text-xs uppercase font-black text-muted tracking-wider">
-            <tr>
-              <th class="px-6 py-4 text-left">GW</th>
-              <th class="px-6 py-4 text-left">Points</th>
-              <th class="px-6 py-4 text-left">Rank</th>
-              <th class="px-6 py-4 text-left">Captain</th>
-              <th class="px-6 py-4 text-left">Transfers</th>
-              <th class="px-6 py-4 text-left">Chip</th>
-              <th class="px-6 py-4 text-left">Bench</th>
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="border-b border-gray-200 bg-gray-50/25 text-[11px] font-mono uppercase tracking-wider text-gray-500">
+              <th class="py-2.5 px-4 font-semibold">Competition</th>
+              <th class="py-2.5 px-3 font-semibold text-right">Current Rank</th>
+              <th class="py-2.5 px-3 font-semibold text-right">Previous</th>
+              <th class="py-2.5 px-3 font-semibold text-right">Trend</th>
+              <th class="py-2.5 px-3 font-semibold text-right">Points</th>
+              <th class="py-2.5 px-4 font-semibold text-right">Percentile</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-100">
+          <tbody class="divide-y divide-gray-100 text-xs">
+            {% for item in mini_league_performance %}
+            <tr class="hover:bg-gray-50/75 transition-colors group">
+              <!-- League Name -->
+              <td class="py-3 px-4 font-medium">
+                <a href="{% url 'rivals:minileagues.show' item.league.id %}" class="text-text-main font-semibold group-hover:text-pitch transition-colors">
+                  {{ item.league.name }}
+                </a>
+              </td>
+
+              <!-- Current Rank -->
+              <td class="py-3 px-3 text-right font-mono tabular-nums font-bold text-text-main">
+                {% if item.current_rank %}#{{ item.current_rank }}{% else %}—{% endif %}
+              </td>
+
+              <!-- Previous Rank -->
+              <td class="py-3 px-3 text-right font-mono tabular-nums text-gray-500">
+                {% if item.previous_rank %}#{{ item.previous_rank }}{% else %}—{% endif %}
+              </td>
+
+              <!-- Trend -->
+              <td class="py-3 px-3 text-right font-mono tabular-nums text-[11px]">
+                {% if item.rank_change > 0 %}
+                  <span class="text-success font-bold">▲ +{{ item.rank_change }}</span>
+                {% elif item.rank_change < 0 %}
+                  <span class="text-danger font-bold">▼ {{ item.rank_change|abs }}</span>
+                {% else %}
+                  <span class="text-gray-400">—</span>
+                {% endif %}
+              </td>
+
+              <!-- Total Points -->
+              <td class="py-3 px-3 text-right font-mono tabular-nums font-semibold text-gray-700">
+                {{ item.total_points|intcomma }}
+              </td>
+
+              <!-- Percentile -->
+              <td class="py-3 px-4 text-right font-mono tabular-nums text-[11px] text-gray-600">
+                {% if item.percentile %}Top {{ item.percentile|floatformat:1 }}%{% else %}—{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Gameweek Performance Ledger -->
+    <div class="bg-white border border-gray-200 shadow-sm mb-8">
+      <div class="px-5 py-3 border-b border-gray-200 flex items-center justify-between bg-gray-50/50">
+        <div class="flex items-center gap-3">
+          <h2 class="text-xs font-black uppercase tracking-wider text-text-main font-mono">Recent Gameweek Ledger</h2>
+          <span class="text-xs font-mono text-gray-500">Last {{ gameweek_data|length }} Gameweeks</span>
+        </div>
+        <span class="text-[11px] font-mono text-gray-400">Matchday Results</span>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="border-b border-gray-200 bg-gray-50/25 text-[11px] font-mono uppercase tracking-wider text-gray-500">
+              <th class="py-2.5 px-4 font-semibold">GW</th>
+              <th class="py-2.5 px-3 font-semibold text-right">Points</th>
+              <th class="py-2.5 px-3 font-semibold text-right">GW Rank</th>
+              <th class="py-2.5 px-4 font-semibold">Captain</th>
+              <th class="py-2.5 px-3 font-semibold text-right">Transfers</th>
+              <th class="py-2.5 px-3 font-semibold text-center">Chip</th>
+              <th class="py-2.5 px-4 font-semibold text-right">Bench</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 text-xs">
             {% for gw in gameweek_data %}
-            <tr class="hover:bg-surface-alt/50 transition-colors">
-              <td class="px-6 py-4 font-bold text-text-main">GW{{ gw.gameweek }}</td>
-              <td class="px-6 py-4 font-black text-lg {% if gw.points > 60 %}text-success{% elif gw.points < 40 %}text-danger{% endif %}">
-                {{ gw.points }}
+            <tr class="hover:bg-gray-50/75 transition-colors">
+              <!-- Gameweek -->
+              <td class="py-3 px-4 font-mono font-bold text-text-main">
+                GW{{ gw.gameweek }}
               </td>
-              <td class="px-6 py-4 font-mono text-muted">
-                {% if gw.rank %} {{ gw.rank|floatformat:0 }} {% else %} - {% endif %}
+
+              <!-- Points -->
+              <td class="py-3 px-3 text-right font-mono font-bold text-sm tabular-nums {% if gw.points >= 65 %}text-pitch{% elif gw.points <= 40 %}text-danger{% else %}text-text-main{% endif %}">
+                {{ gw.points }} <span class="text-[10px] text-gray-400 font-normal">pts</span>
               </td>
-              <td class="px-6 py-4 font-medium">{{ gw.captain_name }}</td>
-              <td class="px-6 py-4">
-                {{ gw.event_transfers }} 
+
+              <!-- GW Rank -->
+              <td class="py-3 px-3 text-right font-mono tabular-nums text-gray-600">
+                {% if gw.rank %}#{{ gw.rank|floatformat:0|intcomma }}{% else %}—{% endif %}
+              </td>
+
+              <!-- Captain -->
+              <td class="py-3 px-4 font-medium text-text-main">
+                {{ gw.captain_name|default:"—" }}
+              </td>
+
+              <!-- Transfers & Hits -->
+              <td class="py-3 px-3 text-right font-mono tabular-nums">
+                {{ gw.event_transfers }}
                 {% if gw.event_transfers_cost > 0 %}
-                <span class="ml-2 bg-danger/10 text-danger px-1.5 py-0.5 rounded font-bold text-xs">
-                  -{{ gw.event_transfers_cost }}
+                <span class="ml-1 text-[10px] font-mono font-bold text-danger bg-danger/10 px-1 py-0.2 border border-danger/20">
+                  -{{ gw.event_transfers_cost }}pt
                 </span>
                 {% endif %}
               </td>
-              <td class="px-6 py-4">
-                {% if gw.chip_played %}
-                <span class="bg-highlight/20 text-yellow-800 px-2 py-1 rounded-full text-xs font-black uppercase tracking-wide border border-highlight/40">
+
+              <!-- Chip -->
+              <td class="py-3 px-3 text-center">
+                {% if gw.chip_played and gw.chip_name %}
+                <span class="inline-block text-[10px] font-mono font-bold uppercase text-pitch bg-pitch/10 px-1.5 py-0.5 border border-pitch/30">
                   {{ gw.chip_name }}
                 </span>
                 {% else %}
-                <span class="text-gray-300">-</span>
+                <span class="text-gray-300 font-mono">—</span>
                 {% endif %}
               </td>
-              <td class="px-6 py-4">
-                {% if gw.bench_points > 10 %}
-                <span class="text-danger font-bold relative group cursor-help">
-                  {{ gw.bench_points }}
-                  <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 bg-black text-white text-xs rounded opacity-0 group-hover:opacity-100 whitespace-nowrap">Bench Pain! 😬</span>
-                </span>
-                {% else %}
-                <span class="text-muted">{{ gw.bench_points }}</span>
-                {% endif %}
+
+              <!-- Bench Points -->
+              <td class="py-3 px-4 text-right font-mono tabular-nums text-gray-600">
+                {{ gw.bench_points }} <span class="text-[10px] text-gray-400 font-normal">pts</span>
               </td>
             </tr>
             {% empty %}
             <tr>
-              <td colspan="7" class="px-6 py-8 text-center text-muted italic">
-                No gameweek data available yet.
+              <td colspan="7" class="py-8 px-4 text-center font-mono text-xs text-gray-400">
+                No gameweek records available yet for this squad.
               </td>
             </tr>
             {% endfor %}
@@ -290,99 +375,136 @@
       </div>
     </div>
 
-    <!-- Past Seasons History -->
-    <div class="bg-surface rounded-2xl shadow-sm border border-gray-100 mb-12 overflow-hidden">
-      <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-        <h2 class="text-lg font-black text-text-main uppercase tracking-tight flex items-center gap-2">
-          <span class="w-1.5 h-5 bg-accent skew-x-12 rounded-sm"></span>
-          Past Seasons History
-        </h2>
-        <span class="text-xs font-bold text-muted bg-gray-100 px-2 py-1 rounded">FPL Career Archive</span>
-      </div>
-      <div class="overflow-x-auto">
-        <table class="min-w-full text-sm">
-          <thead class="bg-surface-alt text-xs uppercase font-black text-muted tracking-wider">
-            <tr>
-              <th class="px-6 py-4 text-left">Season</th>
-              <th class="px-6 py-4 text-left">Total Points</th>
-              <th class="px-6 py-4 text-left">Overall Rank</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-100">
-            {% for history in season_histories %}
-            <tr class="hover:bg-surface-alt/50 transition-colors">
-              <td class="px-6 py-4 font-bold text-text-main flex items-center gap-2">
-                <span class="text-accent font-black">#</span> {{ history.season_name }}
-              </td>
-              <td class="px-6 py-4 font-black text-lg text-text-main">
-                {{ history.total_points }}
-              </td>
-              <td class="px-6 py-4 font-mono font-bold text-gray-700">
-                {% if history.overall_rank %}
-                #{{ history.overall_rank }}
-                {% else %}
-                -
-                {% endif %}
-              </td>
-            </tr>
-            {% empty %}
-            <tr>
-              <td colspan="3" class="px-6 py-8 text-center text-muted italic">
-                No past season history recorded yet. Sync team data to import FPL history.
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
+    <!-- Squad History Carousel -->
+    <div class="mb-8">
+      <c-components.squad_history_carousel :team="{{ team }}"></c-components.squad_history_carousel>
     </div>
 
-    <c-components.squad_history_carousel :team="{{ team }}"></c-components.squad_history_carousel>
+    <!-- Dual-Column Intel Grid (Transfers & Player News) -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-8 items-start">
+      <!-- Transfers Ledger (7 cols) -->
+      <div class="lg:col-span-7 bg-white border border-gray-200 shadow-sm">
+        <div class="px-5 py-3 border-b border-gray-200 flex items-center justify-between bg-gray-50/50">
+          <div class="flex items-center gap-3">
+            <h2 class="text-xs font-black uppercase tracking-wider text-text-main font-mono">Transfer Ledger</h2>
+            <span class="text-xs font-mono text-gray-500">Recent Moves</span>
+          </div>
+          <span class="text-[11px] font-mono text-gray-400">In & Out Activity</span>
+        </div>
 
-    <div class="grid md:grid-cols-2 gap-8 mb-12">
-      <c-components.card title="Recent Transfers">
-         <div class="space-y-4">
-           {% for transfer in transfers %}
-           <div class="flex items-center justify-between p-3 bg-surface-alt rounded-lg border border-gray-100 hover:border-gray-200 transition-colors">
-             <div class="flex items-center gap-4 text-sm">
-                <div class="flex flex-col items-center">
-                   <div class="text-xs font-bold text-muted uppercase mb-1">Out</div>
-                   <div class="font-bold text-danger">{{ transfer.player_out_display_name }}</div>
-                </div>
-                <div class="text-gray-300">→</div>
-                <div class="flex flex-col items-center">
-                   <div class="text-xs font-bold text-muted uppercase mb-1">In</div>
-                   <div class="font-bold text-success">{{ transfer.player_in_display_name }}</div>
-                </div>
-             </div>
-             <div class="text-right">
-                <div class="text-xs font-bold text-muted uppercase">GW{{ transfer.gameweek }}</div>
+        {% if not transfers %}
+        <div class="p-8 text-center font-mono text-xs text-gray-400">
+          No transfers recorded yet for this squad.
+        </div>
+        {% else %}
+        <div class="divide-y divide-gray-100 p-2">
+          {% for transfer in transfers %}
+          <div class="p-3 hover:bg-gray-50/75 transition-colors text-xs flex items-center justify-between gap-4">
+            <div class="min-w-0">
+              <div class="flex items-center gap-1.5 font-mono text-[11px] flex-wrap mb-1">
+                <span class="text-danger font-medium line-through">{{ transfer.player_out_display_name }}</span>
+                <span class="text-gray-300">→</span>
+                <span class="text-pitch font-bold">{{ transfer.player_in_display_name }}</span>
                 {% if transfer.point_cost %}
-                <div class="text-danger font-bold text-xs mt-1">-{{ transfer.point_cost }} pts</div>
+                <span class="text-[10px] font-mono font-bold text-danger bg-danger/10 px-1 py-0.2 border border-danger/20">
+                  -{{ transfer.point_cost }}pt
+                </span>
                 {% endif %}
-             </div>
-           </div>
-           {% empty %}
-           <p class="text-muted text-center py-4 italic">No transfers made recently.</p>
-           {% endfor %}
-         </div>
-      </c-components.card>
+              </div>
+              <span class="text-[10px] font-mono text-gray-400 block">
+                Price diff: {{ transfer.price_difference_display|default:"—" }}
+              </span>
+            </div>
 
-      {% if recent_news %}
-      <c-components.card title="Player News">
-        <div class="space-y-3">
-          {% for player in recent_news %}
-          <div class="border-l-4 border-highlight bg-highlight/5 p-3 rounded-r-lg">
-            <h3 class="font-bold text-text-main text-sm flex justify-between">
-              {{ player.web_name }}
-              <span class="text-xs text-muted font-normal">{{ player.news_added|timesince }} ago</span>
-            </h3>
-            <p class="text-xs text-gray-600 mt-1 leading-relaxed">{{ player.news }}</p>
+            <div class="text-right shrink-0 font-mono text-xs">
+              <span class="font-bold text-text-main block">GW{{ transfer.gameweek }}</span>
+              {% if transfer.transfer_time %}
+              <span class="text-[10px] text-gray-400 block">{{ transfer.transfer_time|timesince }} ago</span>
+              {% endif %}
+            </div>
           </div>
           {% endfor %}
         </div>
-      </c-components.card>
-      {% endif %}
+        {% endif %}
+      </div>
+
+      <!-- Player News Bulletin (5 cols) -->
+      <div class="lg:col-span-5 bg-white border border-gray-200 shadow-sm">
+        <div class="px-5 py-3 border-b border-gray-200 flex items-center justify-between bg-gray-50/50">
+          <div class="flex items-center gap-3">
+            <h2 class="text-xs font-black uppercase tracking-wider text-text-main font-mono">Squad Intel & News</h2>
+            <span class="text-xs font-mono text-gray-500">Status Updates</span>
+          </div>
+          <span class="text-[11px] font-mono text-gray-400">Availability</span>
+        </div>
+
+        {% if not recent_news %}
+        <div class="p-8 text-center font-mono text-xs text-gray-400">
+          No active news or injury updates for players in recent transfers.
+        </div>
+        {% else %}
+        <div class="divide-y divide-gray-100 p-2">
+          {% for player in recent_news %}
+          <div class="p-3 text-xs">
+            <div class="flex items-baseline justify-between gap-2 mb-1">
+              <span class="font-bold text-text-main font-sans">{{ player.web_name }}</span>
+              <span class="text-[10px] font-mono text-gray-400 shrink-0">
+                {% if player.news_added %}{{ player.news_added|timesince }} ago{% endif %}
+              </span>
+            </div>
+            <p class="text-xs text-gray-600 font-mono leading-relaxed bg-gray-50 p-2 border-l-2 border-highlight">
+              {{ player.news }}
+            </p>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
     </div>
+
+    <!-- Career Archive (Past Seasons History) -->
+    <div class="bg-white border border-gray-200 shadow-sm mb-8">
+      <div class="px-5 py-3 border-b border-gray-200 flex items-center justify-between bg-gray-50/50">
+        <div class="flex items-center gap-3">
+          <h2 class="text-xs font-black uppercase tracking-wider text-text-main font-mono">Career Archive</h2>
+          <span class="text-xs font-mono text-gray-500">Historical FPL Campaigns</span>
+        </div>
+        <span class="text-[11px] font-mono text-gray-400">FPL Official History</span>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="border-b border-gray-200 bg-gray-50/25 text-[11px] font-mono uppercase tracking-wider text-gray-500">
+              <th class="py-2.5 px-4 font-semibold">Campaign Season</th>
+              <th class="py-2.5 px-4 font-semibold text-right">Total Points</th>
+              <th class="py-2.5 px-4 font-semibold text-right">Final Overall Rank</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 text-xs">
+            {% for history in season_histories %}
+            <tr class="hover:bg-gray-50/75 transition-colors">
+              <td class="py-3 px-4 font-mono font-bold text-text-main">
+                {{ history.season_name }}
+              </td>
+              <td class="py-3 px-4 text-right font-mono font-bold tabular-nums text-text-main">
+                {{ history.total_points|intcomma }} <span class="text-[10px] text-gray-400 font-normal">pts</span>
+              </td>
+              <td class="py-3 px-4 text-right font-mono tabular-nums text-gray-700">
+                {% if history.overall_rank %}#{{ history.overall_rank|intcomma }}{% else %}—{% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="3" class="py-8 px-4 text-center font-mono text-xs text-gray-400">
+                No past season records imported yet. Run "Sync Data" to load historical FPL campaigns.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
   </div>
 </c-layouts.base>
