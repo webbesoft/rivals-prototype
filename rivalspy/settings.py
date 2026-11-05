@@ -31,11 +31,19 @@ SECRET_KEY = os.getenv("SECRET_KEY", "secret-key-should-be-changed")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "False").lower() in ("1", "true", "yes")
 
-ALLOWED_HOSTS = [os.getenv("ALLOWED_HOSTS", "*")]
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.getenv("ALLOWED_HOSTS", "*").split(",")
+    if host.strip()
+]
 
-CSRF_TRUSTED_ORIGINS = os.getenv("CSRF_TRUSTED_ORIGINS", "http://localhost:8000").split(
-    ","
-)
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",")
+    if origin.strip()
+]
+if not CSRF_TRUSTED_ORIGINS and DEBUG:
+    CSRF_TRUSTED_ORIGINS = ["http://localhost:8000"]
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
@@ -272,5 +280,11 @@ REST_FRAMEWORK = {
 # CORS Settings
 CORS_ALLOW_ALL_ORIGINS = DEBUG  # Allow all origins in development
 CORS_ALLOWED_ORIGINS = (
-    os.getenv("CORS_ALLOWED_ORIGINS", "").split(",") if not DEBUG else []
+    [
+        origin.strip()
+        for origin in os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
+        if origin.strip()
+    ]
+    if not DEBUG
+    else []
 )
