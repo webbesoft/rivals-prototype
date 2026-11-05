@@ -63,7 +63,9 @@ class FplApiService:
         response = self.fetch_bootstrap_static()
         if not response or not response.get("events"):
             return 1
-        current_event = next((e for e in response["events"] if e.get("is_current")), None)
+        current_event = next(
+            (e for e in response["events"] if e.get("is_current")), None
+        )
         return current_event["id"] if current_event else 1
 
     def fetch_current_season(self, force_refresh: bool = False) -> str | None:

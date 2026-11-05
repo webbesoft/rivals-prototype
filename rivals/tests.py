@@ -35,7 +35,9 @@ class SeasonTransitionTest(TestCase):
         self.assertEqual(self.team.current_total_points, 500)
 
     @patch("rivals.services.fpl_api_service.FplApiService.fetch_current_season")
-    def test_new_season_transition_resets_points_and_preserves_old_data(self, mock_season):
+    def test_new_season_transition_resets_points_and_preserves_old_data(
+        self, mock_season
+    ):
         mock_season.return_value = "2025/26"
         service = TeamSyncService(self.team)
         transitioned = service.detect_and_handle_season_transition()
@@ -65,6 +67,7 @@ class SeasonTransitionTest(TestCase):
 class DataEngineeringAuditTests(TestCase):
     def setUp(self):
         from django.core.cache import cache
+
         cache.clear()
         self.team = Team.objects.create(
             fpl_team_id="99999",
@@ -78,7 +81,9 @@ class DataEngineeringAuditTests(TestCase):
         from rivals.services.fpl_api_service import FplApiService
 
         mock_get.return_value.json.return_value = {
-            "events": [{"id": 1, "is_current": True, "deadline_time": "2025-08-15T17:30:00Z"}],
+            "events": [
+                {"id": 1, "is_current": True, "deadline_time": "2025-08-15T17:30:00Z"}
+            ],
             "elements": [{"id": 10, "web_name": "Haaland", "team": 11}],
             "teams": [{"id": 11, "name": "Man City", "short_name": "MCI"}],
         }
@@ -177,7 +182,13 @@ class DataEngineeringAuditTests(TestCase):
         mock_league.return_value = {
             "league_info": {"name": "Test League"},
             "standings": [
-                {"entry": 99999, "entry_name": "Audit FC", "player_name": "Audit Mgr", "rank": 1, "total": 120}
+                {
+                    "entry": 99999,
+                    "entry_name": "Audit FC",
+                    "player_name": "Audit Mgr",
+                    "rank": 1,
+                    "total": 120,
+                }
             ],
         }
 
@@ -194,6 +205,7 @@ class DataEngineeringAuditTests(TestCase):
 class ProjectionServiceTests(TestCase):
     def setUp(self):
         from django.core.cache import cache
+
         cache.clear()
         self.team = Team.objects.create(
             fpl_team_id="88888",
@@ -252,7 +264,9 @@ class ProjectionServiceTests(TestCase):
         from rivals.models import MiniLeague, MiniLeagueTeam
         from rivals.services.projection_service import ProjectionService
 
-        league = MiniLeague.objects.create(fpl_league_id="999", name="Premier Rival League")
+        league = MiniLeague.objects.create(
+            fpl_league_id="999", name="Premier Rival League"
+        )
 
         team_b = Team.objects.create(
             fpl_team_id="77777",
@@ -296,7 +310,13 @@ class ProjectionServiceTests(TestCase):
 class DashboardViewTests(TestCase):
     def setUp(self):
         from django.contrib.auth import get_user_model
-        from rivals.models import MiniLeague, MiniLeagueTeam, TrackedTeam, Transfer, UserMiniLeague
+        from rivals.models import (
+            MiniLeague,
+            MiniLeagueTeam,
+            TrackedTeam,
+            Transfer,
+            UserMiniLeague,
+        )
 
         User = get_user_model()
         self.user = User.objects.create_user(
@@ -366,7 +386,9 @@ class DashboardViewTests(TestCase):
         from django.urls import reverse
 
         self.client.login(username="dashmgr@example.com", password="password123")
-        response = self.client.get(reverse("rivals:teams.show", kwargs={"team_id": self.team.id}))
+        response = self.client.get(
+            reverse("rivals:teams.show", kwargs={"team_id": self.team.id})
+        )
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Command FC")
@@ -378,7 +400,11 @@ class DashboardViewTests(TestCase):
         from django.urls import reverse
 
         self.client.login(username="dashmgr@example.com", password="password123")
-        response = self.client.get(reverse("rivals:minileagues.show", kwargs={"mini_league_id": self.league.id}))
+        response = self.client.get(
+            reverse(
+                "rivals:minileagues.show", kwargs={"mini_league_id": self.league.id}
+            )
+        )
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Apex League")

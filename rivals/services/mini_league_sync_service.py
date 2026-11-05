@@ -49,8 +49,7 @@ class MiniLeagueSyncService:
         """
         current_season = self.fpl_api_service.fetch_current_season()
         existing_mlts = {
-            mlt.team_id: mlt
-            for mlt in self.mini_league.mini_league_teams.all()
+            mlt.team_id: mlt for mlt in self.mini_league.mini_league_teams.all()
         }
 
         for standing in standings:
@@ -75,7 +74,12 @@ class MiniLeagueSyncService:
                     mini_league_team.previous_rank = None
                     mini_league_team.season = current_season
                     mini_league_team.save(
-                        update_fields=["current_rank", "previous_rank", "total_points", "season"]
+                        update_fields=[
+                            "current_rank",
+                            "previous_rank",
+                            "total_points",
+                            "season",
+                        ]
                     )
                 else:
                     mini_league_team.previous_rank = previous_rank

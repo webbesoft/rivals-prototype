@@ -42,17 +42,11 @@ class ApiViewsTestCase(APITestCase):
 
         # Link Team to League
         self.ml_team1 = MiniLeagueTeam.objects.create(
-            mini_league=self.league1,
-            team=self.team1,
-            current_rank=1,
-            total_points=100
+            mini_league=self.league1, team=self.team1, current_rank=1, total_points=100
         )
 
         # Grant User Access to League
-        UserMiniLeague.objects.create(
-            user=self.user1,
-            mini_league=self.league1
-        )
+        UserMiniLeague.objects.create(user=self.user1, mini_league=self.league1)
 
         # Authenticate User1
         self.token = Token.objects.create(user=self.user1)

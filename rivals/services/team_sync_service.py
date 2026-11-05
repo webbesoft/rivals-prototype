@@ -2,7 +2,14 @@ import logging
 
 from django.utils import timezone
 
-from rivals.models import GameweekData, Player, SeasonHistory, SquadHistory, Team, Transfer
+from rivals.models import (
+    GameweekData,
+    Player,
+    SeasonHistory,
+    SquadHistory,
+    Team,
+    Transfer,
+)
 from rivals.services.fpl_api_service import FplApiService
 
 logger = logging.getLogger(__name__)
@@ -45,7 +52,9 @@ class TeamSyncService:
         """
         live_season = self.fpl_api_service.fetch_current_season()
         if not live_season:
-            logger.warning("Could not fetch current season — skipping transition check.")
+            logger.warning(
+                "Could not fetch current season — skipping transition check."
+            )
             return False
 
         # Stamp existing records that have no season so history is not lost
@@ -143,7 +152,9 @@ class TeamSyncService:
 
     def sync_history(self) -> dict | None:
         if self._history_data is None:
-            self._history_data = self.fpl_api_service.fetch_team_history(self.team.fpl_team_id)
+            self._history_data = self.fpl_api_service.fetch_team_history(
+                self.team.fpl_team_id
+            )
         data = self._history_data
         if not data or "current" not in data:
             return None
@@ -206,6 +217,7 @@ class TeamSyncService:
         for t in transfers:
             # Match the (gameweek, transfer_time) signature used by existing rows
             from django.utils.dateparse import parse_datetime
+
             t_time = parse_datetime(t["time"]) if t.get("time") else None
             sig = (t["event"], t_time)
             if sig not in existing_signatures:
@@ -218,8 +230,7 @@ class TeamSyncService:
             return
 
         players_by_fpl_id = {
-            p.fpl_id: p
-            for p in Player.objects.filter(fpl_id__in=needed_elements)
+            p.fpl_id: p for p in Player.objects.filter(fpl_id__in=needed_elements)
         }
 
         transfers_to_create = []

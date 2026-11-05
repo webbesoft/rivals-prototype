@@ -121,7 +121,11 @@ class LandingDataService:
             return {"best_fixtures": [], "worst_fixtures": []}
 
         # Filter for upcoming fixtures: not started, not finished, and with a scheduled event
-        upcoming = [f for f in fixtures if not f.get("started") and not f.get("finished") and f.get("event")]
+        upcoming = [
+            f
+            for f in fixtures
+            if not f.get("started") and not f.get("finished") and f.get("event")
+        ]
         if not upcoming:
             return {"best_fixtures": [], "worst_fixtures": []}
 
@@ -141,16 +145,20 @@ class LandingDataService:
             away_team_name = self._get_team_name(away_id)
             home_team_short = self._get_team_short_name(home_id)
 
-            team_matchups.append({
-                "team": home_team_name,
-                "opponent": away_team_short,
-                "difficulty": h_diff,
-            })
-            team_matchups.append({
-                "team": away_team_name,
-                "opponent": home_team_short,
-                "difficulty": a_diff,
-            })
+            team_matchups.append(
+                {
+                    "team": home_team_name,
+                    "opponent": away_team_short,
+                    "difficulty": h_diff,
+                }
+            )
+            team_matchups.append(
+                {
+                    "team": away_team_name,
+                    "opponent": home_team_short,
+                    "difficulty": a_diff,
+                }
+            )
 
         best = sorted(team_matchups, key=lambda x: (x["difficulty"], x["team"]))[:3]
         worst = sorted(team_matchups, key=lambda x: (-x["difficulty"], x["team"]))[:3]

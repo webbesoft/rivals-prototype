@@ -239,7 +239,11 @@ def update_fpl_id_view(request):
         # on failure.
         try:
             basic_info_json = json.dumps(fpl_data)
-            if getattr(__import__("django.conf", fromlist=["settings"]).settings, "BACKGROUND_TASK_RUN_ASYNC", False):
+            if getattr(
+                __import__("django.conf", fromlist=["settings"]).settings,
+                "BACKGROUND_TASK_RUN_ASYNC",
+                False,
+            ):
                 # Async path: unlink now; the task will create the new link
                 request.user.team = None
                 request.user.save(update_fields=["team"])
@@ -251,6 +255,7 @@ def update_fpl_id_view(request):
                 request.user.save(update_fields=["team"])
         except Exception as e:
             import logging
+
             logging.getLogger(__name__).error(
                 f"Failed to reinitialise user {request.user.id} after FPL ID update: {e}",
                 exc_info=True,

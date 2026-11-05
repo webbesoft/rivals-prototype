@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 import os
+import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -32,9 +33,7 @@ SECRET_KEY = os.getenv("SECRET_KEY", "secret-key-should-be-changed")
 DEBUG = os.getenv("DEBUG", "False").lower() in ("1", "true", "yes")
 
 ALLOWED_HOSTS = [
-    host.strip()
-    for host in os.getenv("ALLOWED_HOSTS", "*").split(",")
-    if host.strip()
+    host.strip() for host in os.getenv("ALLOWED_HOSTS", "*").split(",") if host.strip()
 ]
 
 CSRF_TRUSTED_ORIGINS = [
@@ -172,6 +171,9 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STATIC_ROOT.mkdir(parents=True, exist_ok=True)
+
+TESTING = "test" in sys.argv or "pytest" in sys.modules
 
 # Enable Whitenoise compression and caching
 STORAGES = {
@@ -180,9 +182,9 @@ STORAGES = {
     },
     "staticfiles": {
         "BACKEND": (
-            "whitenoise.storage.CompressedManifestStaticFilesStorage"
-            if not DEBUG
-            else "django.contrib.staticfiles.storage.StaticFilesStorage"
+            "django.contrib.staticfiles.storage.StaticFilesStorage"
+            if DEBUG or TESTING
+            else "whitenoise.storage.CompressedManifestStaticFilesStorage"
         ),
     },
 }
@@ -195,9 +197,13 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "accounts.User"
 
 STATICFILES_DIRS = [
-    BASE_DIR / "assets",
-    BASE_DIR / "core" / "assets",
-    BASE_DIR / "rivals" / "assets",
+    d
+    for d in [
+        BASE_DIR / "assets",
+        BASE_DIR / "core" / "assets",
+        BASE_DIR / "rivals" / "assets",
+    ]
+    if d.exists()
 ]
 
 LOGIN_URL = "/accounts/login/"

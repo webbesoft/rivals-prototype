@@ -147,7 +147,9 @@ class ProjectionService:
                 "projected_overall_rank": current_rank,
                 "projected_rank_min": current_rank,
                 "projected_rank_max": current_rank,
-                "projected_rank_tier": self.get_rank_tier_label(current_rank or 1000000),
+                "projected_rank_tier": self.get_rank_tier_label(
+                    current_rank or 1000000
+                ),
                 "rank_trajectory": "steady",
                 "rank_change": 0,
                 "season_completed": True,
@@ -170,8 +172,12 @@ class ProjectionService:
                 "projected_points_min": int(round(projected_pts * 0.9)),
                 "projected_points_max": int(round(projected_pts * 1.1)),
                 "projected_overall_rank": proj_rank,
-                "projected_rank_min": self.points_to_overall_rank(int(round(projected_pts * 1.1))),
-                "projected_rank_max": self.points_to_overall_rank(int(round(projected_pts * 0.9))),
+                "projected_rank_min": self.points_to_overall_rank(
+                    int(round(projected_pts * 1.1))
+                ),
+                "projected_rank_max": self.points_to_overall_rank(
+                    int(round(projected_pts * 0.9))
+                ),
                 "projected_rank_tier": self.get_rank_tier_label(proj_rank),
                 "rank_trajectory": "steady",
                 "rank_change": 0,
@@ -200,8 +206,12 @@ class ProjectionService:
         optimistic_ppg = max(season_ppg, recent_ppg) * 1.08
 
         # Projected Points
-        expected_final_points = int(round(current_points + (remaining_gws * projected_ppg)))
-        min_final_points = int(round(current_points + (remaining_gws * conservative_ppg)))
+        expected_final_points = int(
+            round(current_points + (remaining_gws * projected_ppg))
+        )
+        min_final_points = int(
+            round(current_points + (remaining_gws * conservative_ppg))
+        )
         max_final_points = int(round(current_points + (remaining_gws * optimistic_ppg)))
 
         # Projected Ranks
@@ -279,21 +289,21 @@ class ProjectionService:
             proj_pts = int(round(curr_pts + (remaining_gws * pace)))
             proj_overall_rank = self.points_to_overall_rank(proj_pts)
 
-            team_projections.append({
-                "team_id": team.id if team else None,
-                "team_name": team.team_name if team else "Unknown",
-                "manager_name": team.manager_name if team else "Unknown",
-                "current_rank": curr_rank,
-                "current_points": curr_pts,
-                "pace_ppg": round(pace, 1),
-                "projected_points": proj_pts,
-                "projected_overall_rank": proj_overall_rank,
-            })
+            team_projections.append(
+                {
+                    "team_id": team.id if team else None,
+                    "team_name": team.team_name if team else "Unknown",
+                    "manager_name": team.manager_name if team else "Unknown",
+                    "current_rank": curr_rank,
+                    "current_points": curr_pts,
+                    "pace_ppg": round(pace, 1),
+                    "projected_points": proj_pts,
+                    "projected_overall_rank": proj_overall_rank,
+                }
+            )
 
         # Sort by projected points descending
-        team_projections.sort(
-            key=lambda x: (-x["projected_points"], x["current_rank"])
-        )
+        team_projections.sort(key=lambda x: (-x["projected_points"], x["current_rank"]))
 
         # Assign projected ranks and calculate gap metrics
         leader_pts = team_projections[0]["projected_points"] if team_projections else 0
@@ -345,4 +355,3 @@ class ProjectionService:
                     "total_teams": league_proj["total_teams"],
                 }
         return None
-

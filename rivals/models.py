@@ -212,7 +212,8 @@ class GameweekData(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["team", "gameweek", "season"], name="unique_team_gameweek_season"
+                fields=["team", "gameweek", "season"],
+                name="unique_team_gameweek_season",
             )
         ]
         indexes = [
