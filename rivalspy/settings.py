@@ -10,14 +10,37 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import logging
 import os
 import sys
 from pathlib import Path
 
+import sentry_sdk
 from dotenv import load_dotenv
+from sentry_sdk.integrations.django import DjangoIntegration
+from sentry_sdk.integrations.logging import LoggingIntegration
 
 load_dotenv()
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "rivalspy.settings")
+
+# ---------------------------------------------------------------------------
+# Sentry
+# ---------------------------------------------------------------------------
+SENTRY_DSN = os.getenv("SENTRY_DSN", "")
+
+sentry_sdk.init(
+    dsn=SENTRY_DSN or None,  # None → SDK is a no-op (safe for local dev without a DSN)
+    integrations=[
+        DjangoIntegration(),
+        LoggingIntegration(
+            level=logging.INFO,  # capture INFO and above as breadcrumbs
+            event_level=logging.ERROR,  # send ERROR and above as Sentry events
+            capture_sentry_logs=True,  # also forward sentry_sdk.logger.* calls
+        ),
+    ],
+    traces_sample_rate=float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "1.0")),
+    send_default_pii=False,
+)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent

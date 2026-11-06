@@ -663,6 +663,7 @@ dependencies = [
     { name = "pylint" },
     { name = "python-dotenv" },
     { name = "requests" },
+    { name = "sentry-sdk" },
     { name = "uvicorn" },
     { name = "whitenoise" },
 ]
@@ -687,6 +688,7 @@ requires-dist = [
     { name = "pylint", specifier = ">=3.3.8" },
     { name = "python-dotenv", specifier = ">=1.1.1" },
     { name = "requests", specifier = ">=2.32.5" },
+    { name = "sentry-sdk", specifier = ">=2.68.0" },
     { name = "uvicorn", specifier = ">=0.35.0" },
     { name = "whitenoise", specifier = ">=6.8.2" },
 ]
@@ -698,6 +700,19 @@ dev = [
     { name = "pytest", specifier = ">=8.4.1" },
     { name = "pytest-cov", specifier = ">=6.2.1" },
     { name = "pytest-django", specifier = ">=4.11.1" },
+]
+
+[[package]]
+name = "sentry-sdk"
+version = "2.74.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "certifi" },
+    { name = "urllib3" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/8e/7f/1b16ab4aee53cc5db976bac12e6df5d562aae3880965200cef812e7121d9/sentry_sdk-2.74.0.tar.gz", hash = "sha256:dd91d75aacaef636006b579ac3ddb2fdbc9dce35f00f4b353b6b1b110c6b256a", size = 1081514, upload-time = "2026-11-05T14:50:27.444Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/55/b1/736d4b4b308694b0071844a533522ac06669ad61751687b94edfbf863f17/sentry_sdk-2.74.0-py3-none-any.whl", hash = "sha256:40b205af015649df3ec9986e057ce24ce85956bee3fb75efa72c93aa7036bdff", size = 549800, upload-time = "2026-11-05T14:50:25.767Z" },
 ]
 
 [[package]]
