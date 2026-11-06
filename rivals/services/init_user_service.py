@@ -25,8 +25,27 @@ class InitUserService:
                 if not user_team:
                     return False
 
-                self._process_classic_leagues(
+                current_leagues = self._process_classic_leagues(
                     basic_info.get("leagues", {}).get("classic", [])
+                )
+
+                if current_leagues:
+                    current_league_ids = [ml.id for ml in current_leagues]
+                    UserMiniLeague.objects.filter(user=self.user).exclude(
+                        mini_league_id__in=current_league_ids
+                    ).delete()
+
+            # Attempt full team data sync (current_season, gameweeks, squad, transfers).
+            # Handled in a separate try/except so non-critical sync errors do not fail
+            # the user initialization after associations have been safely committed.
+            try:
+                from .team_sync_service import TeamSyncService
+
+                TeamSyncService(user_team).sync_full_data()
+            except Exception as sync_err:
+                logger.warning(
+                    f"Non-fatal error syncing full team data for team {user_team.fpl_team_id}: {sync_err}",
+                    exc_info=True,
                 )
 
             return True
@@ -45,12 +64,30 @@ class InitUserService:
                 "current_overall_rank": basic_info["summary_overall_rank"],
             },
         )
-        if created:
-            self.user.team = team
-            self.user.save(update_fields=["team"])
+        if not created:
+            team.team_name = basic_info["name"]
+            team.manager_name = f"{basic_info['player_first_name']} {basic_info['player_last_name']}".strip()
+            team.current_total_points = basic_info.get(
+                "summary_overall_points", team.current_total_points
+            )
+            team.current_overall_rank = basic_info.get(
+                "summary_overall_rank", team.current_overall_rank
+            )
+            team.save(
+                update_fields=[
+                    "team_name",
+                    "manager_name",
+                    "current_total_points",
+                    "current_overall_rank",
+                ]
+            )
+
+        self.user.team = team
+        self.user.save(update_fields=["team"])
         return team
 
-    def _process_classic_leagues(self, classic_leagues: list[dict]) -> None:
+    def _process_classic_leagues(self, classic_leagues: list[dict]) -> list[MiniLeague]:
+        synced_leagues = []
         for league_data in classic_leagues:
             if self._is_system_league(league_data):
                 continue
@@ -64,6 +101,9 @@ class InitUserService:
 
             self._create_user_league_association(mini_league)
             self._sync_league_data(mini_league)
+            synced_leagues.append(mini_league)
+
+        return synced_leagues
 
     def _is_system_league(self, league_data: dict) -> bool:
         system_short_names = ["overall", "region-", "event-", "brd-", "sc", "top-"]

@@ -9,6 +9,17 @@ from rivals.models import GameweekData, Transfer
 
 @login_required
 def dashboard(request):
+    # Self-heal user.team link if user has an fpl_id but team became unlinked
+    if request.user.team_id is None and request.user.fpl_id:
+        from rivals.models import Team
+
+        matched_team = Team.objects.filter(fpl_team_id=request.user.fpl_id).first()
+        if matched_team:
+            request.user.team = matched_team
+            request.user.save(update_fields=["team"])
+
+    user_team = request.user.team
+
     mini_leagues_qs = request.user.customminileagues.select_related(
         "mini_league"
     ).order_by("mini_league__name")
@@ -16,8 +27,6 @@ def dashboard(request):
     paginator = Paginator(mini_leagues_qs, 10)  # 10 per page
     page_number = request.GET.get("page")
     mini_leagues = paginator.get_page(page_number)
-
-    user_team = request.user.team
     recent_leagues = mini_leagues[:5]
     tracked_teams_qs = request.user.tracked_teams.select_related("team").all()
     tracked_teams_count = tracked_teams_qs.count()

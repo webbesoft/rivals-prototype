@@ -223,36 +223,60 @@ def update_fpl_id_view(request):
         new_fpl_id = str(form.cleaned_data["fpl_id"])
         fpl_data = form.fpl_data  # already fetched in clean_fpl_id
 
-        # Update user profile fields (but keep the existing team link for now)
-        request.user.fpl_id = new_fpl_id
-        request.user.team_name = fpl_data.get("name", "")
-        request.user.manager_name = (
+        # Preserve prior profile state to restore on failure
+        old_fpl_id = request.user.fpl_id
+        old_team_name = request.user.team_name
+        old_manager_name = request.user.manager_name
+        old_team = request.user.team
+
+        # Prepare new manager info
+        new_team_name = fpl_data.get("name", "")
+        new_manager_name = (
             fpl_data.get("player_first_name", "")
             + " "
             + fpl_data.get("player_last_name", "")
         ).strip()
-        request.user.save(update_fields=["fpl_id", "team_name", "manager_name"])
 
-        # Re-run InitUserService to create/link new team and leagues.
-        # Only unlink the old team once we know the task will be dispatched
-        # (or has completed synchronously) so the existing link stays intact
-        # on failure.
+        basic_info_json = json.dumps(fpl_data)
+        is_async = getattr(
+            __import__("django.conf", fromlist=["settings"]).settings,
+            "BACKGROUND_TASK_RUN_ASYNC",
+            False,
+        )
+
+        if is_async:
+            # Async path: update profile, clear existing team linkage so stale data
+            # is not shown before the task completes, and queue the task.
+            request.user.fpl_id = new_fpl_id
+            request.user.team_name = new_team_name
+            request.user.manager_name = new_manager_name
+            request.user.team = None
+            request.user.save(
+                update_fields=["fpl_id", "team_name", "manager_name", "team"]
+            )
+            init_user_data_task(request.user.id, basic_info_json)
+            messages.success(
+                request,
+                f'FPL team update to "{new_team_name}" scheduled! Your leagues and stats are being refreshed.',
+            )
+            return redirect("rivals:dashboard")
+
+        # Synchronous path: run initialization first, then update profile fields only on success
         try:
-            basic_info_json = json.dumps(fpl_data)
-            if getattr(
-                __import__("django.conf", fromlist=["settings"]).settings,
-                "BACKGROUND_TASK_RUN_ASYNC",
-                False,
-            ):
-                # Async path: unlink now; the task will create the new link
-                request.user.team = None
-                request.user.save(update_fields=["team"])
-                init_user_data_task(request.user.id, basic_info_json)
-            else:
-                # Synchronous path: run first; only unlink on success
-                init_user_data_task.now(request.user.id, basic_info_json)
-                request.user.team = None
-                request.user.save(update_fields=["team"])
+            request.user.fpl_id = new_fpl_id
+            request.user.team_name = new_team_name
+            request.user.manager_name = new_manager_name
+            request.user.save(update_fields=["fpl_id", "team_name", "manager_name"])
+
+            init_user_data_task.now(request.user.id, basic_info_json)
+            request.user.refresh_from_db()
+
+            messages.success(
+                request,
+                f'FPL team updated to "{new_team_name}" successfully! '
+                "Your leagues and stats are being refreshed.",
+            )
+            return redirect("rivals:dashboard")
         except Exception as e:
             import logging
 
@@ -260,13 +284,19 @@ def update_fpl_id_view(request):
                 f"Failed to reinitialise user {request.user.id} after FPL ID update: {e}",
                 exc_info=True,
             )
-
-        messages.success(
-            request,
-            f"FPL team updated to \"{fpl_data.get('name', '')}\" successfully! "
-            "Your leagues and stats are being refreshed.",
-        )
-        return redirect("rivals:dashboard")
+            # Restore prior profile fields and linkage on failure
+            request.user.fpl_id = old_fpl_id
+            request.user.team_name = old_team_name
+            request.user.manager_name = old_manager_name
+            request.user.team = old_team
+            request.user.save(
+                update_fields=["fpl_id", "team_name", "manager_name", "team"]
+            )
+            messages.error(
+                request,
+                "Failed to refresh FPL team data. Your previous settings have been preserved.",
+            )
+            return redirect("accounts:profile")
 
     # Form invalid — re-render profile page with errors
     return render(request, "accounts/profile.html", {"form": form})

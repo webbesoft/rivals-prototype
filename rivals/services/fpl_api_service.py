@@ -38,14 +38,37 @@ class FplApiService:
             cache.set(self.BOOTSTRAP_CACHE_KEY, data, self.BOOTSTRAP_CACHE_TIMEOUT)
         return data
 
-    def fetch_mini_league(self, league_id: str) -> dict | None:
+    def fetch_mini_league(self, league_id: str, max_pages: int = 10) -> dict | None:
         url = f"{self.BASE_URL}/leagues-classic/{league_id}/standings/"
         response = self.make_request(url)
         if not response:
             return None
+
+        standings_data = response.get("standings", {})
+        results = list(standings_data.get("results", []))
+        has_next = standings_data.get("has_next", False)
+        is_complete = not has_next
+
+        page = 2
+        while has_next and page <= max_pages:
+            next_resp = self.make_request(f"{url}?page_standings={page}")
+            if not next_resp or "standings" not in next_resp:
+                is_complete = False
+                break
+            page_standings = next_resp.get("standings", {})
+            results.extend(page_standings.get("results", []))
+            has_next = page_standings.get("has_next", False)
+            if not has_next:
+                is_complete = True
+            page += 1
+
+        if has_next and page > max_pages:
+            is_complete = False
+
         return {
             "league_info": response["league"],
-            "standings": response["standings"]["results"],
+            "standings": results,
+            "is_complete": is_complete,
         }
 
     def fetch_team_history(self, team_id: str) -> dict | None:

@@ -76,6 +76,7 @@ INSTALLED_APPS += LOCAL_APPS
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "core.middleware.BlockScannerMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -171,7 +172,6 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STATIC_ROOT.mkdir(parents=True, exist_ok=True)
 
 TESTING = "test" in sys.argv or "pytest" in sys.modules
 
@@ -294,3 +294,25 @@ CORS_ALLOWED_ORIGINS = (
     if not DEBUG
     else []
 )
+
+# Production security hardening
+if not DEBUG and not TESTING:
+    has_trusted_proxy_ssl = bool(SECURE_PROXY_SSL_HEADER)
+    default_ssl_redirect = "True" if has_trusted_proxy_ssl else "False"
+    SECURE_SSL_REDIRECT = os.getenv(
+        "SECURE_SSL_REDIRECT", default_ssl_redirect
+    ).lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = "DENY"
+    SECURE_HSTS_SECONDS = int(os.getenv("SECURE_HSTS_SECONDS", "31536000"))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = os.getenv(
+        "SECURE_HSTS_INCLUDE_SUBDOMAINS", "False"
+    ).lower() in ("1", "true", "yes")
+    SECURE_HSTS_PRELOAD = True

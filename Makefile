@@ -11,4 +11,4 @@ lint:
 	uv run ruff check .
 
 mypy:
-	uv run mypy
+	uv run mypy accounts api core rivals rivalspy

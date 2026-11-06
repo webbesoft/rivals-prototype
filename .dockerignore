@@ -1,0 +1,16 @@
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+.kamal
+.pytest_cache
+.venv
+__pycache__
+*.pyc
+*.sqlite3
+dbs/*.sqlite3
+staticfiles
+mediafiles
+node_modules
+

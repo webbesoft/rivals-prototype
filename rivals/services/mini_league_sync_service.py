@@ -35,7 +35,8 @@ class MiniLeagueSyncService:
 
             # --- Sync teams and standings ---
             standings = league_data["standings"]
-            self._sync_teams_and_standings(standings)
+            is_complete = league_data.get("is_complete", True)
+            self._sync_teams_and_standings(standings, is_complete=is_complete)
 
             return True
 
@@ -43,7 +44,9 @@ class MiniLeagueSyncService:
             logger.error(f"Mini League Sync Error: {e}", exc_info=True)
             return False
 
-    def _sync_teams_and_standings(self, standings: list[dict]) -> None:
+    def _sync_teams_and_standings(
+        self, standings: list[dict], is_complete: bool = True
+    ) -> None:
         """
         Update or create teams in the league and track standings.
         """
@@ -51,13 +54,17 @@ class MiniLeagueSyncService:
         existing_mlts = {
             mlt.team_id: mlt for mlt in self.mini_league.mini_league_teams.all()
         }
+        synced_team_ids = set()
+        has_resolution_failure = False
 
         for standing in standings:
             team = self._find_or_create_team(standing)
 
             if not team:
+                has_resolution_failure = True
                 continue
 
+            synced_team_ids.add(team.id)
             mini_league_team = existing_mlts.get(team.id)
 
             if mini_league_team:
@@ -97,6 +104,13 @@ class MiniLeagueSyncService:
                     total_points=standing["total"],
                 )
                 existing_mlts[team.id] = new_mlt
+
+        # Prune teams only when at least one team synced, no resolution failures occurred,
+        # and the response is complete (not a partial standings page)
+        if synced_team_ids and not has_resolution_failure and is_complete:
+            self.mini_league.mini_league_teams.exclude(
+                team_id__in=synced_team_ids
+            ).delete()
 
     def _find_or_create_team(self, standing: dict) -> Team | None:
         """
