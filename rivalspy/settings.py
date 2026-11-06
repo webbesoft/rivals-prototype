@@ -320,11 +320,12 @@ CORS_ALLOWED_ORIGINS = (
 
 # Production security hardening
 if not DEBUG and not TESTING:
-    has_trusted_proxy_ssl = bool(SECURE_PROXY_SSL_HEADER)
-    default_ssl_redirect = "True" if has_trusted_proxy_ssl else "False"
-    SECURE_SSL_REDIRECT = os.getenv(
-        "SECURE_SSL_REDIRECT", default_ssl_redirect
-    ).lower() in (
+    # SECURE_SSL_REDIRECT is intentionally False when running behind a
+    # reverse proxy (Kamal) that already terminates SSL. The proxy enforces
+    # HTTPS at the edge and forwards X-Forwarded-Proto, so Django redirecting
+    # HTTP→HTTPS internally would break plain-HTTP health checks from the
+    # proxy itself (resulting in 301s the proxy cannot follow).
+    SECURE_SSL_REDIRECT = os.getenv("SECURE_SSL_REDIRECT", "False").lower() in (
         "1",
         "true",
         "yes",
