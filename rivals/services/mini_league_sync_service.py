@@ -146,6 +146,10 @@ class MiniLeagueSyncService:
 
     def _sync_tracked_teams_transfers(self) -> None:
         try:
+            from django.conf import settings
+            if getattr(settings, "TESTING", False):
+                return
+
             from rivals.models import TrackedTeam
             from rivals.services.team_sync_service import TeamSyncService
 

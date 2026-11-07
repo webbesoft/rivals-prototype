@@ -144,8 +144,12 @@ def dashboard(request):
 def sync_tracked_rivals_if_deadline_passed(user):
     """
     If the latest gameweek deadline has passed, ensure tracked rivals have
-    their transfers and gameweek data updated as soon as data becomes available.
+    their transfers updated as soon as data becomes available.
     """
+    from django.conf import settings
+    if getattr(settings, "TESTING", False):
+        return
+
     tracked_qs = user.tracked_teams.select_related("team").all()
     if not tracked_qs.exists():
         return
@@ -164,15 +168,16 @@ def sync_tracked_rivals_if_deadline_passed(user):
         if team.last_synced_at is None or team.last_synced_at < deadline_dt:
             throttle_key = f"sync_rival_throttle_{team.id}_{latest_gw}"
             if not cache.get(throttle_key):
-                cache.set(throttle_key, True, 120)  # 2 minute throttle
+                cache.set(throttle_key, True, 300)  # 5 minute throttle
                 try:
                     sync_service = TeamSyncService(team)
                     sync_service.sync_transfers()
-                    sync_service.sync_basic_info()
                     team.last_synced_at = timezone.now()
                     team.save(update_fields=["last_synced_at"])
                 except Exception as e:
-                    logger.warning(f"Auto-sync for tracked rival {team.id} failed: {e}")
+                    logger.warning(
+                        f"Auto-sync for tracked rival {team.id} failed: {e}"
+                    )
 
 
 @login_required
@@ -186,7 +191,6 @@ def dashboard_sync_rivals(request):
         try:
             sync_service = TeamSyncService(tracked.team)
             sync_service.sync_transfers()
-            sync_service.sync_basic_info()
             tracked.team.last_synced_at = timezone.now()
             tracked.team.save(update_fields=["last_synced_at"])
             count += 1
