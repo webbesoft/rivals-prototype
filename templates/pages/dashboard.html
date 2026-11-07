@@ -285,7 +285,19 @@
                 {{ tracked_teams_count }} rival{{ tracked_teams_count|pluralize }} monitored
               </span>
             </div>
+            {% if tracked_teams_count > 0 %}
+            <form action="{% url 'rivals:rivals.sync' %}" method="POST" class="inline">
+              {% csrf_token %}
+              <button type="submit" class="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-mono font-bold uppercase tracking-wider text-text-main bg-white hover:border-pitch hover:text-pitch transition-colors border border-gray-300 shadow-xs cursor-pointer" title="Sync all tracked rivals">
+                <svg class="w-3 h-3 text-pitch" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                </svg>
+                Sync Rivals
+              </button>
+            </form>
+            {% else %}
             <span class="text-[11px] font-mono text-gray-400 hidden sm:inline">Scout opponent squad changes</span>
+            {% endif %}
           </div>
 
           {% if not tracked_teams %}
@@ -369,8 +381,24 @@
         <!-- Activity Stream Container -->
         <div class="bg-white border border-gray-200 shadow-sm">
           <div class="px-5 py-3 border-b border-gray-200 bg-gray-50/50 flex items-center justify-between">
-            <h2 class="text-xs font-black uppercase tracking-wider text-text-main font-mono">Rival Radar</h2>
-            <span class="text-[11px] font-mono text-gray-500">Live Intel</span>
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 bg-pitch rounded-full"></span>
+              <h2 class="text-xs font-black uppercase tracking-wider text-text-main font-mono">Rival Radar</h2>
+            </div>
+            <div class="flex items-center gap-3">
+              {% if tracked_teams_count > 0 %}
+              <form action="{% url 'rivals:rivals.sync' %}" method="POST" class="inline">
+                {% csrf_token %}
+                <button type="submit" class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-mono font-bold uppercase tracking-wider text-pitch bg-pitch/10 hover:bg-pitch hover:text-white transition-colors border border-pitch/20 cursor-pointer" title="Refresh transfers feed">
+                  <svg class="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                  </svg>
+                  Sync Intel
+                </button>
+              </form>
+              {% endif %}
+              <span class="text-[11px] font-mono text-gray-500">Live Intel</span>
+            </div>
           </div>
 
           <!-- Section 1: Recent Transfers by Rivals -->

@@ -4,6 +4,8 @@ from collections import defaultdict
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
+from django.core.cache import cache
+
 from ..models import Team
 from .fpl_api_service import FplApiService
 
@@ -568,17 +570,46 @@ class TeamAnalysisService:
 
         return advantages, insights
 
+    @staticmethod
+    def get_cache_key(fpl_team_id: int, gw: Optional[int] = None) -> str:
+        if gw:
+            return f"tactical_analysis_{fpl_team_id}_gw{gw}"
+        return f"tactical_analysis_{fpl_team_id}_latest"
+
+    def get_cached_analysis(self, fpl_team_id: int) -> Optional[Dict[str, Any]]:
+        """Retrieve cached analysis if available."""
+        gw = self.current_gw or self.api.fetch_current_gameweek()
+        cached = cache.get(self.get_cache_key(fpl_team_id, gw))
+        if cached and not cached.get("error"):
+            return cached
+        cached_latest = cache.get(self.get_cache_key(fpl_team_id))
+        if cached_latest and not cached_latest.get("error"):
+            return cached_latest
+        return None
+
     # ---------- Public endpoints ----------
     def analyze_team(
-        self, fpl_team_id: int, include_team_obj: Optional[Team] = None
+        self,
+        fpl_team_id: int,
+        include_team_obj: Optional[Team] = None,
+        force_refresh: bool = False,
     ) -> Dict[str, Any]:
         """
         Main entry to analyze a team. Returns a serializable dict with:
           - team_summary, transfer_recommendations, captain_suggestions, budget_insights, analysis_timestamp
+        Results are cached to avoid redundant computation across page refreshes.
         """
         self.ensure_data()
+        gw = self.current_gw or self.api.fetch_current_gameweek()
+        cache_key_gw = self.get_cache_key(fpl_team_id, gw)
+        cache_key_latest = self.get_cache_key(fpl_team_id)
+
+        if not force_refresh:
+            cached = cache.get(cache_key_gw) or cache.get(cache_key_latest)
+            if cached and not cached.get("error"):
+                return cached
+
         try:
-            gw = self.current_gw or self.api.fetch_current_gameweek()
             team_picks = self.api.fetch_team_picks(fpl_team_id, gw)
             if not team_picks:
                 return {"error": "Team picks not found"}
@@ -632,7 +663,7 @@ class TeamAnalysisService:
             else:
                 budget_insights.append("No free transfers - changes will cost points")
 
-            return {
+            result = {
                 "team_id": fpl_team_id,
                 "team_summary": team_summary,
                 "current_gameweek": gw,
@@ -641,6 +672,12 @@ class TeamAnalysisService:
                 "budget_insights": budget_insights,
                 "analysis_timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             }
+
+            # Cache analysis for 12 hours (43200 seconds)
+            cache.set(cache_key_gw, result, 43200)
+            cache.set(cache_key_latest, result, 43200)
+
+            return result
         except Exception as e:
             logger.exception("Analyze team failed: %s", e)
             return {"error": str(e)}

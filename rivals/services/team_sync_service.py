@@ -200,29 +200,34 @@ class TeamSyncService:
         if not transfers:
             return
 
-        current_season = self.team.current_season
-
-        # Batch check existing transfers to avoid N+1 queries.
-        # Use (gameweek, transfer_time) as the de-dup key; transfer_time is a
-        # stable value stored on every row and does not depend on FK resolution.
-        existing_signatures = set(
-            Transfer.objects.filter(
-                team=self.team,
-                season=current_season,
-            ).values_list("gameweek", "transfer_time")
+        current_season = (
+            self.team.current_season or self.fpl_api_service.fetch_current_season()
         )
+        if not self.team.current_season and current_season:
+            self.team.current_season = current_season
+            self.team.save(update_fields=["current_season"])
+
+        # Build de-dup set based on (gameweek, iso_timestamp)
+        existing_signatures = set()
+        for gw, tt in Transfer.objects.filter(team=self.team).values_list(
+            "gameweek", "transfer_time"
+        ):
+            if tt:
+                existing_signatures.add(
+                    (gw, tt.isoformat() if hasattr(tt, "isoformat") else str(tt))
+                )
 
         new_transfers_data = []
         needed_elements = set()
-        for t in transfers:
-            # Match the (gameweek, transfer_time) signature used by existing rows
-            from django.utils.dateparse import parse_datetime
+        from django.utils.dateparse import parse_datetime
 
+        for t in transfers:
             t_time = parse_datetime(t["time"]) if t.get("time") else None
-            sig = (t["event"], t_time)
+            t_iso = t_time.isoformat() if t_time else (t.get("time") or "")
+            sig = (t["event"], t_iso)
             if sig not in existing_signatures:
                 existing_signatures.add(sig)
-                new_transfers_data.append(t)
+                new_transfers_data.append((t, t_time))
                 needed_elements.add(t["element_in"])
                 needed_elements.add(t["element_out"])
 
@@ -233,8 +238,22 @@ class TeamSyncService:
             p.fpl_id: p for p in Player.objects.filter(fpl_id__in=needed_elements)
         }
 
+        # If any player elements are missing from DB, trigger quick player sync
+        missing_ids = needed_elements - set(players_by_fpl_id.keys())
+        if missing_ids:
+            try:
+                from rivals.services.player_sync_service import PlayerSyncService
+
+                PlayerSyncService(self.fpl_api_service).sync_all_players()
+                players_by_fpl_id = {
+                    p.fpl_id: p
+                    for p in Player.objects.filter(fpl_id__in=needed_elements)
+                }
+            except Exception as player_err:
+                logger.warning(f"Failed to auto-sync missing players: {player_err}")
+
         transfers_to_create = []
-        for t in new_transfers_data:
+        for t, t_time in new_transfers_data:
             player_in = players_by_fpl_id.get(t["element_in"])
             player_out = players_by_fpl_id.get(t["element_out"])
 
@@ -244,20 +263,20 @@ class TeamSyncService:
                     gameweek=t["event"],
                     season=current_season,
                     player_in_name=(
-                        f"{player_in.first_name} {player_in.second_name}".strip()
+                        player_in.web_name
                         if player_in
-                        else "Unavailable"
+                        else f"Player #{t['element_in']}"
                     ),
                     player_out_name=(
-                        f"{player_out.first_name} {player_out.second_name}".strip()
+                        player_out.web_name
                         if player_out
-                        else "Unavailable"
+                        else f"Player #{t['element_out']}"
                     ),
                     player_in=player_in,
                     player_out=player_out,
-                    player_in_cost=t["element_in_cost"],
-                    player_out_cost=t["element_out_cost"],
-                    transfer_time=t["time"],
+                    player_in_cost=t.get("element_in_cost"),
+                    player_out_cost=t.get("element_out_cost"),
+                    transfer_time=t_time,
                 )
             )
 

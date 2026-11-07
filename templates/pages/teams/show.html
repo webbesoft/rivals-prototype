@@ -52,13 +52,13 @@
         <div class="flex flex-wrap items-center gap-2 shrink-0">
           {% if user.team_id == team.id %}
           <button
-            hx-get="{% url 'rivals:teams.analysis' team.id %}"
+            hx-get="{% url 'rivals:teams.analysis' team.id %}{% if tactical_analysis %}?refresh=1{% endif %}"
             hx-target="#analysis-container"
             hx-indicator="#analysis-loading"
             hx-swap="innerHTML"
             class="px-4 py-2 bg-pitch text-white font-mono text-xs font-bold uppercase tracking-wide hover:bg-pitch/90 transition-colors cursor-pointer"
           >
-            Run Tactical Analysis
+            {% if tactical_analysis %}Refresh Tactical Analysis{% else %}Run Tactical Analysis{% endif %}
           </button>
           {% elif user.team %}
           <button
@@ -208,7 +208,11 @@
     </div>
 
     {% if user.team_id == team.id %}
-    <div id="analysis-container" class="mb-8 empty:hidden"></div>
+    <div id="analysis-container" class="mb-8 empty:hidden">
+      {% if tactical_analysis %}
+      {% include "partials/analysis.html" with analysis=tactical_analysis team=team %}
+      {% endif %}
+    </div>
     {% elif user.team %}
     <div id="comparison-loading" class="hidden my-6 p-8 border border-gray-200 bg-white shadow-sm text-center font-mono">
       <div class="inline-block w-6 h-6 border-2 border-pitch border-t-transparent rounded-full animate-spin mb-2"></div>

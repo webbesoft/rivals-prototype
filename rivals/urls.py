@@ -8,6 +8,7 @@ app_name = "rivals"
 
 urlpatterns = [
     path("", dashboard_views.dashboard, name="dashboard"),
+    path("rivals/sync/", dashboard_views.dashboard_sync_rivals, name="rivals.sync"),
     path("teams/", team_views.team_show, name="teams.index"),
     path("teams/<int:team_id>/", team_views.team_show, name="teams.show"),
     path("teams/<int:team_id>/track/", team_views.team_track, name="teams.track"),

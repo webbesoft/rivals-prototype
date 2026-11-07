@@ -38,6 +38,9 @@ class MiniLeagueSyncService:
             is_complete = league_data.get("is_complete", True)
             self._sync_teams_and_standings(standings, is_complete=is_complete)
 
+            # --- Sync transfers for any tracked teams in this league ---
+            self._sync_tracked_teams_transfers()
+
             return True
 
         except Exception as e:
@@ -140,3 +143,21 @@ class MiniLeagueSyncService:
         except Exception as e:
             logger.error(f"Team creation error: {e}", exc_info=True)
             return None
+
+    def _sync_tracked_teams_transfers(self) -> None:
+        try:
+            from rivals.models import TrackedTeam
+            from rivals.services.team_sync_service import TeamSyncService
+
+            league_team_ids = set(
+                self.mini_league.mini_league_teams.values_list("team_id", flat=True)
+            )
+            tracked_teams = TrackedTeam.objects.filter(
+                team_id__in=league_team_ids
+            ).select_related("team")
+            for tt in tracked_teams:
+                TeamSyncService(tt.team).sync_transfers()
+        except Exception as e:
+            logger.warning(
+                f"Failed syncing tracked team transfers in league {self.mini_league.id}: {e}"
+            )

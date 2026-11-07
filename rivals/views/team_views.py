@@ -28,6 +28,12 @@ def team_show(request, team_id):
     season_histories = team.season_histories.all()
     projection = ProjectionService().project_team_finish(team)
 
+    tactical_analysis = None
+    if request.user.team_id == team.id:
+        tactical_analysis = TeamAnalysisService().get_cached_analysis(
+            int(team.fpl_team_id)
+        )
+
     return render(
         request,
         "pages/teams/show.html",
@@ -39,6 +45,7 @@ def team_show(request, team_id):
             "recent_news": recent_news,
             "season_histories": season_histories,
             "projection": projection,
+            "tactical_analysis": tactical_analysis,
         },
     )
 
@@ -184,8 +191,11 @@ def get_squad_history(request, team_id, gameweek):
 @login_required
 def team_analysis(request, team_id):
     team = get_object_or_404(Team, id=team_id)
+    force_refresh = request.GET.get("refresh") == "1"
     analysis_service = TeamAnalysisService()
-    result = analysis_service.analyze_team(int(team.fpl_team_id), include_team_obj=team)
+    result = analysis_service.analyze_team(
+        int(team.fpl_team_id), include_team_obj=team, force_refresh=force_refresh
+    )
 
     return render(request, "partials/analysis.html", {"analysis": result, "team": team})
 

@@ -1,301 +1,500 @@
-<c-layouts.base title="Rival Comparison - {{ my_team.team_name }} vs {{ rival_team.team_name }}">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+<c-layouts.base title="Head-to-Head: {{ my_team.team_name }} vs {{ rival_team.team_name }} - RivalSpy">
+  {% load humanize %}
+  {% load math_filters %}
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+
     {% if comparison.error %}
-    <div class="bg-danger/10 border border-danger/20 rounded-2xl p-8 text-center">
-      <p class="text-danger font-bold text-xl mb-2">Comparison Failed</p>
-      <p class="text-muted">{{ comparison.error }}</p>
-      <a href="{% url 'rivals:teams.show' rival_team.id %}" class="mt-4 inline-block text-accent hover:text-white transition-colors">
-        ← Back to Team Page
-      </a>
+    <!-- Error State -->
+    <div class="border-l-4 border-danger bg-white border border-gray-200 p-6 shadow-sm">
+      <div class="flex items-start justify-between">
+        <div>
+          <p class="text-xs font-mono font-bold uppercase tracking-wider text-danger mb-1">Comparison Failed</p>
+          <p class="text-sm text-text-main font-medium">{{ comparison.error }}</p>
+        </div>
+        <a href="{% url 'rivals:teams.show' rival_team.id %}" class="px-3.5 py-1.5 text-xs font-mono font-bold uppercase tracking-wide border border-gray-300 text-text-main bg-white hover:border-pitch hover:text-pitch transition-colors">
+          ← Back to Team
+        </a>
+      </div>
     </div>
     {% else %}
-    <!-- Header -->
-    <div class="mb-8 rounded-2xl shadow-xl overflow-hidden relative group">
-      <div class="absolute inset-0 bg-pitch"></div>
-      <div class="absolute inset-0 bg-gradient-to-r from-black/50 to-transparent"></div>
-      <div class="absolute top-0 right-0 p-32 bg-accent/10 blur-3xl rounded-full"></div>
-      
-      <div class="relative p-8">
-        <div class="flex items-center justify-between mb-8">
-          <div>
-            <div class="flex items-center gap-3 mb-2">
-               <span class="px-2 py-0.5 bg-accent/20 border border-accent/40 text-accent text-xs font-black uppercase tracking-wider rounded">Analysis</span>
+
+    <!-- Masthead & Matchup Identity -->
+    <div class="pb-6 mb-8 border-b border-gray-200 flex flex-col md:flex-row md:items-end justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-2 mb-1.5">
+          <span class="text-[11px] font-mono uppercase tracking-widest text-muted">Tactical Intel</span>
+          <span class="text-gray-300 font-mono text-xs">/</span>
+          <span class="text-[11px] font-mono text-pitch font-bold uppercase">Head-to-Head Scouting</span>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-black text-text-main uppercase tracking-tight font-sans">
+          {{ my_team.team_name }} <span class="text-gray-400 font-normal">vs</span> {{ rival_team.team_name }}
+        </h1>
+        <p class="text-xs text-gray-500 font-mono mt-1">
+          <span class="text-pitch font-bold uppercase">You</span> ({{ my_team.manager_name }})
+          <span class="mx-2 text-gray-300">·</span>
+          <span class="text-danger font-bold uppercase">Rival</span> ({{ rival_team.manager_name }})
+          <span class="mx-2 text-gray-300">·</span>
+          GW{{ comparison.current_gameweek }} Data
+        </p>
+      </div>
+
+      <!-- Quick Action Controls -->
+      <div class="flex items-center gap-2 shrink-0">
+        <a href="{% url 'rivals:teams.show' rival_team.id %}" class="px-3.5 py-2 text-xs font-mono font-bold uppercase tracking-wide border border-gray-300 text-text-main bg-white hover:border-pitch hover:text-pitch transition-colors">
+          ← Rival Squad
+        </a>
+        <a href="{% url 'rivals:teams.show' my_team.id %}" class="px-3.5 py-2 text-xs font-mono font-bold uppercase tracking-wide bg-pitch text-white hover:bg-pitch/90 transition-colors">
+          My Squad
+        </a>
+      </div>
+    </div>
+
+    <!-- Top Matchup Summary Ledger -->
+    <div class="mb-8 bg-white border border-gray-200 shadow-sm">
+      <div class="px-5 py-2.5 border-b border-gray-200 bg-gray-50/75 flex items-center justify-between text-xs font-mono">
+        <span class="font-bold uppercase tracking-wider text-text-main">Season Standing Comparison</span>
+        <span class="text-gray-500">Live FPL Benchmarks</span>
+      </div>
+
+      <div class="grid grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-gray-200">
+        <!-- 1. Total Points -->
+        <div class="p-4 sm:p-5">
+          <p class="text-[11px] font-mono uppercase tracking-wider text-gray-500 mb-1">Total Points</p>
+          <div class="flex items-baseline justify-between">
+            <div>
+              <p class="text-xs font-mono text-pitch font-bold">You</p>
+              <p class="text-xl font-black font-mono tabular-nums text-text-main">{{ my_team.current_total_points|intcomma }}</p>
             </div>
-            <h1 class="text-4xl md:text-6xl font-black text-white uppercase italic tracking-tighter leading-none mb-1 shadow-black drop-shadow-lg">
-              Head-to-Head
-            </h1>
-            <p class="text-xl text-gray-300 font-medium font-mono uppercase tracking-widest">
-              {{ my_team.team_name }} vs {{ rival_team.team_name }}
-            </p>
+            <div class="text-right">
+              <p class="text-xs font-mono text-danger font-bold">Rival</p>
+              <p class="text-xl font-black font-mono tabular-nums text-text-main">{{ rival_team.current_total_points|intcomma }}</p>
+            </div>
           </div>
-          <a
-            href="{% url 'rivals:teams.show' rival_team.id %}"
-            class="hidden md:inline-flex bg-white/5 hover:bg-white/10 text-white border border-white/20 px-6 py-2 rounded-xl font-bold uppercase tracking-wide text-xs transition-colors items-center gap-2"
-          >
-            <span>← Back to Rival</span>
-          </a>
+          <div class="mt-2 text-[11px] font-mono">
+            {% if my_team.current_total_points > rival_team.current_total_points %}
+            <span class="text-success font-bold">+{{ my_team.current_total_points|subtract:rival_team.current_total_points }} pts ahead</span>
+            {% elif my_team.current_total_points < rival_team.current_total_points %}
+            <span class="text-danger font-bold">{{ rival_team.current_total_points|subtract:my_team.current_total_points }} pts behind</span>
+            {% else %}
+            <span class="text-gray-400">Level on points</span>
+            {% endif %}
+          </div>
         </div>
 
-        <!-- Comparison Hero Grid -->
-        <div class="grid lg:grid-cols-2 gap-8">
-           <!-- Projected Outcome Card -->
-           <div class="bg-black/40 backdrop-blur-sm rounded-xl p-6 border border-white/10 flex flex-col justify-center">
-             <div class="text-xs uppercase text-muted font-bold tracking-wider mb-4">Projected GW{{ comparison.current_gameweek|add:1 }} Outcome</div>
-             <div class="flex items-center justify-between mb-6">
-               <div class="text-center flex-1">
-                 <div class="text-xs text-gray-400 mb-1">Your Expected</div>
-                 <div class="text-4xl font-black text-white shadow-black drop-shadow-md">{{ comparison.projected_gw_outcome.my_expected|floatformat:1 }}</div>
-               </div>
-               <div class="text-2xl text-gray-600 font-black italic mx-4">VS</div>
-               <div class="text-center flex-1">
-                 <div class="text-xs text-gray-400 mb-1">Rival Expected</div>
-                 <div class="text-4xl font-black text-white shadow-black drop-shadow-md">{{ comparison.projected_gw_outcome.rival_expected|floatformat:1 }}</div>
-               </div>
-             </div>
-             <div class="text-center">
-               {% if comparison.projected_gw_outcome.difference > 0 %}
-               <div class="inline-block bg-accent/20 border border-accent/40 text-accent px-4 py-2 rounded-lg font-black text-xl uppercase tracking-wide">
-                 +{{ comparison.projected_gw_outcome.difference|floatformat:1 }} GAIN
-               </div>
-               {% elif comparison.projected_gw_outcome.difference < 0 %}
-               <div class="inline-block bg-danger/20 border border-danger/40 text-danger px-4 py-2 rounded-lg font-black text-xl uppercase tracking-wide">
-                 {{ comparison.projected_gw_outcome.difference|floatformat:1 }} LOSS
-               </div>
-               {% else %}
-               <div class="inline-block bg-white/10 border border-white/20 text-white px-4 py-2 rounded-lg font-black text-xl uppercase tracking-wide">
-                 EVEN
-               </div>
-               {% endif %}
-             </div>
-           </div>
+        <!-- 2. Overall Rank -->
+        <div class="p-4 sm:p-5">
+          <p class="text-[11px] font-mono uppercase tracking-wider text-gray-500 mb-1">Overall Rank</p>
+          <div class="flex items-baseline justify-between">
+            <div>
+              <p class="text-xs font-mono text-pitch font-bold">You</p>
+              <p class="text-lg font-black font-mono tabular-nums text-text-main">
+                {% if my_team.current_overall_rank %}#{{ my_team.current_overall_rank|intcomma }}{% else %}—{% endif %}
+              </p>
+            </div>
+            <div class="text-right">
+              <p class="text-xs font-mono text-danger font-bold">Rival</p>
+              <p class="text-lg font-black font-mono tabular-nums text-text-main">
+                {% if rival_team.current_overall_rank %}#{{ rival_team.current_overall_rank|intcomma }}{% else %}—{% endif %}
+              </p>
+            </div>
+          </div>
+        </div>
 
-           <!-- Key Stats Grid (Captain & Momentum) -->
-           <div class="grid grid-cols-2 gap-4">
-             <!-- Captains -->
-             <div class="bg-black/40 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-               <div class="text-xs uppercase text-muted font-bold tracking-wider mb-1">Your Captain</div>
-               {% if comparison.captaincy.mine %}
-               <div class="text-lg font-black text-white truncate">{{ comparison.captaincy.mine.name }}</div>
-               <div class="text-2xl font-black text-accent shadow-black drop-shadow-md">{{ comparison.captaincy.mine.expected_points|floatformat:1 }} <span class="text-sm font-bold text-gray-500">exp</span></div>
-               {% else %}
-               <div class="text-sm text-gray-400">N/A</div>
-               {% endif %}
-             </div>
-             <div class="bg-black/40 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-               <div class="text-xs uppercase text-muted font-bold tracking-wider mb-1">Rival Captain</div>
-               {% if comparison.captaincy.rival %}
-               <div class="text-lg font-black text-white truncate">{{ comparison.captaincy.rival.name }}</div>
-               <div class="text-2xl font-black text-white shadow-black drop-shadow-md">{{ comparison.captaincy.rival.expected_points|floatformat:1 }} <span class="text-sm font-bold text-gray-500">exp</span></div>
-               {% else %}
-               <div class="text-sm text-gray-400">N/A</div>
-               {% endif %}
-             </div>
-             
-             <!-- Momentum -->
-             <div class="bg-black/40 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-               <div class="text-xs uppercase text-muted font-bold tracking-wider mb-1">Your Momentum</div>
-               <div class="text-2xl font-black {% if comparison.momentum.mine.trend == 'up' %}text-accent{% elif comparison.momentum.mine.trend == 'down' %}text-danger{% else %}text-white{% endif %} shadow-black drop-shadow-md">
-                 {{ comparison.momentum.mine.average|floatformat:1 }}
-               </div>
-               <div class="text-xs text-gray-400 mt-1">Last 5 GW avg</div>
-             </div>
-             <div class="bg-black/40 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-               <div class="text-xs uppercase text-muted font-bold tracking-wider mb-1">Rival Momentum</div>
-               <div class="text-2xl font-black text-white shadow-black drop-shadow-md">
-                 {{ comparison.momentum.rival.average|floatformat:1 }}
-               </div>
-               <div class="text-xs text-gray-400 mt-1">Last 5 GW avg</div>
-             </div>
-           </div>
+        <!-- 3. Squad Value -->
+        <div class="p-4 sm:p-5">
+          <p class="text-[11px] font-mono uppercase tracking-wider text-gray-500 mb-1">Squad Value</p>
+          <div class="flex items-baseline justify-between">
+            <div>
+              <p class="text-xs font-mono text-pitch font-bold">You</p>
+              <p class="text-lg font-black font-mono tabular-nums text-text-main">£{{ my_team.value_in_millions|floatformat:1 }}m</p>
+            </div>
+            <div class="text-right">
+              <p class="text-xs font-mono text-danger font-bold">Rival</p>
+              <p class="text-lg font-black font-mono tabular-nums text-text-main">£{{ rival_team.value_in_millions|floatformat:1 }}m</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. Available Bank -->
+        <div class="p-4 sm:p-5">
+          <p class="text-[11px] font-mono uppercase tracking-wider text-gray-500 mb-1">In The Bank</p>
+          <div class="flex items-baseline justify-between">
+            <div>
+              <p class="text-xs font-mono text-pitch font-bold">You</p>
+              <p class="text-lg font-black font-mono tabular-nums text-text-main">£{{ my_team.bank_in_millions|floatformat:1 }}m</p>
+            </div>
+            <div class="text-right">
+              <p class="text-xs font-mono text-danger font-bold">Rival</p>
+              <p class="text-lg font-black font-mono tabular-nums text-text-main">£{{ rival_team.bank_in_millions|floatformat:1 }}m</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Projected GW Outcome & Tactical Advantage Strip -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
+      <!-- Left: Projected Gameweek Outcome Card -->
+      <div class="lg:col-span-6 bg-white border border-gray-200 shadow-sm flex flex-col justify-between">
+        <div class="px-5 py-3 border-b border-gray-200 bg-gray-50/50 flex items-center justify-between">
+          <h2 class="text-xs font-black uppercase tracking-wider text-text-main font-mono">
+            Projected Gameweek {{ comparison.current_gameweek|add:1 }} Outcome
+          </h2>
+          <span class="text-[11px] font-mono text-gray-500">Expected xP Model</span>
+        </div>
+
+        <div class="p-6">
+          <div class="grid grid-cols-2 gap-4 text-center mb-6">
+            <div class="p-4 bg-gray-50 border border-gray-100">
+              <p class="text-xs font-mono uppercase tracking-wider text-pitch font-bold mb-1">Your Expected</p>
+              <p class="text-3xl sm:text-4xl font-black font-mono tabular-nums text-text-main">
+                {{ comparison.projected_gw_outcome.my_expected|floatformat:1 }}
+              </p>
+              <p class="text-[11px] font-mono text-gray-400 mt-1">projected points</p>
+            </div>
+
+            <div class="p-4 bg-gray-50 border border-gray-100">
+              <p class="text-xs font-mono uppercase tracking-wider text-danger font-bold mb-1">Rival Expected</p>
+              <p class="text-3xl sm:text-4xl font-black font-mono tabular-nums text-text-main">
+                {{ comparison.projected_gw_outcome.rival_expected|floatformat:1 }}
+              </p>
+              <p class="text-[11px] font-mono text-gray-400 mt-1">projected points</p>
+            </div>
+          </div>
+
+          <!-- Differential Banner -->
+          <div class="text-center p-3 border {% if comparison.projected_gw_outcome.difference > 0 %}border-pitch bg-pitch/5 text-pitch{% elif comparison.projected_gw_outcome.difference < 0 %}border-danger bg-danger/5 text-danger{% else %}border-gray-200 bg-gray-50 text-gray-600{% endif %}">
+            <span class="font-mono text-xs uppercase tracking-widest font-black">
+              {% if comparison.projected_gw_outcome.difference > 0 %}
+                ▲ +{{ comparison.projected_gw_outcome.difference|floatformat:1 }} Advantage (Gain Forecast)
+              {% elif comparison.projected_gw_outcome.difference < 0 %}
+                ▼ {{ comparison.projected_gw_outcome.difference|floatformat:1 }} Deficit (Behind Forecast)
+              {% else %}
+                = Even Differential Projected
+              {% endif %}
+            </span>
+          </div>
+        </div>
+
+        <div class="px-5 py-2.5 border-t border-gray-100 bg-gray-50/25 text-[11px] font-mono text-gray-500">
+          Based on 5-gameweek rolling form, fixture FDR coefficients, and player selection rates.
+        </div>
+      </div>
+
+      <!-- Right: Captains & Momentum Grid -->
+      <div class="lg:col-span-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <!-- Your Captain -->
+        <div class="bg-white border border-gray-200 shadow-sm p-5 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-[11px] font-mono uppercase tracking-wider text-pitch font-bold">Your Captain Pick</span>
+              <span class="text-[10px] font-mono bg-pitch/10 text-pitch px-1.5 py-0.5 rounded font-bold uppercase">Active</span>
+            </div>
+            {% if comparison.captaincy.mine %}
+            <p class="text-base font-bold text-text-main truncate">{{ comparison.captaincy.mine.name }}</p>
+            <p class="text-2xl font-black font-mono tabular-nums text-pitch mt-1">
+              {{ comparison.captaincy.mine.expected_points|floatformat:1 }}
+              <span class="text-xs font-normal font-mono text-gray-500">exp pts</span>
+            </p>
+            {% else %}
+            <p class="text-sm font-mono text-gray-400 mt-2">Captain unassigned</p>
+            {% endif %}
+          </div>
+          <p class="text-[11px] font-mono text-gray-400 mt-4 border-t border-gray-100 pt-2">Calculated pre-multiplier</p>
+        </div>
+
+        <!-- Rival Captain -->
+        <div class="bg-white border border-gray-200 shadow-sm p-5 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-[11px] font-mono uppercase tracking-wider text-danger font-bold">Rival Captain Pick</span>
+              <span class="text-[10px] font-mono bg-danger/10 text-danger px-1.5 py-0.5 rounded font-bold uppercase">Opponent</span>
+            </div>
+            {% if comparison.captaincy.rival %}
+            <p class="text-base font-bold text-text-main truncate">{{ comparison.captaincy.rival.name }}</p>
+            <p class="text-2xl font-black font-mono tabular-nums text-text-main mt-1">
+              {{ comparison.captaincy.rival.expected_points|floatformat:1 }}
+              <span class="text-xs font-normal font-mono text-gray-500">exp pts</span>
+            </p>
+            {% else %}
+            <p class="text-sm font-mono text-gray-400 mt-2">Captain unassigned</p>
+            {% endif %}
+          </div>
+          <p class="text-[11px] font-mono text-gray-400 mt-4 border-t border-gray-100 pt-2">Opposing captain forecast</p>
+        </div>
+
+        <!-- Your Momentum -->
+        <div class="bg-white border border-gray-200 shadow-sm p-5 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-[11px] font-mono uppercase tracking-wider text-gray-500">Your Momentum</span>
+              <span class="text-[10px] font-mono font-bold uppercase {% if comparison.momentum.mine.trend == 'up' %}text-success{% elif comparison.momentum.mine.trend == 'down' %}text-danger{% else %}text-gray-400{% endif %}">
+                {{ comparison.momentum.mine.trend|default:"steady" }}
+              </span>
+            </div>
+            <p class="text-2xl font-black font-mono tabular-nums text-text-main">
+              {{ comparison.momentum.mine.average|floatformat:1 }}
+              <span class="text-xs font-normal font-mono text-gray-500">pts/GW</span>
+            </p>
+          </div>
+          <p class="text-[11px] font-mono text-gray-400 mt-4 border-t border-gray-100 pt-2">Last 5 GW moving average</p>
+        </div>
+
+        <!-- Rival Momentum -->
+        <div class="bg-white border border-gray-200 shadow-sm p-5 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-[11px] font-mono uppercase tracking-wider text-gray-500">Rival Momentum</span>
+              <span class="text-[10px] font-mono font-bold uppercase {% if comparison.momentum.rival.trend == 'up' %}text-success{% elif comparison.momentum.rival.trend == 'down' %}text-danger{% else %}text-gray-400{% endif %}">
+                {{ comparison.momentum.rival.trend|default:"steady" }}
+              </span>
+            </div>
+            <p class="text-2xl font-black font-mono tabular-nums text-text-main">
+              {{ comparison.momentum.rival.average|floatformat:1 }}
+              <span class="text-xs font-normal font-mono text-gray-500">pts/GW</span>
+            </p>
+          </div>
+          <p class="text-[11px] font-mono text-gray-400 mt-4 border-t border-gray-100 pt-2">Last 5 GW moving average</p>
         </div>
       </div>
     </div>
 
     <!-- Squad Breakdown by Position -->
-    <div class="bg-surface rounded-2xl shadow-sm border border-gray-100 p-6 mb-8">
-      <h2 class="text-xl font-black text-text-main uppercase tracking-tight mb-6 flex items-center gap-2">
-        <span class="w-2 h-2 bg-accent rounded-full"></span>
-        Squad Breakdown
-      </h2>
-      <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="bg-white border border-gray-200 shadow-sm mb-8">
+      <div class="px-5 py-3 border-b border-gray-200 bg-gray-50/50 flex items-center justify-between">
+        <h2 class="text-xs font-black uppercase tracking-wider text-text-main font-mono">
+          Squad Differential by Position
+        </h2>
+        <span class="text-[11px] font-mono text-gray-500">Projected Expected Points per Position</span>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-gray-200">
         {% for pos in comparison.position_comparisons %}
-        <div class="bg-surface-alt rounded-xl p-4 border border-gray-100">
-          <div class="text-xs font-bold text-muted uppercase tracking-wider mb-3">{{ pos.position }}</div>
-          <div class="space-y-2">
-            <div>
-              <div class="text-xs text-muted mb-1">You</div>
-              <div class="text-lg font-black {% if pos.advantage == 'mine' %}text-accent{% else %}text-text-main{% endif %}">
-                {{ pos.my_team_expected|floatformat:1 }} <span class="text-xs font-normal text-muted">exp</span>
+        <div class="p-5 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-xs font-black uppercase tracking-wider font-mono text-text-main">{{ pos.position }}</span>
+              {% if pos.advantage == 'mine' %}
+              <span class="text-[10px] font-mono font-bold uppercase px-1.5 py-0.5 bg-pitch/10 text-pitch">
+                Advantage You
+              </span>
+              {% elif pos.advantage == 'theirs' %}
+              <span class="text-[10px] font-mono font-bold uppercase px-1.5 py-0.5 bg-danger/10 text-danger">
+                Rival Ahead
+              </span>
+              {% else %}
+              <span class="text-[10px] font-mono font-bold uppercase px-1.5 py-0.5 bg-gray-100 text-gray-500">
+                Parity
+              </span>
+              {% endif %}
+            </div>
+
+            <div class="space-y-2 font-mono">
+              <div class="flex items-center justify-between">
+                <span class="text-xs text-pitch font-bold">You</span>
+                <span class="text-sm font-bold tabular-nums text-text-main">
+                  {{ pos.my_team_expected|floatformat:1 }} <span class="text-[10px] font-normal text-gray-400">xP</span>
+                </span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-xs text-danger font-bold">Rival</span>
+                <span class="text-sm font-bold tabular-nums text-text-main">
+                  {{ pos.rival_team_expected|floatformat:1 }} <span class="text-[10px] font-normal text-gray-400">xP</span>
+                </span>
               </div>
             </div>
-            <div class="h-px bg-gray-200"></div>
-            <div>
-              <div class="text-xs text-muted mb-1">Rival</div>
-              <div class="text-lg font-black {% if pos.advantage == 'theirs' %}text-danger{% else %}text-text-main{% endif %}">
-                {{ pos.rival_team_expected|floatformat:1 }} <span class="text-xs font-normal text-muted">exp</span>
-              </div>
-            </div>
-            {% if pos.advantage == 'mine' %}
-            <div class="text-xs font-bold text-accent mt-2">✓ Advantage</div>
-            {% elif pos.advantage == 'theirs' %}
-            <div class="text-xs font-bold text-danger mt-2">⚠ Behind</div>
-            {% endif %}
+          </div>
+
+          <!-- Delta -->
+          <div class="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-xs font-mono">
+            <span class="text-gray-400">Net Delta</span>
+            <span class="font-bold {% if pos.advantage == 'mine' %}text-pitch{% elif pos.advantage == 'theirs' %}text-danger{% else %}text-gray-500{% endif %}">
+              {% if pos.my_team_expected > pos.rival_team_expected %}
+                +{{ pos.my_team_expected|subtract:pos.rival_team_expected|floatformat:1 }}
+              {% elif pos.my_team_expected < pos.rival_team_expected %}
+                -{{ pos.rival_team_expected|subtract:pos.my_team_expected|floatformat:1 }}
+              {% else %}
+                0.0
+              {% endif %}
+            </span>
           </div>
         </div>
         {% endfor %}
       </div>
     </div>
 
-    <!-- Fixture Comparison (Avg Difficulty) -->
-    <div class="bg-surface rounded-2xl shadow-sm border border-gray-100 p-6 mb-8">
-      <h2 class="text-xl font-black text-text-main uppercase tracking-tight mb-6 flex items-center gap-2">
-        <span class="w-2 h-2 bg-accent rounded-full"></span>
-        Upcoming Schedule Difficulty (Next 6 GWs)
-      </h2>
-      <div class="grid md:grid-cols-2 gap-6">
+    <!-- Upcoming Schedule Difficulty (Next 6 GWs) -->
+    <div class="bg-white border border-gray-200 shadow-sm mb-8">
+      <div class="px-5 py-3 border-b border-gray-200 bg-gray-50/50 flex items-center justify-between">
+        <h2 class="text-xs font-black uppercase tracking-wider text-text-main font-mono">
+          Upcoming Schedule Difficulty (Next 6 Gameweeks)
+        </h2>
+        <span class="text-[11px] font-mono text-gray-500">FDR Rating (1 Easy — 5 Hard)</span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-200">
         <!-- Your Fixtures -->
-        <div>
-          <div class="text-sm font-bold text-muted uppercase tracking-wider mb-4">Your Squad Avg</div>
+        <div class="p-5">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-xs font-mono font-bold uppercase tracking-wider text-pitch">Your Squad Schedule</h3>
+            <span class="text-[11px] font-mono text-gray-400">Average Squad FDR</span>
+          </div>
           <div class="space-y-2">
             {% for fixture in comparison.fixture_schedules.mine %}
-            <div class="flex items-center justify-between p-3 bg-surface-alt rounded-lg border border-gray-100">
+            <div class="flex items-center justify-between p-2.5 bg-gray-50 border border-gray-100 font-mono text-xs">
+              <span class="font-bold text-gray-700">GW{{ fixture.gameweek }}</span>
               <div class="flex items-center gap-3">
-                <div class="text-xs font-mono text-muted">GW{{ fixture.gameweek }}</div>
-                <div class="text-sm font-bold text-text-main flex items-center gap-2">
-                  <span class="{% if fixture.rating == 'easy' %}text-success{% elif fixture.rating == 'hard' %}text-danger{% else %}text-muted{% endif %}">
-                    {{ fixture.difficulty_score|floatformat:1 }}
-                  </span>
-                  <span class="text-xs font-normal text-muted uppercase tracking-wide">FDR</span>
+                <span class="font-bold {% if fixture.rating == 'easy' %}text-success{% elif fixture.rating == 'hard' %}text-danger{% else %}text-gray-600{% endif %}">
+                  {{ fixture.difficulty_score|floatformat:1 }} FDR
+                </span>
+                <div class="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div class="h-full {% if fixture.rating == 'easy' %}bg-success{% elif fixture.rating == 'hard' %}bg-danger{% else %}bg-gray-400{% endif %}" style="width: {% widthratio fixture.difficulty_score 5 100 %}%"></div>
                 </div>
-              </div>
-              <div class="flex-1 ml-4 h-2 bg-gray-200 rounded-full overflow-hidden max-w-[100px]">
-                 <div class="h-full rounded-full {% if fixture.rating == 'easy' %}bg-success{% elif fixture.rating == 'hard' %}bg-danger{% else %}bg-highlight{% endif %}" style="width: {% widthratio fixture.difficulty_score 5 100 %}%"></div>
               </div>
             </div>
             {% empty %}
-            <div class="text-sm text-muted italic">No schedule data available</div>
+            <p class="text-xs font-mono text-gray-400 py-4 text-center">No fixture data available</p>
             {% endfor %}
           </div>
         </div>
+
         <!-- Rival Fixtures -->
-        <div>
-          <div class="text-sm font-bold text-muted uppercase tracking-wider mb-4">Rival Squad Avg</div>
+        <div class="p-5">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-xs font-mono font-bold uppercase tracking-wider text-danger">Rival Squad Schedule</h3>
+            <span class="text-[11px] font-mono text-gray-400">Average Squad FDR</span>
+          </div>
           <div class="space-y-2">
             {% for fixture in comparison.fixture_schedules.rival %}
-            <div class="flex items-center justify-between p-3 bg-surface-alt rounded-lg border border-gray-100">
+            <div class="flex items-center justify-between p-2.5 bg-gray-50 border border-gray-100 font-mono text-xs">
+              <span class="font-bold text-gray-700">GW{{ fixture.gameweek }}</span>
               <div class="flex items-center gap-3">
-                <div class="text-xs font-mono text-muted">GW{{ fixture.gameweek }}</div>
-                <div class="text-sm font-bold text-text-main flex items-center gap-2">
-                   <span class="{% if fixture.rating == 'easy' %}text-success{% elif fixture.rating == 'hard' %}text-danger{% else %}text-muted{% endif %}">
-                    {{ fixture.difficulty_score|floatformat:1 }}
-                  </span>
-                  <span class="text-xs font-normal text-muted uppercase tracking-wide">FDR</span>
+                <span class="font-bold {% if fixture.rating == 'easy' %}text-success{% elif fixture.rating == 'hard' %}text-danger{% else %}text-gray-600{% endif %}">
+                  {{ fixture.difficulty_score|floatformat:1 }} FDR
+                </span>
+                <div class="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div class="h-full {% if fixture.rating == 'easy' %}bg-success{% elif fixture.rating == 'hard' %}bg-danger{% else %}bg-gray-400{% endif %}" style="width: {% widthratio fixture.difficulty_score 5 100 %}%"></div>
                 </div>
-              </div>
-              <div class="flex-1 ml-4 h-2 bg-gray-200 rounded-full overflow-hidden max-w-[100px]">
-                 <div class="h-full rounded-full {% if fixture.rating == 'easy' %}bg-success{% elif fixture.rating == 'hard' %}bg-danger{% else %}bg-highlight{% endif %}" style="width: {% widthratio fixture.difficulty_score 5 100 %}%"></div>
               </div>
             </div>
             {% empty %}
-            <div class="text-sm text-muted italic">No schedule data available</div>
+            <p class="text-xs font-mono text-gray-400 py-4 text-center">No fixture data available</p>
             {% endfor %}
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Transfer Planning -->
-    <div class="grid md:grid-cols-2 gap-6 mb-8">
-      <!-- Your Transfer Recommendations -->
-      <div class="bg-surface rounded-2xl shadow-sm border border-gray-100 p-6">
-        <h2 class="text-lg font-black text-text-main uppercase tracking-tight mb-4 flex items-center gap-2">
-          <span class="w-2 h-2 bg-accent rounded-full"></span>
-          Your Transfer Options
-        </h2>
-        {% if comparison.transfer_recommendations.mine %}
-        <div class="space-y-3">
-          {% for rec in comparison.transfer_recommendations.mine|slice:":3" %}
-          <div class="bg-surface-alt rounded-lg p-4 border border-gray-100">
-            <div class="flex items-center justify-between mb-2">
-              <div class="text-xs font-bold text-danger uppercase opacity-80">Out</div>
-              <div class="text-xs font-bold text-accent uppercase opacity-80">In</div>
-            </div>
-            <div class="flex items-center justify-between">
-              <div>
-                <div class="text-sm font-bold text-text-main">{{ rec.transfer_out.name }}</div>
-                <div class="text-xs text-muted">{{ rec.transfer_out.team }} • £{{ rec.transfer_out.price|floatformat:1 }}m</div>
-              </div>
-              <div class="text-gray-400 mx-2">→</div>
-              <div class="text-right">
-                <div class="text-sm font-bold text-accent">{{ rec.transfer_in.0.name }}</div>
-                <div class="text-xs text-muted">{{ rec.transfer_in.0.team }} • £{{ rec.transfer_in.0.price|floatformat:1 }}m</div>
-              </div>
-            </div>
-            <div class="mt-2 text-xs text-gray-500 bg-white/50 p-2 rounded">{{ rec.reasoning }}</div>
-          </div>
-          {% endfor %}
+    <!-- Transfer Recommendations & Counter-Moves -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+      <!-- Your Transfer Opportunities -->
+      <div class="bg-white border border-gray-200 shadow-sm">
+        <div class="px-5 py-3 border-b border-gray-200 bg-gray-50/50 flex items-center justify-between">
+          <h2 class="text-xs font-black uppercase tracking-wider text-pitch font-mono">
+            Your Transfer Opportunities
+          </h2>
+          <span class="text-[11px] font-mono text-gray-500">Target Differentials</span>
         </div>
-        {% else %}
-        <div class="text-sm text-muted italic">No transfer recommendations available</div>
-        {% endif %}
+
+        <div class="p-5">
+          {% if comparison.transfer_recommendations.mine %}
+          <div class="space-y-3">
+            {% for rec in comparison.transfer_recommendations.mine|slice:":3" %}
+            <div class="border border-gray-200 p-3.5 bg-gray-50/50">
+              <div class="flex items-center justify-between text-[11px] font-mono mb-2">
+                <span class="text-danger font-bold uppercase">Sell</span>
+                <span class="text-pitch font-bold uppercase">Buy</span>
+              </div>
+              <div class="flex items-center justify-between text-xs">
+                <div>
+                  <p class="font-bold text-text-main">{{ rec.transfer_out.name }}</p>
+                  <p class="text-[11px] font-mono text-gray-500">{{ rec.transfer_out.team }} · £{{ rec.transfer_out.price|floatformat:1 }}m</p>
+                </div>
+                <span class="text-gray-400 font-mono text-sm px-2">→</span>
+                <div class="text-right">
+                  <p class="font-bold text-pitch">{{ rec.transfer_in.0.name }}</p>
+                  <p class="text-[11px] font-mono text-gray-500">{{ rec.transfer_in.0.team }} · £{{ rec.transfer_in.0.price|floatformat:1 }}m</p>
+                </div>
+              </div>
+              <p class="mt-2 text-[11px] font-mono text-gray-600 bg-white p-2 border border-gray-100">
+                {{ rec.reasoning }}
+              </p>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <p class="text-xs font-mono text-gray-400 py-6 text-center">No transfer recommendations available.</p>
+          {% endif %}
+        </div>
       </div>
 
-      <!-- Rival Transfer Predictions -->
-      <div class="bg-surface rounded-2xl shadow-sm border border-gray-100 p-6">
-        <h2 class="text-lg font-black text-text-main uppercase tracking-tight mb-4 flex items-center gap-2">
-          <span class="w-2 h-2 bg-danger rounded-full"></span>
-          Rival Likely Moves
-        </h2>
-        {% if comparison.transfer_recommendations.rival %}
-        <div class="space-y-3">
-          {% for rec in comparison.transfer_recommendations.rival|slice:":3" %}
-          <div class="bg-surface-alt rounded-lg p-4 border border-gray-100">
-            <div class="flex items-center justify-between mb-2">
-              <div class="text-xs font-bold text-danger uppercase opacity-80">Out</div>
-              <div class="text-xs font-bold text-danger uppercase opacity-80">In</div>
-            </div>
-            <div class="flex items-center justify-between">
-              <div>
-                <div class="text-sm font-bold text-text-main">{{ rec.transfer_out.name }}</div>
-                <div class="text-xs text-muted">{{ rec.transfer_out.team }} • £{{ rec.transfer_out.price|floatformat:1 }}m</div>
-              </div>
-              <div class="text-gray-400 mx-2">→</div>
-              <div class="text-right">
-                <div class="text-sm font-bold text-danger">{{ rec.transfer_in.0.name }}</div>
-                <div class="text-xs text-muted">{{ rec.transfer_in.0.team }} • £{{ rec.transfer_in.0.price|floatformat:1 }}m</div>
-              </div>
-            </div>
-            <div class="mt-2 text-xs text-gray-500 bg-white/50 p-2 rounded">{{ rec.reasoning }}</div>
-          </div>
-          {% endfor %}
+      <!-- Rival Likely Moves -->
+      <div class="bg-white border border-gray-200 shadow-sm">
+        <div class="px-5 py-3 border-b border-gray-200 bg-gray-50/50 flex items-center justify-between">
+          <h2 class="text-xs font-black uppercase tracking-wider text-danger font-mono">
+            Rival Likely Moves
+          </h2>
+          <span class="text-[11px] font-mono text-gray-500">Anticipated Opponent Transfers</span>
         </div>
-        {% else %}
-        <div class="text-sm text-muted italic">No transfer predictions available</div>
-        {% endif %}
+
+        <div class="p-5">
+          {% if comparison.transfer_recommendations.rival %}
+          <div class="space-y-3">
+            {% for rec in comparison.transfer_recommendations.rival|slice:":3" %}
+            <div class="border border-gray-200 p-3.5 bg-gray-50/50">
+              <div class="flex items-center justify-between text-[11px] font-mono mb-2">
+                <span class="text-danger font-bold uppercase">Likely Out</span>
+                <span class="text-danger font-bold uppercase">Likely In</span>
+              </div>
+              <div class="flex items-center justify-between text-xs">
+                <div>
+                  <p class="font-bold text-text-main">{{ rec.transfer_out.name }}</p>
+                  <p class="text-[11px] font-mono text-gray-500">{{ rec.transfer_out.team }} · £{{ rec.transfer_out.price|floatformat:1 }}m</p>
+                </div>
+                <span class="text-gray-400 font-mono text-sm px-2">→</span>
+                <div class="text-right">
+                  <p class="font-bold text-danger">{{ rec.transfer_in.0.name }}</p>
+                  <p class="text-[11px] font-mono text-gray-500">{{ rec.transfer_in.0.team }} · £{{ rec.transfer_in.0.price|floatformat:1 }}m</p>
+                </div>
+              </div>
+              <p class="mt-2 text-[11px] font-mono text-gray-600 bg-white p-2 border border-gray-100">
+                {{ rec.reasoning }}
+              </p>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <p class="text-xs font-mono text-gray-400 py-6 text-center">No rival transfer predictions available.</p>
+          {% endif %}
+        </div>
       </div>
     </div>
 
-    <!-- Key Insights -->
+    <!-- Strategic Intelligence Insights -->
     {% if comparison.key_insights %}
-    <div class="bg-surface rounded-2xl shadow-sm border border-gray-100 p-6">
-      <h2 class="text-xl font-black text-text-main uppercase tracking-tight mb-6 flex items-center gap-2">
-        <span class="w-2 h-2 bg-accent rounded-full"></span>
-        Key Insights
-      </h2>
-      <div class="space-y-3">
+    <div class="bg-white border border-gray-200 shadow-sm mb-8">
+      <div class="px-5 py-3 border-b border-gray-200 bg-gray-50/50 flex items-center justify-between">
+        <h2 class="text-xs font-black uppercase tracking-wider text-text-main font-mono">
+          Strategic Matchup Insights
+        </h2>
+        <span class="text-[11px] font-mono text-gray-500">Analytical Brief</span>
+      </div>
+      <div class="p-5 space-y-2.5">
         {% for insight in comparison.key_insights %}
-        <div class="flex items-start gap-3 p-3 bg-highlight/5 rounded-lg border border-highlight/10">
-          <span class="text-accent mt-0.5">•</span>
-          <p class="text-sm text-text-main flex-1 font-medium">{{ insight }}</p>
+        <div class="flex items-start gap-3 p-3 bg-gray-50 border border-gray-100">
+          <span class="text-pitch font-mono font-bold text-xs">#</span>
+          <p class="text-xs font-mono text-text-main leading-relaxed">{{ insight }}</p>
         </div>
         {% endfor %}
       </div>
     </div>
     {% endif %}
 
-    <div class="mt-8 text-center text-xs text-muted">
-      Analysis generated: {{ comparison.analysis_timestamp }}
+    <div class="text-center text-[11px] font-mono text-gray-400">
+      Head-to-head analysis generated: {{ comparison.analysis_timestamp }}
     </div>
+
     {% endif %}
   </div>
 </c-layouts.base>
