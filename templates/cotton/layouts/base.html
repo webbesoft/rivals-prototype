@@ -1,41 +1,42 @@
 <!DOCTYPE html>
 {% load static %}
 <html lang="{{ LANGUAGE_CODE|default:'en' }}">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#0f4f2f" />
-    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
 
-    <!-- Primary SEO Meta Tags -->
-    <title>{% block title %}RivalSpy - FPL Rival Tracker & Mini-League Intelligence{% endblock %}</title>
-    <meta
-      name="description"
-      content="{% block meta_description %}Track your Fantasy Premier League rivals like never before. Real-time transfer detection, captaincy picks, chip usage, projected points, and head-to-head mini-league scouting.{% endblock %}"
-    />
-    <meta
-      name="keywords"
-      content="{% block meta_keywords %}FPL rival tracker, Fantasy Premier League, FPL mini league spy, FPL transfer detector, FPL captain picks, FPL projections, FPL scout, FPL head to head{% endblock %}"
-    />
-    <link rel="canonical" href="{% block canonical %}{{ request.build_absolute_uri }}{% endblock %}" />
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0f4f2f" />
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
 
-    <!-- Open Graph / Facebook -->
-    <meta property="og:locale" content="en_US" />
-    <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="RivalSpy" />
-    <meta property="og:title" content="{% block og_title %}RivalSpy - FPL Rival Tracker & Mini-League Intelligence{% endblock %}" />
-    <meta property="og:description" content="{% block og_description %}Track your Fantasy Premier League rivals like never before. Real-time transfer detection, captaincy picks, chip usage, and head-to-head mini-league scouting.{% endblock %}" />
-    <meta property="og:url" content="{{ request.build_absolute_uri }}" />
-    <meta property="og:image" content="{% block og_image %}{% static 'images/og-card.png' %}{% endblock %}" />
+  <!-- Primary SEO Meta Tags -->
+  <title>{% block title %}RivalSpy - FPL Rival Tracker & Mini-League Intelligence{% endblock %}</title>
+  <meta name="description"
+    content="{% block meta_description %}Track your Fantasy Premier League rivals like never before. Real-time transfer detection, captaincy picks, chip usage, projected points, and head-to-head mini-league scouting.{% endblock %}" />
+  <meta name="keywords"
+    content="{% block meta_keywords %}FPL rival tracker, Fantasy Premier League, FPL mini league spy, FPL transfer detector, FPL captain picks, FPL projections, FPL scout, FPL head to head{% endblock %}" />
+  <link rel="canonical" href="{% block canonical %}{{ request.build_absolute_uri }}{% endblock %}" />
 
-    <!-- Twitter Cards -->
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="{% block twitter_title %}RivalSpy - FPL Rival Tracker & Mini-League Intelligence{% endblock %}" />
-    <meta name="twitter:description" content="{% block twitter_description %}Track your Fantasy Premier League rivals like never before. Real-time transfer detection, captaincy picks, chip usage, and head-to-head mini-league scouting.{% endblock %}" />
-    <meta name="twitter:image" content="{% block twitter_image %}{% static 'images/og-card.png' %}{% endblock %}" />
+  <!-- Open Graph / Facebook -->
+  <meta property="og:locale" content="en_US" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="RivalSpy" />
+  <meta property="og:title"
+    content="{% block og_title %}RivalSpy - FPL Rival Tracker & Mini-League Intelligence{% endblock %}" />
+  <meta property="og:description"
+    content="{% block og_description %}Track your Fantasy Premier League rivals like never before. Real-time transfer detection, captaincy picks, chip usage, and head-to-head mini-league scouting.{% endblock %}" />
+  <meta property="og:url" content="{{ request.build_absolute_uri }}" />
+  <meta property="og:image" content="{% block og_image %}{% static 'images/og-card.svg' %}{% endblock %}" />
 
-    <!-- Schema.org JSON-LD Structured Data -->
-    <script type="application/ld+json">
+  <!-- Twitter Cards -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title"
+    content="{% block twitter_title %}RivalSpy - FPL Rival Tracker & Mini-League Intelligence{% endblock %}" />
+  <meta name="twitter:description"
+    content="{% block twitter_description %}Track your Fantasy Premier League rivals like never before. Real-time transfer detection, captaincy picks, chip usage, and head-to-head mini-league scouting.{% endblock %}" />
+  <meta name="twitter:image" content="{% block twitter_image %}{% static 'images/og-card.svg' %}{% endblock %}" />
+
+  <!-- Schema.org JSON-LD Structured Data -->
+  <script type="application/ld+json">
       {
         "@context": "https://schema.org",
         "@type": "SoftwareApplication",
@@ -51,21 +52,23 @@
       }
     </script>
 
-    <link rel="stylesheet" href="{% static 'css/output.css' %}" />
-    <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.7/dist/htmx.min.js"></script>
-    {% block extra_head %}{% endblock %}
-  </head>
-  <body class="antialiased bg-surface-alt text-text-main font-sans selection:bg-accent selection:text-pitch">
-    {% block extra_scripts %}{% endblock %}
+  <link rel="stylesheet" href="{% static 'css/output.css' %}" />
+  <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.7/dist/htmx.min.js"></script>
+  {% block extra_head %}{% endblock %}
+</head>
 
-    <div class="min-h-screen flex flex-col">
-      <c-components.header />
+<body class="antialiased bg-surface-alt text-text-main font-sans selection:bg-accent selection:text-pitch">
+  {% block extra_scripts %}{% endblock %}
 
-      <main class="flex-grow">{{ slot }}</main>
+  <div class="min-h-screen flex flex-col">
+    <c-components.header />
 
-      <c-components.footer />
-    </div>
+    <main class="flex-grow">{{ slot }}</main>
 
-    {% block extra_body_end %}{% endblock %}
-  </body>
+    <c-components.footer />
+  </div>
+
+  {% block extra_body_end %}{% endblock %}
+</body>
+
 </html>
