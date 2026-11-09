@@ -470,6 +470,16 @@
   .min-h-screen {
     min-height: 100vh;
   }
+
+  @media (width >= 48rem) {
+    .md\:flex {
+      display: flex;
+    }
+
+    .md\:hidden {
+      display: none;
+    }
+  }
   .w-1 {
     width: calc(var(--spacing) * 1);
   }

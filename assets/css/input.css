@@ -40,3 +40,15 @@
     font-family: var(--font-sans);
   }
 }
+
+@layer utilities {
+  @media (width >= 48rem) {
+    .md\:flex {
+      display: flex;
+    }
+
+    .md\:hidden {
+      display: none;
+    }
+  }
+}
