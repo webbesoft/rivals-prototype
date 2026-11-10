@@ -9,13 +9,16 @@ from background_task.tasks import tasks
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.core.management import call_command
+from django.db import connection
 from django.test import Client
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils import timezone
 
 from rivals.models import (
     GameweekData,
     MiniLeague,
+    MiniLeagueTeam,
     SyncState,
     Team,
     TrackedTeam,
@@ -563,6 +566,59 @@ def test_cold_dashboard_and_unknown_context_do_not_fetch_fpl(manager):
     assert response.status_code == 200
     assert "Figures may be out of date" in response.content.decode()
     assert SyncState.objects.get(key="context").status == "queued"
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "league_count,page,visible_count", [(1, 1, 1), (10, 1, 10), (12, 2, 2)]
+)
+def test_dashboard_batches_projection_queries(
+    manager, stored_context, league_count, page, visible_count
+):
+    user, rival = manager
+    for index in range(league_count):
+        league = MiniLeague.objects.create(
+            fpl_league_id=str(1000 + index), name=f"League {index:02d}"
+        )
+        UserMiniLeague.objects.create(user=user, mini_league=league)
+        MiniLeagueTeam.objects.create(
+            mini_league=league, team=user.team, current_rank=2, total_points=400
+        )
+        MiniLeagueTeam.objects.create(
+            mini_league=league, team=rival, current_rank=1, total_points=500
+        )
+    client = Client()
+    client.force_login(user)
+    # Isolate projection reads from refresh scheduling writes. Exercise both a
+    # cold projection cache and the next page load, with real template rendering.
+    for _ in range(2):
+        with (
+            patch("rivals.views.dashboard_views.enqueue_user"),
+            CaptureQueriesContext(connection) as queries,
+        ):
+            response = client.get(reverse("rivals:dashboard"), {"page": page})
+        assert response.status_code == 200
+        projections = response.context["mini_league_projections"]
+        assert len(projections) == visible_count
+        assert all(projection["current_rank"] == 2 for projection in projections)
+        assert all(projection["projected_rank"] == 2 for projection in projections)
+        assert all(projection["total_teams"] == 2 for projection in projections)
+        standings_queries = [
+            query["sql"]
+            for query in queries
+            if 'FROM "rivals_minileagueteam"' in query["sql"]
+        ]
+        assert len(standings_queries) == 1
+        # Dashboard context and refresh status each read it once; the team and
+        # league projections must reuse the dashboard's context.
+        context_queries = [
+            query["sql"]
+            for query in queries
+            if 'FROM "rivals_syncstate"' in query["sql"]
+            and "\"key\" = 'context'" in query["sql"]
+        ]
+        assert len(context_queries) == 2
+        assert len(response.context["mini_leagues"]) == visible_count
 
 
 @pytest.mark.django_db

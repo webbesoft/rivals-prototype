@@ -26,7 +26,7 @@ def test_league_projection_cache_is_portable_and_invalidates_after_sync(synced_a
         with patch(
             "rivals.services.projection_service.GameweekContextService.cached",
             return_value={"season": "2026/27", "scoring_gameweek": 10},
-        ):
+        ) as context_lookup:
             with warnings.catch_warnings():
                 warnings.simplefilter("error", CacheKeyWarning)
                 first = service.project_mini_league(league)
@@ -39,5 +39,6 @@ def test_league_projection_cache_is_portable_and_invalidates_after_sync(synced_a
                 refreshed = service.project_mini_league(league)
                 assert refreshed["standings"][0]["current_points"] == 600
                 assert league.mini_league_teams.select_related.call_count == 2
+                context_lookup.assert_called_once()
     finally:
         cache.clear()

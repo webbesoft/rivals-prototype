@@ -39,8 +39,14 @@ class ProjectionService:
     ranks for FPL teams.
     """
 
-    def __init__(self, api: Optional[FplApiService] = None):
+    def __init__(self, api: Optional[FplApiService] = None, *, context=None):
         self.api = api or FplApiService()
+        self.context = context
+
+    def _gameweek_context(self):
+        if self.context is None:
+            self.context = GameweekContextService.cached()
+        return self.context
 
     # ------------------------------------------------------------------
     # Core mathematical conversion
@@ -123,7 +129,7 @@ class ProjectionService:
 
         if completed_count == 0:
             # Use stored event context when history has not yet been imported.
-            live_gw = current_gw or GameweekContextService.cached()["scoring_gameweek"]
+            live_gw = current_gw or self._gameweek_context()["scoring_gameweek"]
             if live_gw is None:
                 return {}
             completed_count = max(0, live_gw - 1)
@@ -259,12 +265,16 @@ class ProjectionService:
     # ------------------------------------------------------------------
 
     def project_mini_league(
-        self, mini_league: MiniLeague, current_gw: Optional[int] = None
+        self,
+        mini_league: MiniLeague,
+        current_gw: Optional[int] = None,
+        *,
+        standings=None,
     ) -> Dict[str, Any]:
         """
         Projects final standings and finishing positions for all teams in a mini-league.
         """
-        context = GameweekContextService.cached()
+        context = self._gameweek_context()
         live_gw = current_gw or context["scoring_gameweek"]
         synced_at = (
             mini_league.last_synced_at.isoformat()
@@ -283,7 +293,11 @@ class ProjectionService:
         completed_gw = max(0, min(TOTAL_GAMEWEEKS, live_gw - 1))
         remaining_gws = TOTAL_GAMEWEEKS - completed_gw
 
-        mlts = list(mini_league.mini_league_teams.select_related("team").all())
+        mlts = (
+            standings
+            if standings is not None
+            else list(mini_league.mini_league_teams.select_related("team").all())
+        )
         if not mlts:
             return {"league_id": mini_league.id, "standings": [], "total_teams": 0}
 
@@ -348,12 +362,19 @@ class ProjectionService:
         return result
 
     def get_team_mini_league_summary(
-        self, team: Team, mini_league: MiniLeague, current_gw: Optional[int] = None
+        self,
+        team: Team,
+        mini_league: MiniLeague,
+        current_gw: Optional[int] = None,
+        *,
+        standings=None,
     ) -> Optional[Dict[str, Any]]:
         """
         Gets a single team's projected finish within a specific mini-league.
         """
-        league_proj = self.project_mini_league(mini_league, current_gw=current_gw)
+        league_proj = self.project_mini_league(
+            mini_league, current_gw=current_gw, standings=standings
+        )
         for s in league_proj.get("standings", []):
             if s["team_id"] == team.id:
                 return {
