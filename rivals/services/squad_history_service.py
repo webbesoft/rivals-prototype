@@ -81,31 +81,39 @@ class SquadHistoryService:
             )
         )
         current_season = season == self.context["season"]
+        # A queued or expired dispatcher must not stop an explicit lineup read.
+        # When the live season is unknown, verify the team's recorded season
+        # against bootstrap before requesting any event scores.
+        candidate_current = current_season or (
+            (not self.context["season"] or self.context["stale"])
+            and season == self.team.current_season
+        )
         recent = rows and (timezone.now() - rows[0].updated_at).total_seconds() < 120
         complete = len(rows) == 15
-        if complete and (
-            not current_season
-            or (
-                all(p.gameweek_points is not None for p in rows)
-                and (all(p.points_final for p in rows) or recent)
-            )
+        scores_complete = complete and all(p.gameweek_points is not None for p in rows)
+        if scores_complete and (
+            not candidate_current or all(p.points_final for p in rows) or recent
         ):
             return rows, None
-        if not current_season or self.context["stale"]:
+        if not candidate_current:
             if complete:
-                return rows, (
-                    "This lineup may be out of date." if current_season else None
-                )
+                return rows, "Player scores are unavailable for this season."
             return [], "This lineup is currently unavailable."
         bootstrap = self.api.fetch_bootstrap_static()
-        if (
-            not bootstrap
-            or GameweekContextService.derive(bootstrap.get("events", []))["season"]
-            != season
-        ):
+        if not bootstrap:
             return (
                 rows if complete else []
             ), "We couldn't update this lineup. Please try again."
+        live_context = GameweekContextService.derive(bootstrap.get("events", []))
+        if live_context["season"] != season:
+            return (
+                rows if complete else []
+            ), "Player scores are unavailable for this season."
+        if (
+            not live_context["scoring_gameweek"]
+            or gameweek > live_context["scoring_gameweek"]
+        ):
+            return (rows if complete else []), "This lineup is not available yet."
         service = TeamSyncService(self.team)
         service.fpl_api_service = self.api
         picks = service.get_gameweek_picks(gameweek)

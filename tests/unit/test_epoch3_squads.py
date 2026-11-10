@@ -250,7 +250,7 @@ def test_archive_never_uses_current_season_api_and_filters_equal_gameweeks(
     service = SquadHistoryService(manager.team, api=api)
     selection = service.selection("2025/26", 10)
     rows, error = service.load(selection["season"], selection["gameweek"])
-    assert len(rows) == 15 and error is None
+    assert len(rows) == 15 and "unavailable for this season" in error
     assert all(row.player_name == "Archived player" for row in rows)
     assert not api.method_calls
     assert manager.team.get_available_gameweeks("2025/26") == [10]
@@ -647,3 +647,47 @@ def test_form_left_open_across_deadline_cannot_confirm_old_transfer_count(manage
     )
     assert "Reload your squad" in response.content.decode()
     assert not TeamPlanningInput.objects.exists()
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("context_status", ["missing", "queued", "stale"])
+def test_lineup_backfills_existing_points_without_a_recent_dispatcher(
+    manager, api, context_status
+):
+    import_rows(manager.team, api, points=False)
+    if context_status == "missing":
+        SyncState.objects.filter(key="context").delete()
+    elif context_status == "queued":
+        SyncState.objects.filter(key="context").update(
+            status="queued", last_success_at=None, payload={}
+        )
+    else:
+        SyncState.objects.filter(key="context").update(
+            last_success_at=NOW - timedelta(hours=1)
+        )
+    client = Client()
+    client.force_login(manager)
+    with patch("rivals.services.squad_history_service.FplApiService", return_value=api):
+        response = client.get(reverse("rivals:teams.lineup", args=[manager.team_id]))
+    assert response.status_code == 200
+    assert "0 pts · ×3" in response.content.decode()
+    assert "Squad points:" in response.content.decode()
+    assert (
+        manager.team.squad_histories.filter(gameweek_points__isnull=True).count() == 0
+    )
+    api.fetch_gameweek_live.assert_called_once_with(10, "2026/27")
+
+
+@pytest.mark.django_db
+def test_unknown_context_cannot_import_current_scores_into_a_previous_season(
+    manager, api
+):
+    import_rows(manager.team, api, season="2025/26", points=False)
+    manager.team.current_season = "2025/26"
+    manager.team.save(update_fields=["current_season"])
+    SyncState.objects.filter(key="context").delete()
+    rows, error = SquadHistoryService(manager.team, api=api).load("2025/26", 10)
+    assert len(rows) == 15 and "unavailable for this season" in error
+    assert all(row.gameweek_points is None for row in rows)
+    api.fetch_team_picks.assert_not_called()
+    api.fetch_gameweek_live.assert_not_called()
