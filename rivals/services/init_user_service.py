@@ -20,19 +20,12 @@ class InitUserService:
         try:
             account_leagues(basic_info)
             with transaction.atomic():
-                previous_team_id = self.user.team_id
                 user_team = self._create_user_team(basic_info)
 
                 if not user_team:
                     return False
 
-                reconcile_memberships(
-                    self.user,
-                    basic_info,
-                    retire_legacy=bool(
-                        previous_team_id and previous_team_id != user_team.pk
-                    ),
-                )
+                reconcile_memberships(self.user, basic_info)
 
             # Queue bounded worker tasks; never fetch league pages while holding
             # the initialization transaction's SQLite write lock.

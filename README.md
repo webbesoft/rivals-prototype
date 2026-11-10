@@ -29,9 +29,14 @@ uv run python manage.py fpl_worker
 
 The worker refreshes players, subscribed leagues, your team, and tracked rivals without manual sync clicks. Check it with `uv run python manage.py check_fpl_worker`.
 
-Profile refreshes reconcile FPL account league memberships, retaining historical
-standings and manually added leagues. Older memberships have an unknown source;
-review them once after migrating before retiring leagues absent from FPL:
+The worker automatically reconciles league memberships for each active account
+on its next successful profile refresh. It adds current FPL leagues and deactivates
+missing account imports, including older unclassified memberships. Historical
+standings and memberships explicitly marked as manually added are retained.
+Failed or incomplete FPL responses never retire memberships. No per-user cleanup
+command is required after deployment or season changes.
+
+For troubleshooting, an optional command previews the same legacy cleanup:
 
 ```sh
 uv run python manage.py reconcile_fpl_leagues --user-id 1 --retire-legacy

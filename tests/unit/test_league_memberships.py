@@ -52,7 +52,7 @@ def profile(rows=None):
     }
 
 
-def test_refresh_retires_only_missing_fpl_memberships_and_keeps_history(owner):
+def test_refresh_retires_missing_fpl_and_legacy_memberships_and_keeps_history(owner):
     old = membership(owner, 9)
     manual = membership(owner, 20, "manual")
     legacy = membership(owner, 30, "legacy")
@@ -69,7 +69,7 @@ def test_refresh_retires_only_missing_fpl_memberships_and_keeps_history(owner):
         row.refresh_from_db()
     assert not old.active
     assert manual.active and manual.source == "manual"
-    assert legacy.active and legacy.source == "legacy"
+    assert not legacy.active and legacy.source == "fpl"
     assert current.active and current.source == "fpl"
     assert old.mini_league.mini_league_teams.get().total_points == 500
     assert not MiniLeague.objects.filter(fpl_league_id="314").exists()
@@ -92,7 +92,7 @@ def test_refresh_retires_only_missing_fpl_memberships_and_keeps_history(owner):
 def test_invalid_or_wrong_account_profile_never_retires_memberships(owner, bad):
     old = membership(owner, 9)
     with pytest.raises(ValueError):
-        reconcile_memberships(owner, bad, retire_legacy=True)
+        reconcile_memberships(owner, bad)
     old.refresh_from_db()
     assert old.active
 
@@ -126,7 +126,17 @@ def test_legacy_cleanup_is_dry_run_then_apply_and_preserves_manual_rows(owner):
 
 
 def test_profile_worker_reconciles_memberships(owner):
-    old = membership(owner, 9)
+    old = membership(owner, 9, "legacy")
+    shared_owner = get_user_model().objects.create_user(
+        username="shared", email="shared@example.com", team=owner.team
+    )
+    shared_old = membership(shared_owner, 19, "legacy")
+    manual = membership(shared_owner, 20, "manual")
+    other_team = Team.objects.create(fpl_team_id="456", team_name="Other XI")
+    other_owner = get_user_model().objects.create_user(
+        username="other", email="other@example.com", team=other_team
+    )
+    unrelated = membership(other_owner, 39, "legacy")
     state = SyncState.objects.create(
         key=f"profile:{owner.team_id}", kind="profile", object_id=owner.team_id
     )
@@ -147,8 +157,17 @@ def test_profile_worker_reconciles_memberships(owner):
         api.return_value.fetch_team_basic_info.return_value = profile()
         ingest(state)
     old.refresh_from_db()
+    shared_old.refresh_from_db()
+    manual.refresh_from_db()
+    unrelated.refresh_from_db()
     assert not old.active
+    assert not shared_old.active
+    assert manual.active and unrelated.active
     assert owner.customminileagues.get(mini_league__fpl_league_id="10").source == "fpl"
+    assert (
+        shared_owner.customminileagues.get(mini_league__fpl_league_id="10").source
+        == "fpl"
+    )
 
 
 @pytest.mark.django_db

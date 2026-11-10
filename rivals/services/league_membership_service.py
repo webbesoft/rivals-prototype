@@ -27,7 +27,12 @@ def account_leagues(profile):
     return result
 
 
-def reconcile_memberships(user, profile, *, retire_legacy=False):
+def reconcile_memberships(user, profile, *, retire_legacy=True):
+    """Refresh account imports, including old unclassified memberships.
+
+    Legacy memberships are treated as account imports on the first validated
+    profile refresh. Explicit manual memberships are never retired here.
+    """
     current = account_leagues(profile)
     if str(profile.get("id")) != str(user.team.fpl_team_id):
         raise ValueError("FPL profile does not match the linked team")
@@ -73,4 +78,4 @@ def reconcile_memberships(user, profile, *, retire_legacy=False):
         sources = ["fpl", "legacy"] if retire_legacy else ["fpl"]
         user.customminileagues.filter(source__in=sources).exclude(
             mini_league__fpl_league_id__in=current
-        ).update(active=False)
+        ).update(active=False, source="fpl")
