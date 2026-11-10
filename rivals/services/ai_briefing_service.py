@@ -89,10 +89,10 @@ def evidence_for(report):
 
 def request_briefing(user, report):
     if not user.is_verified:
-        raise AIUnavailable("Verify your email before preparing a Gemini briefing.")
+        raise AIUnavailable("Verify your email before preparing an AI briefing.")
     if not configured():
         raise AIUnavailable(
-            "Gemini is temporarily unavailable. Your transfer advice is still available."
+            "AI briefings are temporarily unavailable. Your transfer advice is still available."
         )
     deadline = parse_datetime(report["deadline"])
     now = timezone.now()
@@ -104,7 +104,7 @@ def request_briefing(user, report):
             user=user, verified_at__isnull=False
         ).first()
         if not credential:
-            raise AIUnavailable("Connect Gemini in your account settings first.")
+            raise AIUnavailable("Enable AI briefings in your account settings first.")
         existing = (
             AIBriefing.objects.filter(
                 user=user,
@@ -131,7 +131,7 @@ def request_briefing(user, report):
             or usage.reserved_tokens + TOKEN_RESERVATION > 100000
         ):
             raise AIUnavailable(
-                "Your Gemini briefing limit has been reached. Your transfer advice is still available."
+                "Your AI briefing limit has been reached. Your transfer advice is still available."
             )
         usage.generations += 1
         usage.reserved_tokens += TOKEN_RESERVATION

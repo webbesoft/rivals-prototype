@@ -44,7 +44,7 @@ class Gemini:
                         )
                     if response.status_code != 200:
                         raise AIUnavailable(
-                            "Gemini is temporarily unavailable. Your transfer advice is still available."
+                            "AI briefings are temporarily unavailable. Your transfer advice is still available."
                         )
                     data = bytearray()
                     for chunk in response.iter_content(chunk_size=1):
@@ -57,7 +57,7 @@ class Gemini:
         except Exception:
             # Provider bodies, request objects and exception strings may contain secrets.
             raise AIUnavailable(
-                "Gemini is temporarily unavailable. Your transfer advice is still available."
+                "AI briefings are temporarily unavailable. Your transfer advice is still available."
             ) from None
 
     def verify(self, api_key):
@@ -113,7 +113,7 @@ class Gemini:
             },
         }
         if len(json.dumps(body).encode()) > MAX_INPUT_BYTES:
-            raise AIUnavailable("This plan is too large for a Gemini briefing.")
+            raise AIUnavailable("This plan is too large for an AI briefing.")
         result = self.request(api_key, body)
         try:
             candidate = result["candidates"][0]
@@ -157,5 +157,5 @@ class Gemini:
             return priorities, input_tokens, output_tokens
         except Exception:
             raise AIUnavailable(
-                "Gemini couldn't prepare a grounded briefing. Your transfer advice is still available."
+                "We couldn't prepare a grounded AI briefing. Your transfer advice is still available."
             ) from None

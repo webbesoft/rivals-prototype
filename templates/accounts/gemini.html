@@ -1,27 +1,28 @@
-<c-layouts.base title="Gemini briefing settings - RivalSpy">
+<c-layouts.base title="AI briefing settings - RivalSpy">
   <div class="max-w-3xl mx-auto px-4 py-10">
     <div class="app-masthead">
       <p class="app-kicker">Your account</p>
-      <h1 class="app-page-title">Gemini briefings</h1>
+      <h1 class="app-page-title">AI briefings</h1>
       <p class="app-lede">A short list of what matters most before the deadline, based on your transfer plan.</p>
     </div>
     {% for message in messages %}<p role="status" class="app-panel p-4 mb-4">{{ message }}</p>{% endfor %}
     <section class="app-panel p-6 mb-6">
-      <h2 class="app-section-title mb-3">{% if gemini_connected %}Gemini connected · ••••••••{% else %}Connect your Gemini account{% endif %}</h2>
+      <h2 class="app-section-title mb-3">{% if gemini_connected %}AI briefings enabled · ••••••••{% else %}Enable AI briefings{% endif %}</h2>
+      <p class="text-sm text-gray-600 mb-4">Supported provider: Google Gemini.</p>
       <p class="text-sm text-gray-600 mb-4">When you request a briefing, we send Google a small summary of your plan: player names, estimated gains and transfer costs, the estimated remaining bank and free transfers, captain options, squad risks and anonymous rival comparisons. We leave out your email, FPL ID, league names and rival identities. Gemini selects priorities; the facts and recommendations come from your plan.</p>
       <p class="text-sm text-gray-600 mb-4">Requests use your Google API quota and may incur charges. Google's data use depends on your account and region; unpaid services may use prompts to improve their products. Review <a class="underline" href="https://ai.google.dev/gemini-api/terms" rel="noopener noreferrer" target="_blank">Google's terms</a> and your billing limits before connecting.</p>
-      <p class="text-sm text-gray-600 mb-4">Your key is encrypted and never displayed again. You can remove it at any time. Regular transfer advice works without Gemini.</p>
+      <p class="text-sm text-gray-600 mb-4">Your key is encrypted and never displayed again. You can remove it at any time. Regular transfer advice works without AI briefings.</p>
       {% if not user.is_verified %}
-        <p class="text-sm mb-4">Verify your email to connect Gemini.</p><a class="underline" href="{% url 'accounts:verification_pending' %}">Email verification</a>
+        <p class="text-sm mb-4">Verify your email to enable AI briefings.</p><a class="underline" href="{% url 'accounts:verification_pending' %}">Email verification</a>
       {% elif not gemini_configured %}
-        <p role="status" class="text-sm">Gemini connections are temporarily unavailable. Your regular transfer advice is ready to use.</p>
+        <p role="status" class="text-sm">AI briefings are temporarily unavailable. Your regular transfer advice is ready to use.</p>
       {% else %}
         <form method="POST" class="space-y-4">
           {% csrf_token %}<input type="hidden" name="action" value="connect">
           <label class="block text-sm font-bold" for="{{ connection_form.api_key.id_for_label }}">{% if gemini_connected %}Replacement Gemini API key{% else %}Gemini API key{% endif %}</label>
           {{ connection_form.api_key }}{{ connection_form.api_key.errors }}
           <p class="text-xs text-gray-600">By connecting, you agree to send the planning summary above to Google when you request a briefing. Up to six briefings per day, with ten minutes between new requests.</p>
-          <button type="submit" class="bg-pitch text-white px-5 py-3 font-bold">{% if gemini_connected %}Replace key{% else %}Connect Gemini{% endif %}</button>
+          <button type="submit" class="bg-pitch text-white px-5 py-3 font-bold">{% if gemini_connected %}Replace key{% else %}Enable AI briefings{% endif %}</button>
           <a class="underline text-sm ml-3" href="https://aistudio.google.com/api-keys" target="_blank" rel="noopener noreferrer">Get a Gemini key</a>
         </form>
       {% endif %}

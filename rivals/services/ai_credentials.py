@@ -37,7 +37,7 @@ def keyring():
             version: Fernet(value.encode()) for version, value in keys.items()
         }
     except Exception:
-        raise AIUnavailable("Gemini connections are temporarily unavailable.") from None
+        raise AIUnavailable("AI briefings are temporarily unavailable.") from None
 
 
 def configured():
@@ -69,7 +69,7 @@ def decrypt(credential):
             raise ValueError
         return payload["key"]
     except Exception:
-        raise AIUnavailable("Reconnect Gemini to prepare a briefing.") from None
+        raise AIUnavailable("Update your API key to prepare an AI briefing.") from None
 
 
 def reserve_connection(user):
@@ -81,7 +81,9 @@ def reserve_connection(user):
             and timezone.now() - usage.last_connection_at
             < timezone.timedelta(seconds=30)
         ):
-            raise AIUnavailable("Please wait before trying another Gemini connection.")
+            raise AIUnavailable(
+                "Please wait before trying to connect AI briefings again."
+            )
         usage.connections += 1
         usage.last_connection_at = timezone.now()
         usage.save(update_fields=["connections", "last_connection_at"])
@@ -93,7 +95,7 @@ def connect(user, api_key):
     from rivals.services.gemini_service import Gemini
 
     if not user.is_verified:
-        raise AIUnavailable("Verify your email before connecting Gemini.")
+        raise AIUnavailable("Verify your email before enabling AI briefings.")
     keyring()
     reserve_connection(user)
     previous_revision = (
@@ -114,7 +116,9 @@ def connect(user, api_key):
             .first()
         )
         if not current_user.is_verified or current_revision != previous_revision:
-            raise AIUnavailable("Your Gemini connection changed. Please try again.")
+            raise AIUnavailable(
+                "Your AI briefing connection changed. Please try again."
+            )
         AICredential.objects.update_or_create(
             user=user,
             defaults={

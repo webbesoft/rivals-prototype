@@ -29,7 +29,7 @@ def briefing(request):
         except AIUnavailable as exception:
             error = str(exception)
         except Exception:
-            error = "We couldn't prepare your Gemini briefing. Your transfer advice is still available."
+            error = "We couldn't prepare your AI briefing. Your transfer advice is still available."
     run, state = current_run(request.user, fingerprint)
     cards = []
     if run and state == "ready":

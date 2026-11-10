@@ -47,11 +47,11 @@ def gemini_settings(request):
             disconnect(request.user)
             messages.success(
                 request,
-                "Gemini disconnected. Your saved key and briefings have been removed.",
+                "AI briefings disconnected. Your saved key and briefings have been removed.",
             )
             return redirect("accounts:gemini")
         if request.POST.get("action") != "connect":
-            messages.error(request, "Choose Connect Gemini or Remove key.")
+            messages.error(request, "Choose Enable AI briefings or Remove key.")
         else:
             form = GeminiConnectionForm(request.POST)
             if form.is_valid():
@@ -61,12 +61,12 @@ def gemini_settings(request):
                     messages.error(request, str(error))
                 except Exception:
                     messages.error(
-                        request, "Gemini couldn't be connected. Please try again."
+                        request, "AI briefings couldn't be enabled. Please try again."
                     )
                 else:
                     messages.success(
                         request,
-                        "Gemini connected. You can now prepare a briefing from your transfer plan.",
+                        "AI briefings enabled. You can now prepare a briefing from your transfer plan.",
                     )
                     return redirect("accounts:gemini")
                 form = GeminiConnectionForm()

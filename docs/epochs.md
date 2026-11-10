@@ -76,7 +76,7 @@ Verified-email managers can connect, replace and remove a Gemini key from accoun
 
 Validation: 47 new security/provider tests pass, including execution through the existing task worker. The isolated epoch suite passes 246 tests; Django system checks and application migration checks pass.
 
-The keyring must be configured on both web/job roles before connections are available. See [Gemini briefings operations and privacy](gemini-briefings.md) for setup, current primary provider references, exact limits, rotation, backup/restore and remaining smoke checks. Apply migration `0015`; no production deployment, real provider key or live Google charge was part of implementation.
+The keyring must be configured on both web/job roles before connections are available. See [AI briefings operations and privacy](gemini-briefings.md) for setup, current primary provider references, exact limits, rotation, backup/restore and remaining smoke checks. Apply migration `0015`; no production deployment, real provider key or live Google charge was part of implementation.
 
 ## Epoch 6 — Deadline digests
 

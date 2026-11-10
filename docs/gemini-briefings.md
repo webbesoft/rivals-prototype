@@ -1,6 +1,6 @@
-# Gemini priorities
+# AI briefings
 
-Epoch 5 adds an optional Gemini connection and an on-demand briefing in the transfer planner. Regular transfer suggestions, estimates, comparisons and the decision journal work without a key. Scheduled email digests remain Epoch 6.
+Epoch 5 adds AI briefings: an optional, on-demand feature in the transfer planner, currently powered by Gemini using each user's own key. Regular transfer suggestions, estimates, comparisons and the decision journal work without a key. Scheduled email digests remain Epoch 6.
 
 ## Who supplies each key
 
@@ -15,7 +15,7 @@ The operator does not supply a shared Gemini key. There is no deployment-level G
 
 A verified-email manager connects a Gemini API key at `/accounts/gemini/`. The server checks access to the approved model using Google's model metadata endpoint before saving the key. This verifies that the key can see the model; it does not verify the manager's Google identity, billing account, remaining quota, or ability to complete a future generation.
 
-The planner's “Prepare Gemini briefing” action queues one request. The worker recomputes the plan and stops if its inputs have changed. Gemini ranks up to three evidence items, always including the engine's transfer-or-hold recommendation. Evidence includes expected gain after hits, captain options, availability/minutes risks, allowance retained, forecast sensitivity, fixture blanks/doubles, and an anonymous rival comparison when available.
+The planner's “Prepare AI briefing” action queues one request. The worker recomputes the plan and stops if its inputs have changed. Gemini ranks up to three evidence items, always including the engine's transfer-or-hold recommendation. Evidence includes expected gain after hits, captain options, availability/minutes risks, allowance retained, forecast sensitivity, fixture blanks/doubles, and an anonymous rival comparison when available.
 
 The model returns only evidence IDs from a supplied enum. The server rejects unknown IDs, duplicates, missing priorities, extra fields, truncated output and unsupported responses. Titles, explanations, names and figures displayed in the briefing come from the engine's evidence, never from free-form model output. Gemini cannot introduce a new transfer, price, injury claim or external link. It cannot execute transfers. This first integration prioritises evidence rather than offering a free-form chatbot or independent forecasts.
 
