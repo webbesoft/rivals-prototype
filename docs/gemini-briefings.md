@@ -2,6 +2,15 @@
 
 Epoch 5 adds an optional Gemini connection and an on-demand briefing in the transfer planner. Regular transfer suggestions, estimates, comparisons and the decision journal work without a key. Scheduled email digests remain Epoch 6.
 
+## Who supplies each key
+
+| Key | Supplied by | Where it goes | Purpose |
+| --- | --- | --- | --- |
+| Gemini API key | Each individual user | Gemini settings, then encrypted in the database | Authorises that user's Google requests against their own quota/billing |
+| Encryption keyring (`AI_CREDENTIAL_KEYS`) | The app operator | Deployment secrets, shared by web and worker | Encrypts/decrypts the user keys stored in the database |
+
+The operator does not supply a shared Gemini key. There is no deployment-level Gemini API key or fallback provider account. The encryption keyring is generated locally using Fernet; it is not issued by Google and cannot authorise Gemini requests. Each briefing uses only its owner's saved Gemini key.
+
 ## What the model does
 
 A verified-email manager connects a Gemini API key at `/accounts/gemini/`. The server checks access to the approved model using Google's model metadata endpoint before saving the key. This verifies that the key can see the model; it does not verify the manager's Google identity, billing account, remaining quota, or ability to complete a future generation.
@@ -52,7 +61,7 @@ Provider errors and raw model output are not stored in task errors or applicatio
    uv run python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'
    ```
 
-3. Store it in the deployment secret manager, separately from the database and Django `SECRET_KEY`. Supply the same versioned keyring to the web and job roles:
+3. Store this encryption key in the deployment secret manager, separately from the database and Django `SECRET_KEY`. Do not put a Gemini API key here. Supply the same versioned encryption keyring to the web and job roles:
 
    ```dotenv
    AI_CREDENTIAL_KEYS='{"v1":"<dedicated Fernet key>"}'

@@ -80,11 +80,13 @@ The keyring must be configured on both web/job roles before connections are avai
 
 ## Epoch 6 — Deadline digests
 
+- Lead with the planner's “Fixtures and playing-time risks” visual, immediately below a short gameweek/deadline header and before written analysis. Show the upcoming forecast XI in formation, captain/vice, all bench players, opponents with H/A, blanks/doubles, individual estimated points and visible availability/minutes flags. Label the hold/current-squad baseline clearly. Follow the next-gameweek lineup with a compact outlook across the planning window; avoid repeating a full pitch for every week.
+- Use the same forecast data and selection rules as the planner. Adapt the visual for email with inline styles and an email-safe layout that reads on mobile. Names, fixtures, estimates and risk labels must remain readable when images are blocked; no scripts, gameweek switches or hover-only explanations. Include a plain-text alternative.
 - Offer an explicit opt-in for verified email accounts, with a configurable lead time (initial default: four hours before the actual next FPL deadline). Use timezone-aware deadlines, not a fixed weekday schedule.
 - Store a per-user, per-season, per-event delivery record. Re-evaluate changed deadlines, use bounded retries, prevent duplicate delivery, and skip missed or expired deadlines rather than send obsolete advice.
-- Refresh inputs before generating the digest. Include freshness, risks, best transfer versus roll, captain options, relevant rival scenarios, uncertainty, and a link to the plan.
+- Refresh inputs before generating the digest. After the visual, give brief transfer-versus-roll advice, captain reasoning, relevant rival scenarios, uncertainty and a link to the plan. The visual carries the squad/fixture/risk detail; do not repeat it as a wall of prose.
 - Allow preview/test delivery, unsubscribe, and pausing. Separate generation and delivery states; handle ambiguous email-send failures deliberately.
-- Never include provider keys in emails. Use the structured digest if the provider fails, and state when fresh advice cannot be generated.
+- Never include provider keys in emails. Any Gemini enhancement uses the recipient's own saved key. The visual and structured advice work without Gemini; retain them if the provider fails, and state when fresh advice cannot be generated.
 
 ## Product ideas to prioritise through use
 
