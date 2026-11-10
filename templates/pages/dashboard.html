@@ -177,7 +177,7 @@
             <div class="flex items-center gap-3">
               <h2 class="app-section-title text-xs font-black uppercase tracking-wider text-text-main tabular-nums">Your mini-leagues</h2>
               <span class="text-xs tabular-nums text-gray-500">
-                {{ mini_leagues.paginator.count|default:mini_leagues|length }} total
+                {{ mini_leagues.paginator.count }} total
               </span>
             </div>
             <a href="{% url 'rivals:minileagues.create' %}" class="text-xs tabular-nums font-bold uppercase tracking-wide text-pitch hover:underline">
