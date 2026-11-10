@@ -100,6 +100,14 @@ class DecisionInputForm(PlanningInputForm):
             required=False,
             empty_label="Auto: league leader",
         )
+        from rivals.services.planner_rival_choices import rival_choices
+
+        selected_rival = (
+            self.data.get("target_rival") if self.is_bound else data["rival_id"]
+        )
+        self.fields["target_rival"].widget.choices = rival_choices(
+            rivals, selected=selected_rival
+        )
         self.initial.update(target_league=chosen_id, target_rival=data["rival_id"])
         self.squad_rows = []
         # Slots retain their position when managers update post-deadline holdings.

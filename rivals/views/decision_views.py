@@ -1,4 +1,6 @@
 import logging
+from functools import wraps
+from time import perf_counter
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -11,14 +13,29 @@ from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.gzip import gzip_page
 
 from rivals.forms import DecisionInputForm
 from rivals.services.planner_presentation import planner_pitch_weeks
 from rivals.services.ai_credentials import configured
-from rivals.models import DecisionRecord, TeamPlanningInput
+from rivals.models import DecisionRecord, Team, TeamPlanningInput
 from rivals.services.decision_engine import DecisionEngine, DecisionUnavailable, digest
 
 logger = logging.getLogger(__name__)
+
+
+def planner_timing(view):
+    @wraps(view)
+    def measured(request, *args, **kwargs):
+        started = perf_counter()
+        response = view(request, *args, **kwargs)
+        duration = (perf_counter() - started) * 1000
+        response["Server-Timing"] = f"planner;dur={duration:.1f}"
+        if duration > 10000:
+            logger.warning("Slow planner response: %s %.0fms", request.path, duration)
+        return response
+
+    return measured
 
 
 def report_context(report, user):
@@ -97,15 +114,95 @@ def summary(request):
         )
 
 
+@planner_timing
 @login_required
 @never_cache
+@require_GET
+@gzip_page
+def preview(request):
+    try:
+        report = DecisionEngine(request.user).load().preview()
+        return render(
+            request,
+            "partials/decision_preview.html",
+            {
+                "report": report,
+                "planner_weeks": planner_pitch_weeks(report),
+                "decision_deadline": parse_datetime(report["deadline"]),
+            },
+        )
+    except DecisionUnavailable as error:
+        message = str(error)
+    except Exception:
+        logger.exception("Squad forecast unavailable for user %s", request.user.pk)
+        message = "We couldn't prepare your squad forecast. Please try again."
+    return render(
+        request, "partials/decision_workspace.html", {"decision_error": message}
+    )
+
+
+@login_required
+@require_GET
+@never_cache
+def rival_search(request):
+    from rivals.services.gameweek_context_service import GameweekContextService
+    from rivals.services.planner_rival_choices import rival_choices
+
+    try:
+        league_id = int(request.GET.get("target_league", ""))
+    except (ValueError, TypeError):
+        return HttpResponseBadRequest("Choose a mini-league first.")
+    if not request.user.customminileagues.filter(
+        mini_league_id=league_id, active=True, mini_league__active=True
+    ).exists():
+        return HttpResponseBadRequest("Choose one of your active mini-leagues.")
+    season = GameweekContextService.cached().get("season")
+    if not season:
+        return HttpResponseBadRequest(
+            "Current season is unavailable. Please try again."
+        )
+    rivals = Team.objects.filter(
+        mini_league_teams__mini_league_id=league_id,
+        mini_league_teams__season=season,
+    ).exclude(pk=request.user.team_id)
+    return render(
+        request,
+        "partials/planner_rival_options.html",
+        {
+            "choices": rival_choices(
+                rivals,
+                search=request.GET.get("rival_search", ""),
+                selected=request.GET.get("target_rival"),
+            ),
+            "selected": request.GET.get("target_rival", ""),
+        },
+    )
+
+
+@planner_timing
+@login_required
+@never_cache
+@gzip_page
 def workspace(request):
     if request.method not in ("GET", "POST"):
         return HttpResponseBadRequest("Use the transfer planner to review your squad.")
     try:
         engine = DecisionEngine(request.user).load()
-        form = DecisionInputForm(
-            request.POST if request.method == "POST" else None, engine=engine
+        results_only = request.method == "GET" and request.GET.get("results") == "1"
+        if request.method == "GET" and request.GET.get("editor") == "1":
+            return render(
+                request,
+                "partials/decision_form.html",
+                {
+                    "form": DecisionInputForm(engine=engine),
+                },
+            )
+        form = (
+            None
+            if results_only
+            else DecisionInputForm(
+                request.POST if request.method == "POST" else None, engine=engine
+            )
         )
         report = None
         if request.method == "POST" and form.is_valid():
@@ -147,7 +244,11 @@ def workspace(request):
                 )
         elif request.method == "GET":
             report = engine.report()
-        context = {"form": form, "ai_enabled": configured()}
+        context = {
+            "form": form,
+            "ai_enabled": configured(),
+            "results_only": results_only,
+        }
         if report:
             context.update(report_context(report, request.user))
         return render(request, "partials/decision_workspace.html", context)

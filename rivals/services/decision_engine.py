@@ -690,6 +690,41 @@ class DecisionEngine:
         )
         return [league_ids, scores, squad]
 
+    def player_forecasts(self):
+        return [
+            {
+                "id": pid,
+                "name": self.name(pid),
+                "position": POSITIONS[self.players[pid]["element_type"]],
+                "element_type": self.players[pid]["element_type"],
+                "club": self.club_names.get(self.players[pid]["team"], "—"),
+                "news": self.players[pid].get("news", ""),
+                "risk_label": (
+                    "Check news"
+                    if self.players[pid].get("status", "a") not in ("a", "d")
+                    or number(
+                        self.players[pid].get("chance_of_playing_next_round"), 100
+                    )
+                    < 100
+                    else "Minutes risk" if self.risk[pid] > 0.45 else ""
+                ),
+                "schedule": self.player_fixtures[pid],
+                "minutes_risk": round(self.risk[pid], 2),
+                "price": self.players[pid].get("now_cost", 0) / 10,
+            }
+            for pid in self.ids
+        ]
+
+    def preview(self):
+        """Forecast the unchanged squad without searching transfer combinations."""
+        self.prepare(self.inputs())
+        return {
+            "gameweek": self.weeks[0],
+            "deadline": self.context["next_deadline"].isoformat(),
+            "baseline": self.evaluate(self.ids),
+            "players": self.player_forecasts(),
+        }
+
     def report(self, inputs=None, manual=None):
         if not hasattr(self, "players"):
             self.load()
@@ -828,29 +863,7 @@ class DecisionEngine:
             ),
             "captain_id": first["captain"],
             "vice_id": first["vice"],
-            "players": [
-                {
-                    "id": pid,
-                    "name": self.name(pid),
-                    "position": POSITIONS[self.players[pid]["element_type"]],
-                    "element_type": self.players[pid]["element_type"],
-                    "club": self.club_names.get(self.players[pid]["team"], "—"),
-                    "news": self.players[pid].get("news", ""),
-                    "risk_label": (
-                        "Check news"
-                        if self.players[pid].get("status", "a") not in ("a", "d")
-                        or number(
-                            self.players[pid].get("chance_of_playing_next_round"), 100
-                        )
-                        < 100
-                        else "Minutes risk" if self.risk[pid] > 0.45 else ""
-                    ),
-                    "schedule": self.player_fixtures[pid],
-                    "minutes_risk": round(self.risk[pid], 2),
-                    "price": self.players[pid].get("now_cost", 0) / 10,
-                }
-                for pid in self.ids
-            ],
+            "players": self.player_forecasts(),
             "inputs": data,
             "bank_display": data["bank"] / 10 if data["bank"] is not None else 0,
             "weeks": self.weeks,

@@ -48,4 +48,10 @@ SQLite uses WAL mode on the shared local volume so atomic league imports do not
 block session and standings reads. Publication remains atomic; concurrent writers
 still serialize. Initialization queues network work after its database transaction.
 
+The transfer planner loads progressively: the unchanged-squad forecast appears
+before transfer comparisons, and editing controls load when opened. Rival choices
+are limited to 50 matches with search. Planner fragments support gzip compression
+and expose a `Server-Timing` header in browser Network tools; responses taking over
+10 seconds on the server are logged as `Slow planner response`.
+
 See [refresh operations](docs/background-refresh.md) and the [delivery epochs](docs/epochs.md). The current implementation is being developed beyond the original prototype described above.

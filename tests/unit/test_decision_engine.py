@@ -712,6 +712,216 @@ def test_dashboard_and_planner_shells_do_not_wait_for_fpl(manager):
 
 
 @pytest.mark.django_db
+def test_preview_renders_squad_without_running_transfer_search(manager, api):
+    client = Client()
+    client.force_login(manager)
+    with (
+        patch("rivals.services.decision_engine.FplApiService", return_value=api),
+        patch.object(
+            DecisionEngine,
+            "options",
+            side_effect=AssertionError("Preview must not search transfers"),
+        ),
+    ):
+        response = client.get(reverse("rivals:decisions.preview"))
+    html = response.content.decode()
+    assert "Fixtures and playing-time risks" in html
+    assert "decision-results" in html and "?results=1" in html
+    assert "<select" not in html
+    assert "planner;dur=" in response["Server-Timing"]
+
+
+@pytest.mark.django_db
+def test_preview_forecast_matches_full_report(manager, api):
+    engine = DecisionEngine(manager, api).load()
+    preview = engine.preview()
+    report = engine.report()
+    assert preview["baseline"]["lineups"] == report["baseline"]["lineups"]
+    assert preview["players"] == report["players"]
+
+
+@pytest.mark.django_db
+def test_progressive_comparison_defers_controls_and_can_be_compressed(manager, api):
+    import gzip
+
+    client = Client()
+    client.force_login(manager)
+    with (
+        patch("rivals.services.decision_engine.FplApiService", return_value=api),
+        patch(
+            "rivals.views.decision_views.DecisionInputForm",
+            side_effect=AssertionError("Controls must be deferred"),
+        ),
+    ):
+        response = client.get(
+            reverse("rivals:decisions.workspace"),
+            {"results": "1"},
+            HTTP_ACCEPT_ENCODING="gzip",
+        )
+    assert response["Content-Encoding"] == "gzip"
+    html = gzip.decompress(response.content).decode()
+    assert "Transfer versus hold" in html and "?editor=1" in html
+    assert "<select" not in html and "planner-pitch-heading" not in html
+    assert len(response.content) < len(html.encode()) / 2
+
+
+@pytest.mark.django_db
+def test_editor_load_does_not_recompute_transfer_report(manager, api):
+    client = Client()
+    client.force_login(manager)
+    with (
+        patch("rivals.services.decision_engine.FplApiService", return_value=api),
+        patch.object(
+            DecisionEngine,
+            "report",
+            side_effect=AssertionError("Editor must not search transfers"),
+        ),
+    ):
+        response = client.get(reverse("rivals:decisions.workspace"), {"editor": "1"})
+    html = response.content.decode()
+    assert "Compare options" in html and 'name="owned_14"' in html
+    assert "Transfer versus hold" not in html
+
+
+@pytest.mark.django_db
+def test_rival_selector_is_bounded_searchable_and_keeps_selected_rival(manager, api):
+    from rivals.services.planner_rival_choices import rival_choices
+
+    league = MiniLeague.objects.create(fpl_league_id="999", name="Large league")
+    UserMiniLeague.objects.create(user=manager, mini_league=league)
+    teams = Team.objects.bulk_create(
+        [
+            Team(
+                fpl_team_id=str(1000 + n),
+                team_name=f"Rival {n}",
+                manager_name="Manager",
+            )
+            for n in range(75)
+        ]
+    )
+    MiniLeagueTeam.objects.bulk_create(
+        [
+            MiniLeagueTeam(
+                mini_league=league,
+                team=team,
+                season="2026/27",
+                current_rank=n // 2 + 1,
+                total_points=100,
+            )
+            for n, team in enumerate(teams)
+        ]
+    )
+    # Other memberships must not affect ranks, consume the limit or duplicate
+    # options. Equal ranks in the chosen league must still sort by team PK.
+    for season, fpl_id in (("2025/26", "998"), ("2026/27", "997")):
+        other_league = MiniLeague.objects.create(fpl_league_id=fpl_id, name="Other")
+        MiniLeagueTeam.objects.bulk_create(
+            [
+                MiniLeagueTeam(
+                    mini_league=other_league,
+                    team=team,
+                    season=season,
+                    current_rank=len(teams) - n,
+                    total_points=100,
+                )
+                for n, team in enumerate(teams)
+            ]
+        )
+    previous_team = Team.objects.create(fpl_team_id="2000", team_name="Previous season")
+    MiniLeagueTeam.objects.create(
+        mini_league=league,
+        team=previous_team,
+        season="2025/26",
+        current_rank=1,
+        total_points=100,
+    )
+    engine = DecisionEngine(manager, api).load()
+    data = {
+        **form_data(engine),
+        "target_league": league.pk,
+        "target_rival": teams[-1].pk,
+    }
+    form = DecisionInputForm(data, engine=engine)
+    assert form.is_valid(), form.errors
+    choices = list(form.fields["target_rival"].widget.choices)
+    assert len(choices) == 52  # 50 matches, selected rival and automatic leader.
+    assert choices == [
+        ("", "Auto: league leader"),
+        (teams[-1].pk, teams[-1].team_name),
+        *((team.pk, team.team_name) for team in teams[:50]),
+    ]
+    assert (teams[-1].pk, teams[-1].team_name) in choices
+    queryset = form.fields["target_rival"].queryset
+    assert rival_choices(queryset, search="Rival 74") == [
+        ("", "Auto: league leader"),
+        (teams[-1].pk, "Rival 74"),
+    ]
+    client = Client()
+    client.force_login(manager)
+    with patch(
+        "rivals.services.gameweek_context_service.GameweekContextService.cached",
+        return_value={"season": "2026/27"},
+    ):
+        response = client.get(
+            reverse("rivals:decisions.rivals"),
+            {"target_league": league.pk, "rival_search": "Rival 74"},
+        )
+        assert response.status_code == 200 and "Rival 74" in response.content.decode()
+        assert response.content.decode().count("<option") == 2
+        assert (
+            client.get(
+                reverse("rivals:decisions.rivals"), {"target_league": league.pk + 999}
+            ).status_code
+            == 400
+        )
+
+
+@pytest.mark.django_db
+def test_preview_failure_shows_retry_and_does_not_schedule_comparison(manager, api):
+    api.fetch_bootstrap_static.return_value = None
+    client = Client()
+    client.force_login(manager)
+    with patch("rivals.services.decision_engine.FplApiService", return_value=api):
+        response = client.get(reverse("rivals:decisions.preview"))
+    html = response.content.decode()
+    assert "Try again" in html and "decision-results" not in html
+
+
+@pytest.mark.django_db
+def test_progressive_payload_stays_small_with_800_players(manager, api):
+    base = api.fetch_bootstrap_static.return_value["elements"][0]
+    for pid in range(46, 801):
+        api.fetch_bootstrap_static.return_value["elements"].append(
+            {
+                **base,
+                "id": pid,
+                "element_type": 1 + pid % 4,
+                "team": 1 + pid % 20,
+                "now_cost": 40 + pid % 50,
+            }
+        )
+    client = Client()
+    client.force_login(manager)
+    with patch("rivals.services.decision_engine.FplApiService", return_value=api):
+        full = client.get(reverse("rivals:decisions.workspace"))
+        preview = client.get(
+            reverse("rivals:decisions.preview"), HTTP_ACCEPT_ENCODING="gzip"
+        )
+        results = client.get(
+            reverse("rivals:decisions.workspace"),
+            {"results": "1"},
+            HTTP_ACCEPT_ENCODING="gzip",
+        )
+    assert "Transfer versus hold" in full.content.decode()
+    assert preview["Content-Encoding"] == results["Content-Encoding"] == "gzip"
+    initial_bytes = len(preview.content) + len(results.content)
+    assert initial_bytes < len(full.content) / 4
+    print(
+        f"800 players: full HTML {len(full.content):,} bytes; compressed progressive forecast + comparison {initial_bytes:,} bytes"
+    )
+
+
+@pytest.mark.django_db
 def test_representative_forecast_runtime(manager, api):
     base = api.fetch_bootstrap_static.return_value["elements"][0]
     for pid in range(46, 801):

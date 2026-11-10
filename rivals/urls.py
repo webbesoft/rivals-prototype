@@ -18,6 +18,8 @@ urlpatterns = [
     path("decisions/", decision_views.planner, name="decisions"),
     path("decisions/summary/", decision_views.summary, name="decisions.summary"),
     path("decisions/workspace/", decision_views.workspace, name="decisions.workspace"),
+    path("decisions/preview/", decision_views.preview, name="decisions.preview"),
+    path("decisions/rivals/", decision_views.rival_search, name="decisions.rivals"),
     path("decisions/save/", decision_views.save_decision, name="decisions.save"),
     path("decisions/journal/", decision_views.journal, name="decisions.journal"),
     path(

@@ -1,0 +1,1 @@
+{% for value, label in choices %}<option value="{{ value }}"{% if value|stringformat:"s" == selected %} selected{% endif %}>{{ label }}</option>{% endfor %}
