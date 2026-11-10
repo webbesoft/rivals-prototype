@@ -9,6 +9,7 @@ from django.shortcuts import redirect, render
 from django.utils import timezone
 
 from rivals.models import GameweekData, Transfer
+from rivals.services.score_summary_service import ScoreSummaryService
 
 logger = logging.getLogger(__name__)
 
@@ -137,6 +138,9 @@ def dashboard(request):
             "recent_activity": recent_activity,
             "user_gameweek_data": user_gameweek_data,
             "new_season_detected": new_season_detected,
+            "score_summary": (
+                ScoreSummaryService(user_team).cached() if user_team else None
+            ),
         },
     )
 
@@ -147,6 +151,7 @@ def sync_tracked_rivals_if_deadline_passed(user):
     their transfers updated as soon as data becomes available.
     """
     from django.conf import settings
+
     if getattr(settings, "TESTING", False):
         return
 
@@ -175,9 +180,7 @@ def sync_tracked_rivals_if_deadline_passed(user):
                     team.last_synced_at = timezone.now()
                     team.save(update_fields=["last_synced_at"])
                 except Exception as e:
-                    logger.warning(
-                        f"Auto-sync for tracked rival {team.id} failed: {e}"
-                    )
+                    logger.warning(f"Auto-sync for tracked rival {team.id} failed: {e}")
 
 
 @login_required

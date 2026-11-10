@@ -3,12 +3,26 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_http_methods
 
 from rivals.models import Player, Team
 from rivals.services.projection_service import ProjectionService
+from rivals.services.score_summary_service import ScoreSummaryService
 from rivals.services.team_analysis_service import TeamAnalysisService
 from rivals.services.team_sync_service import TeamSyncService
+
+
+@login_required
+@require_http_methods(["GET"])
+@never_cache
+def team_score(request, team_id):
+    team = get_object_or_404(Team, id=team_id)
+    return render(
+        request,
+        "partials/score_summary.html",
+        {"score_summary": ScoreSummaryService(team).refresh()},
+    )
 
 
 @login_required
@@ -46,6 +60,7 @@ def team_show(request, team_id):
             "season_histories": season_histories,
             "projection": projection,
             "tactical_analysis": tactical_analysis,
+            "score_summary": ScoreSummaryService(team).cached(),
         },
     )
 
@@ -92,6 +107,7 @@ def team_sync(request, team_id):
 
 def calculate_mini_league_performance(team):
     from collections import defaultdict
+
     from rivals.models import MiniLeagueTeam
 
     mlts = list(team.mini_league_teams.select_related("mini_league").all())

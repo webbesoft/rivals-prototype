@@ -11,6 +11,7 @@ urlpatterns = [
     path("rivals/sync/", dashboard_views.dashboard_sync_rivals, name="rivals.sync"),
     path("teams/", team_views.team_show, name="teams.index"),
     path("teams/<int:team_id>/", team_views.team_show, name="teams.show"),
+    path("teams/<int:team_id>/score/", team_views.team_score, name="teams.score"),
     path("teams/<int:team_id>/track/", team_views.team_track, name="teams.track"),
     path("teams/<int:team_id>/untrack/", team_views.team_untrack, name="teams.untrack"),
     path("teams/<int:team_id>/sync/", team_views.team_sync, name="teams.sync"),

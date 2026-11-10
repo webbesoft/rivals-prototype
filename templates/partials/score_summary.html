@@ -1,0 +1,30 @@
+{% load humanize %}
+<div class="px-5 py-3 border-b border-gray-200 flex flex-wrap justify-between gap-2 text-xs font-mono">
+  <h2 class="font-bold uppercase tracking-wider text-pitch">{% if score_summary.gameweek %}Gameweek {{ score_summary.gameweek }}{% else %}Gameweek score{% endif %}</h2>
+  <span data-score-status role="status" class="text-gray-500">
+    {% if score_summary.unavailable %}FPL is unavailable. {% if score_summary.updated_at %}Showing saved scores; {% endif %}retrying automatically.
+    {% elif score_summary.stale %}Saved scores; checking for updates automatically.
+    {% elif score_summary.updated_at %}Checked {{ score_summary.updated_at|timesince }} ago · {% if score_summary.finished %}Gameweek finished{% else %}Provisional FPL scores{% endif %}
+    {% else %}Checking FPL automatically…{% endif %}
+  </span>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-4">
+  <div class="p-5">
+    <p class="text-xs font-mono uppercase text-gray-500">Gameweek points</p>
+    <p class="text-3xl font-black font-mono text-pitch">{% if score_summary.updated_at %}{{ score_summary.points|default_if_none:"—" }}{% else %}—{% endif %}</p>
+  </div>
+  <div class="p-5">
+    <p class="text-xs font-mono uppercase text-gray-500">Gameweek average</p>
+    <p class="text-3xl font-black font-mono text-text-main">{% if score_summary.updated_at %}{{ score_summary.average|default_if_none:"—" }}{% else %}—{% endif %}</p>
+    {% if score_summary.updated_at and score_summary.difference != None %}<p class="text-xs font-mono text-gray-500">{% if score_summary.difference > 0 %}+{% endif %}{{ score_summary.difference }} vs average</p>{% endif %}
+  </div>
+  <div class="p-5">
+    <p class="text-xs font-mono uppercase text-gray-500">Total points</p>
+    <p class="text-2xl font-black font-mono text-text-main">{% if score_summary.updated_at %}{{ score_summary.total_points|default_if_none:"—"|intcomma }}{% else %}—{% endif %}</p>
+  </div>
+  <div class="p-5">
+    <p class="text-xs font-mono uppercase text-gray-500">Overall rank</p>
+    <p class="text-2xl font-black font-mono text-text-main">{% if score_summary.updated_at %}{{ score_summary.overall_rank|default_if_none:"—"|intcomma }}{% else %}—{% endif %}</p>
+  </div>
+</div>
+{% if score_summary.updated_at and not score_summary.gameweek %}<p class="px-5 pb-4 text-xs text-gray-500">No gameweek score is available yet.</p>{% endif %}

@@ -15,6 +15,10 @@
     </div>
     {% endif %}
 
+    {% if user_team %}
+    {% include "partials/score_panel.html" with score_team=user_team %}
+    {% endif %}
+
     <!-- New season banner -->
     {% if new_season_detected %}
     <div class="mb-8 border-l-4 border-pitch bg-white border border-gray-200 p-4 shadow-sm flex items-center justify-between gap-4 flex-wrap">

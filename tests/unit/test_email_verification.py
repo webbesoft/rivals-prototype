@@ -33,10 +33,10 @@ def test_signup_sends_verification_email(monkeypatch):
             return None
 
     monkeypatch.setattr(
-        "rivals.services.fpl_api_service.FplApiService", lambda: DummyFPL()
+        "accounts.forms.FplApiService", lambda: DummyFPL()
     )
     monkeypatch.setattr(
-        "rivals.services.init_user_service.InitUserService",
+        "accounts.tasks.InitUserService",
         lambda user: DummyInit(user),
     )
 
