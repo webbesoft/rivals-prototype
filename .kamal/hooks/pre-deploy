@@ -3,6 +3,17 @@
 # Pre-deploy hook for Kamal
 # Runs unit tests using uv before deployment proceeds
 
+set -eu
+
+# Kamal runs this hook on the deployment host, before containers start.
+PYTHON_VERSION=$(cat .python-version)
+echo "🐍 Preparing Python ${PYTHON_VERSION} for pre-deploy tests..."
+if ! uv python install "$PYTHON_VERSION"; then
+    echo "❌ Could not prepare Python ${PYTHON_VERSION}. No tests were run." >&2
+    echo "Update uv (Homebrew: brew upgrade uv; standalone: uv self update), then retry deployment." >&2
+    exit 1
+fi
+
 echo "🧪 Running pre-deploy tests..."
 
 # Run tests using uv

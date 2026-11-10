@@ -47,6 +47,8 @@ League failure logs include the external FPL league ID and the failed page or im
 
 The Docker image uses Python 3.15.2 for both build and runtime, matching `.python-version`, and installs production dependencies into `/opt/venv` during its build. Web startup runs Python directly; `uv run` commands in the job role and deployment hooks reuse that environment with `UV_NO_SYNC=1`. Containers should not create a new `.venv` or download packages at startup, which can exhaust Kamal's 30-second readiness window. After changing the Dockerfile, rebuild and redeploy the image with `kamal deploy`.
 
+Kamal's pre-deploy test hook runs on the machine invoking Kamal and explicitly installs the interpreter pinned in `.python-version` before testing. Keep that machine's `uv` current so it knows about new Python downloads: use `brew upgrade uv` for Homebrew installations or `uv self update` for standalone installations. A Python installation failure stops deployment before tests run.
+
 `config/deploy.yml` includes a `job` role on the same host as `web`, sharing the named volume mounted at `/app/dbs`. It starts:
 
 ```sh
