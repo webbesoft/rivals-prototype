@@ -1,14 +1,16 @@
+# Share the Python interpreter and OS between the build and runtime environments.
+FROM python:3.15.2-slim-bookworm AS base
+
 # ---- Build stage: install dependencies & build static assets ----
-# Use a uv-derived image (uv preinstalled) as the builder so uv can create the environment
-# Pin uv/python tag for reproducible builds (replace 0.8.18-bookworm-slim with the version you test).
-FROM ghcr.io/astral-sh/uv:0.8.18-python3.12-bookworm-slim AS builder
+FROM base AS builder
+COPY --from=ghcr.io/astral-sh/uv:0.8.18 /uv /usr/local/bin/uv
 
 # Set a deterministic locale and reduce interactive prompts
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    UV_PROJECT_ENVIRONMENT=system \
-    PATH="/usr/local/bin:${PATH}"
+    UV_PROJECT_ENVIRONMENT=/opt/venv \
+    PATH="/opt/venv/bin:${PATH}"
 
 WORKDIR /app
 
@@ -26,9 +28,8 @@ RUN curl -sLO https://github.com/tailwindlabs/tailwindcss/releases/latest/downlo
   && chmod +x tailwindcss-linux-x64 \
   && mv tailwindcss-linux-x64 /usr/local/bin/tailwindcss
 
-# Sync the project into the image (creates system-installed packages because UV_PROJECT_ENVIRONMENT=system)
-# --locked uses uv.lock, giving reproducible installs (recommended).
-RUN uv sync --locked
+# Install production dependencies once, into the environment copied to runtime.
+RUN uv sync --locked --no-dev
 
 # Copy the rest of the app
 COPY . /app
@@ -37,22 +38,22 @@ COPY . /app
 RUN tailwindcss -i assets/css/input.css -o assets/css/output.css --minify
 
 # Collect static files into /app/staticfiles (adjust STATIC_ROOT in settings accordingly)
-# Run migrations as part of build only if you prefer baked DB state (commonly migrations are run at deploy time).
 # Verify that we ignore the input.css which contains invalid css for whitenoise
-RUN uv run python manage.py collectstatic --noinput --ignore "css/input.css"
+RUN python manage.py collectstatic --noinput --ignore "css/input.css"
 
 # (Optional) Compile optimized .pyc files
-RUN uv run python -OO -m compileall -q /app
+RUN python -OO -m compileall -q /app
 
 # ---- Final stage: minimal runtime image ----
-# Use a slim python base and copy installed system packages from builder
-FROM python:3.12-slim-trixie AS runner
+FROM base AS runner
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PORT=8000 \
     DJANGO_SETTINGS_MODULE=rivalspy.settings \
-    PATH="/usr/local/bin:${PATH}"
+    UV_PROJECT_ENVIRONMENT=/opt/venv \
+    UV_NO_SYNC=1 \
+    PATH="/opt/venv/bin:${PATH}"
 
 WORKDIR /app
 
@@ -64,10 +65,8 @@ RUN addgroup --system app && adduser --system --ingroup app app \
 ENV UV_CACHE_DIR=/app/.cache/uv
 RUN mkdir -p /app/.cache/uv && chown -R app:app /app/.cache
 
-# Copy system-wide installed packages and binaries created during build (site-packages, scripts)
-# This copies /usr/local from the builder into runtime. It is the simplest reliable way
-# to bring installed Python packages across multi-stage builds when installed into the system.
-COPY --from=builder /usr/local /usr/local
+# Keep uv for operational commands; UV_NO_SYNC makes them reuse the built environment.
+COPY --from=builder /opt/venv /opt/venv
 COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
 
 # Copy application files and the collected static files
@@ -80,6 +79,5 @@ USER app
 
 EXPOSE 8000
 
-# Production entrypoint:
-# Use `uv run` to run uvicorn from the uv-managed environment.
-CMD ["uv", "run", "uvicorn", "rivalspy.asgi:application", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+# Start immediately using the dependencies installed during the build.
+CMD ["python", "-m", "uvicorn", "rivalspy.asgi:application", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]

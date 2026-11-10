@@ -45,6 +45,8 @@ League failure logs include the external FPL league ID and the failed page or im
 
 ## Production
 
+The Docker image uses Python 3.15.2 for both build and runtime, matching `.python-version`, and installs production dependencies into `/opt/venv` during its build. Web startup runs Python directly; `uv run` commands in the job role and deployment hooks reuse that environment with `UV_NO_SYNC=1`. Containers should not create a new `.venv` or download packages at startup, which can exhaust Kamal's 30-second readiness window. After changing the Dockerfile, rebuild and redeploy the image with `kamal deploy`.
+
 `config/deploy.yml` includes a `job` role on the same host as `web`, sharing the named volume mounted at `/app/dbs`. It starts:
 
 ```sh
