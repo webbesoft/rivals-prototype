@@ -60,6 +60,8 @@ The plan is usable immediately. Bank uses the latest available public balance or
 
 Validation: all 199 tests pass, including allowance rollover, midweek corrections, chip handling, inferred sale values, optional edits and the confirmation-free planner. Django checks and migration consistency checks pass.
 
+Secondary replacement comparisons use compact, expandable rows showing the sell target, leading replacement and net gain. Each row opens a price/hit/gain table; the section starts collapsed so it does not compete with the main recommendation. The 56 planner tests pass after this presentation update.
+
 Apply migration `0014`; routine history ingestion fills gameweek bank/chip snapshots. The previous Epoch 3 requirement to re-enter the transfer count at every deadline is superseded for planner defaults. See [transfer decisions](transfer-decisions.md) for default sources and limits.
 
 ## Epoch 5 — Secure bring-your-own-key analysis

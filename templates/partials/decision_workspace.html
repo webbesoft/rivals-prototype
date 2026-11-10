@@ -53,7 +53,7 @@
     {% endfor %}
     </div>
   </div>
-  {% if report.alternatives %}<details class="app-panel border border-gray-200 bg-white p-5 mb-6"><summary class="cursor-pointer font-bold">Other alternatives for squad slots</summary>{% for slot in report.alternatives %}<div class="mt-4 text-sm"><h3 class="font-bold">Replacing {{ slot.player }} · {{ slot.position }}</h3><ul>{% for option in slot.options %}<li>{{ option.moves.0.in_name }} · estimated gross gain {{ option.gross_gain }} · points cost {{ option.hits|default_if_none:"—" }}</li>{% endfor %}</ul></div>{% endfor %}</details>{% endif %}
+  {% if report.alternatives %}{% include "partials/decision_alternatives.html" %}{% endif %}
   {% if report.rival %}
   <div class="app-panel bg-white border border-gray-200 p-5 mb-6">
     <h2 class="text-lg font-bold mb-3">{{ report.rival.league }} · Rival scenarios</h2>

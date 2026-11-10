@@ -1,0 +1,48 @@
+<details class="app-panel decision-alternatives mb-6">
+  <summary class="decision-alternatives-heading">
+    <span>
+      <span class="app-section-title block">Compare other replacements</span>
+      <span class="decision-alternatives-note">{{ report.alternatives|length }} players · {{ report.horizon }} gameweeks</span>
+    </span>
+    <span class="decision-alternatives-toggle">Browse options <span aria-hidden="true">⌄</span></span>
+  </summary>
+  <div class="decision-alternatives-body">
+    <p class="decision-alternatives-note">See the leading replacement for each player. Gains are estimated points versus keeping your squad, after transfer hits.</p>
+    {% for slot in report.alternatives %}
+    {% with leading=slot.options.0 %}
+    <details class="decision-replacement">
+      <summary class="decision-replacement-heading">
+        <span class="decision-replacement-player">
+          <span class="decision-alternatives-label">Sell · {{ slot.position }}</span>
+          <strong>{{ slot.player }}</strong>
+        </span>
+        <span class="decision-replacement-target">
+          <span class="decision-alternatives-label">Top replacement</span>
+          <strong>{{ leading.moves.0.in_name }}</strong>
+        </span>
+        <span class="decision-replacement-gain {% if leading.net_gain > 0 %}decision-gain-positive{% endif %}">
+          <strong>{% if leading.net_gain != None %}{% if leading.net_gain > 0 %}+{% endif %}{{ leading.net_gain|floatformat:1 }}{% else %}—{% endif %}</strong>
+          <span class="decision-alternatives-label">pts vs hold</span>
+        </span>
+        <span class="decision-replacement-chevron" aria-hidden="true">⌄</span>
+      </summary>
+      <div class="decision-replacement-options">
+        <table>
+          <caption class="sr-only">Replacements for {{ slot.player }} over {{ report.horizon }} gameweeks. Gains include transfer hits.</caption>
+          <thead><tr><th scope="col">Buy</th><th scope="col">Hit (pts)</th><th scope="col">Gain (pts)</th></tr></thead>
+          <tbody>
+            {% for option in slot.options %}
+            <tr>
+              <th scope="row"><span class="decision-option-name">{{ option.moves.0.in_name }}{% if forloop.first %}<span class="decision-option-badge">Top pick</span>{% endif %}</span><span class="decision-alternatives-note">£{{ option.moves.0.buy_price|floatformat:1 }}m</span></th>
+              <td>{{ option.hits|default_if_none:"—" }}</td>
+              <td class="{% if option.net_gain > 0 %}decision-gain-positive{% endif %}"><strong>{% if option.net_gain != None %}{% if option.net_gain > 0 %}+{% endif %}{{ option.net_gain|floatformat:1 }}{% else %}—{% endif %}</strong></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </details>
+    {% endwith %}
+    {% endfor %}
+  </div>
+</details>

@@ -148,6 +148,83 @@
 .matchday-app .app-panel > :first-child { border-top-left-radius: 7px; border-top-right-radius: 7px; }
 .matchday-app .app-panel > :last-child { border-bottom-left-radius: 7px; border-bottom-right-radius: 7px; }
 .matchday-app .app-panel > :is(.border-b, .border-t) { background: #edf0e4; }
+
+/* Secondary transfer comparisons: one scannable row per sell target. */
+.decision-alternatives summary { cursor: pointer; list-style: none; }
+.decision-alternatives summary::-webkit-details-marker { display: none; }
+.decision-alternatives-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+}
+.decision-alternatives-note {
+  display: block;
+  margin-top: 5px;
+  color: var(--soft-ink);
+  font-size: 12px;
+  line-height: 1.6;
+  font-weight: 400;
+}
+.decision-alternatives-toggle { flex-shrink: 0; font-size: 12px; font-weight: 700; }
+.decision-alternatives-toggle > span, .decision-replacement-chevron {
+  display: inline-block;
+  transition: transform .15s ease;
+}
+.decision-alternatives[open] > summary .decision-alternatives-toggle > span,
+.decision-replacement[open] > summary .decision-replacement-chevron { transform: rotate(180deg); }
+.decision-alternatives-body { padding: 0 20px 20px; }
+.decision-alternatives-body > p { margin: 0 0 16px; }
+.decision-replacement { border-top: 1px solid var(--rule); }
+.decision-replacement-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto 14px;
+  gap: 16px;
+  align-items: center;
+  padding: 16px 0;
+  font-size: 14px;
+}
+.decision-replacement-heading strong { display: block; overflow-wrap: anywhere; }
+.decision-alternatives-label {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--soft-ink);
+  font-size: 11px;
+  font-weight: 400;
+}
+.decision-replacement-gain { text-align: right; font-variant-numeric: tabular-nums; }
+.decision-replacement-gain > strong { font-size: 20px; line-height: 1.3; }
+.decision-replacement-gain > span { margin: 2px 0 0; }
+.decision-gain-positive { color: var(--success); }
+.decision-replacement-options { padding: 0 0 16px; overflow-x: auto; }
+.decision-replacement-options table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.decision-replacement-options thead { background: var(--paper); }
+.decision-replacement-options th, .decision-replacement-options td {
+  padding: 12px;
+  text-align: right;
+  border-bottom: 1px solid var(--rule);
+  font-variant-numeric: tabular-nums;
+}
+.decision-replacement-options th:first-child { text-align: left; }
+.decision-replacement-options thead th { color: var(--soft-ink); font-size: 11px; font-weight: 600; }
+.decision-option-name { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.decision-option-badge {
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: #e8efdf;
+  color: var(--ink);
+  font-size: 10px;
+}
+@media (max-width: 480px) {
+  .decision-alternatives-heading { align-items: start; padding: 16px; }
+  .decision-alternatives-toggle { font-size: 0; }
+  .decision-alternatives-toggle > span { font-size: 16px; }
+  .decision-alternatives-body { padding: 0 16px 16px; }
+  .decision-replacement-heading { gap: 10px; font-size: 12px; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto 10px; }
+  .decision-replacement-gain > strong { font-size: 18px; }
+  .decision-replacement-options th, .decision-replacement-options td { padding: 10px 6px; }
+}
 .matchday-app :is(.bg-white, .bg-surface) { background-color: var(--surface); }
 .matchday-app :is(.bg-gray-50, .bg-gray-100, .bg-gray-50\/75, .bg-gray-50\/50, .bg-gray-50\/25) { background-color: #f0f1e8; }
 .matchday-app :is(.border-gray-100, .border-gray-200, .border-gray-300) { border-color: var(--rule); }
