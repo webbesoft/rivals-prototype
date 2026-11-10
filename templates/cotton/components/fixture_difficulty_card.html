@@ -1,9 +1,9 @@
-<div class="bg-surface rounded-2xl p-6 border border-gray-100 shadow-lg hover:shadow-xl transition-all duration-300 relative overflow-hidden group">
+<div class="app-panel bg-surface rounded-2xl p-6 border border-gray-100 shadow-lg hover:shadow-xl transition-all duration-300 relative overflow-hidden group">
   <div class="absolute top-0 right-0 w-1 h-full bg-highlight opacity-0 group-hover:opacity-100 transition-opacity"></div>
   
   <div class="flex items-center justify-between mb-4">
-    <h3 class="text-xl font-black text-text-main uppercase tracking-tight">Fixture Radar</h3>
-    <span class="text-xs font-mono text-muted bg-gray-100 px-2 py-1 rounded">Next 3 GWs</span>
+    <h3 class="app-section-title text-xl font-black text-text-main uppercase tracking-tight">Fixture Radar</h3>
+    <span class="text-xs tabular-nums text-muted bg-gray-100 px-2 py-1 rounded">Upcoming fixtures</span>
   </div>
   
   <p class="text-xs text-muted mb-6 uppercase tracking-wide">Best and worst upcoming fixtures</p>
@@ -21,7 +21,7 @@
           <div class="flex items-center gap-2">
             <span class="font-bold text-text-main text-sm">{{ fixture.team }}</span>
             <span class="text-xs text-muted">vs</span>
-            <span class="text-xs font-mono text-muted">{{ fixture.opponent }}</span>
+            <span class="text-xs tabular-nums text-muted">{{ fixture.opponent }}</span>
           </div>
           <div class="flex gap-1">
             {% for i in "12345" %}
@@ -47,7 +47,7 @@
           <div class="flex items-center gap-2">
             <span class="font-bold text-text-main text-sm">{{ fixture.team }}</span>
             <span class="text-xs text-muted">vs</span>
-            <span class="text-xs font-mono text-muted">{{ fixture.opponent }}</span>
+            <span class="text-xs tabular-nums text-muted">{{ fixture.opponent }}</span>
           </div>
           <div class="flex gap-1">
             {% for i in "12345" %}

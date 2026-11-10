@@ -1,10 +1,7 @@
 <c-vars site_name="RivalSpy" home_url="/" />
-
-<header class="bg-pitch text-white shadow-lg border-b border-accent/20 relative z-50">
-  <div class="max-w-7xl mx-auto flex justify-between items-center px-4 py-4">
-    <a href="{{ home_url }}" class="text-2xl font-black tracking-tighter uppercase italic flex items-center gap-2">
-      <span class="text-accent">#</span>{{ site_name }}
-    </a>
+<header class="app-header">
+  <div class="app-header-inner">
+    <a href="{{ home_url }}" class="app-brand" aria-label="RivalSpy home"><span class="app-crest" aria-hidden="true">R<span>•</span></span>{{ site_name }}</a>
     <c-components.navbar />
   </div>
 </header>

@@ -1,0 +1,4 @@
+{% for message in messages %}
+<div role="status" class="app-notice{% if message.tags == 'error' %} app-notice-error{% elif message.tags == 'warning' %} app-notice-warning{% endif %}">{{ message }}</div>
+{% endfor %}
+{% if form.non_field_errors %}<div role="alert" class="app-notice app-notice-error">{{ form.non_field_errors }}</div>{% endif %}

@@ -1,4 +1,4 @@
-<c-vars landing="" />
+<c-vars landing="" title="RivalSpy - FPL Rival Tracker & Mini-League Intelligence" />
 <!DOCTYPE html>
 {% load static %}
 <html lang="{{ LANGUAGE_CODE|default:'en' }}">
@@ -10,7 +10,7 @@
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
 
   <!-- Primary SEO Meta Tags -->
-  <title>{% block title %}RivalSpy - FPL Rival Tracker & Mini-League Intelligence{% endblock %}</title>
+  <title>{% block title %}{{ title }}{% endblock %}</title>
   <meta name="description"
     content="{% block meta_description %}Track your Fantasy Premier League rivals like never before. Real-time transfer detection, captaincy picks, chip usage, projected points, and head-to-head mini-league scouting.{% endblock %}" />
   <meta name="keywords"
@@ -54,18 +54,20 @@
     </script>
 
   <link rel="stylesheet" href="{% static 'css/output.css' %}" />
+  <link rel="stylesheet" href="{% static 'css/matchday.css' %}" />
   {% if landing %}<link rel="stylesheet" href="{% static 'css/landing.css' %}" />{% endif %}
   <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.7/dist/htmx.min.js"></script>
   {% block extra_head %}{% endblock %}
 </head>
 
-<body class="antialiased bg-surface-alt text-text-main font-sans selection:bg-accent selection:text-pitch">
+<body class="{% if not landing %}matchday-app {% endif %}antialiased bg-surface-alt text-text-main font-sans selection:bg-accent selection:text-pitch">
   {% block extra_scripts %}{% endblock %}
 
+  <a class="app-skip-link" href="#main-content">Skip to content</a>
   <div class="min-h-screen flex flex-col">
     {% if not landing %}<c-components.header />{% endif %}
 
-    <main class="flex-grow">{{ slot }}</main>
+    <main id="main-content" class="flex-grow{% if not landing %} app-content{% endif %}">{{ slot }}</main>
 
     {% if not landing %}<c-components.footer />{% endif %}
   </div>

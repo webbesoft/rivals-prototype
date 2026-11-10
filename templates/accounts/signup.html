@@ -1,128 +1,42 @@
-<c-layouts.guest>
-  <div class="min-h-screen relative flex flex-col items-center justify-center p-6 overflow-hidden bg-pitch">
-    <!-- Ambient Background -->
-    <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20 pointer-events-none"></div>
-    <div class="absolute inset-0 bg-gradient-to-b from-pitch via-pitch/90 to-black/80 pointer-events-none"></div>
-    <div class="absolute top-0 right-0 p-[30rem] bg-accent/5 blur-[100px] rounded-full pointer-events-none animate-pulse"></div>
-    <div class="absolute bottom-0 left-0 p-[20rem] bg-highlight/5 blur-[80px] rounded-full pointer-events-none"></div>
-
-    <div class="relative z-10 w-full max-w-md animate-in fade-in slide-in-from-bottom-8 duration-700">
-      <div class="text-center mb-10">
-        <h1 class="text-4xl md:text-5xl font-black italic uppercase tracking-tighter text-white mb-4 drop-shadow-lg">
-          Join the <span class="text-transparent text-stroke-accent">Ranks</span>
-        </h1>
-        <p class="text-lg text-gray-300 font-medium max-w-xs mx-auto leading-relaxed">
-          Start tracking your rivals and get the edge you need.
-        </p>
-      </div>
-
-      <div class="bg-surface rounded-2xl shadow-xl border border-white/10 p-8 relative overflow-hidden group">
-        <div class="absolute top-0 right-0 w-1 h-full bg-accent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-
-        {# Flash errors #} 
-        {% if messages %} 
-          {% for message in messages %} 
-            {% if message.tags == "error" %}
-            <div class="mb-6 p-4 rounded-xl bg-danger/10 text-danger border border-danger/20 text-sm font-bold flex items-center gap-2">
-              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-              {{ message }}
-            </div>
-            {% endif %} 
-          {% endfor %} 
-        {% endif %}
-
-        <form
-          method="POST"
-          action="{% url 'accounts:signup' %}"
-          class="space-y-5"
-          onsubmit="this.querySelector('button').disabled=true; this.querySelector('button').innerText='Creating Account...';"
-        >
-          {% csrf_token %}
-
-          <div>
-            <label for="fpl_id" class="block text-xs font-bold uppercase tracking-wide text-muted mb-2">FPL Team ID</label>
-            <input
-              type="text"
-              id="fpl_id"
-              name="fpl_id"
-              value="{{ form.fpl_id.value|default:'' }}"
-              placeholder="e.g. 1234567"
-              class="block w-full px-4 py-3 rounded-xl bg-surface-alt border border-white/10 text-text-main focus:ring-2 focus:ring-accent focus:border-accent transition-all placeholder-gray-500"
-            />
-            {% if form.fpl_id.errors %}
-            <p class="text-xs text-danger font-bold mt-1 uppercase">{{ form.fpl_id.errors.0 }}</p>
-            {% endif %}
-          </div>
-
-          <div>
-            <label for="email" class="block text-xs font-bold uppercase tracking-wide text-muted mb-2">Email Address</label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value="{{ form.email.value|default:'' }}"
-              class="block w-full px-4 py-3 rounded-xl bg-surface-alt border border-white/10 text-text-main focus:ring-2 focus:ring-accent focus:border-accent transition-all placeholder-gray-500"
-              placeholder="manager@example.com"
-            />
-            {% if form.email.errors %}
-            <p class="text-xs text-danger font-bold mt-1 uppercase">{{ form.email.errors.0 }}</p>
-            {% endif %}
-          </div>
-
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label for="password1" class="block text-xs font-bold uppercase tracking-wide text-muted mb-2">Password</label>
-              <input
-                type="password"
-                id="password1"
-                name="password1"
-                class="block w-full px-4 py-3 rounded-xl bg-surface-alt border border-white/10 text-text-main focus:ring-2 focus:ring-accent focus:border-accent transition-all placeholder-gray-500"
-                placeholder="••••••"
-              />
-              {% if form.password1.errors %}
-              <p class="text-xs text-danger font-bold mt-1 uppercase">{{ form.password1.errors.0 }}</p>
-              {% endif %}
-            </div>
-
-            <div>
-              <label for="password2" class="block text-xs font-bold uppercase tracking-wide text-muted mb-2">Confirm</label>
-              <input
-                type="password"
-                id="password2"
-                name="password2"
-                class="block w-full px-4 py-3 rounded-xl bg-surface-alt border border-white/10 text-text-main focus:ring-2 focus:ring-accent focus:border-accent transition-all placeholder-gray-500"
-                placeholder="••••••"
-              />
-              {% if form.password2.errors %}
-              <p class="text-xs text-danger font-bold mt-1 uppercase">{{ form.password2.errors.0 }}</p>
-              {% endif %}
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            class="w-full bg-accent text-pitch font-black uppercase tracking-wide py-4 rounded-xl hover:bg-white transition-all shadow-lg shadow-accent/20 hover:scale-[1.02] active:scale-[0.98] mt-6"
-          >
-            Start Tracking Rivals
-          </button>
-        </form>
-
-        <div class="mt-8 pt-6 border-t border-white/5 text-sm text-center space-y-3">
-          <div>
-            <span class="text-muted">Already enlisted?</span>
-            <a
-              href="{% url 'accounts:login' %}"
-              class="font-bold text-accent hover:text-white uppercase tracking-wide ml-1 transition-colors"
-              >Return to Base</a
-            >
-          </div>
-          <div>
-            <a href="/guides/getting-team-id" class="text-xs font-bold text-gray-500 hover:text-gray-300 uppercase tracking-wide transition-colors"
-              >Help finding your Team ID</a
-            >
-          </div>
-        </div>
-      </div>
+<c-layouts.base title="Get started - RivalSpy">
+  <div class="app-auth">
+    <div class="app-auth-intro">
+      <p class="app-kicker">For the league within the league</p>
+      <h1 class="app-page-title">Bring your team.<br><em>Find your rivals.</em></h1>
+      <p class="app-lede">Connect your FPL team to follow the mini-leagues, transfers and captain calls that make every gameweek personal.</p>
+      <p class="app-auth-note">38 gameweeks.<br>Plenty of plot twists.</p>
     </div>
+    <section class="app-panel app-auth-card" aria-labelledby="signup-title">
+      <h2 id="signup-title" class="app-section-title">Set up your RivalSpy</h2>
+      {% include 'partials/account_messages.html' %}
+      <form method="POST" action="{% url 'accounts:signup' %}" class="app-form">
+        {% csrf_token %}
+        <div>
+          <label for="fpl_id">FPL team ID</label>
+          <input type="number" id="fpl_id" name="fpl_id" min="1" inputmode="numeric" value="{{ form.fpl_id.value|default:'' }}" placeholder="e.g. 1234567" required aria-describedby="team-id-help{% if form.fpl_id.errors %} fpl-id-errors{% endif %}" {% if form.fpl_id.errors %}aria-invalid="true"{% endif %}>
+          <p id="team-id-help" class="app-field-help">The number in your FPL team page URL.</p>
+          {% if form.fpl_id.errors %}<div id="fpl-id-errors" class="app-field-error">{{ form.fpl_id.errors }}</div>{% endif %}
+        </div>
+        <div>
+          <label for="email">Email address</label>
+          <input type="email" id="email" name="email" autocomplete="email" value="{{ form.email.value|default:'' }}" placeholder="manager@example.com" required {% if form.email.errors %}aria-invalid="true" aria-describedby="email-errors"{% endif %}>
+          {% if form.email.errors %}<div id="email-errors" class="app-field-error">{{ form.email.errors }}</div>{% endif %}
+        </div>
+        <div>
+          <label for="password1">Password</label>
+          <input type="password" id="password1" name="password1" autocomplete="new-password" required aria-describedby="password-help{% if form.password1.errors %} password1-errors{% endif %}" {% if form.password1.errors %}aria-invalid="true"{% endif %}>
+          <div id="password-help" class="app-field-help">{{ form.password1.help_text }}</div>
+          {% if form.password1.errors %}<div id="password1-errors" class="app-field-error">{{ form.password1.errors }}</div>{% endif %}
+        </div>
+        <div>
+          <label for="password2">Confirm password</label>
+          <input type="password" id="password2" name="password2" autocomplete="new-password" required {% if form.password2.errors %}aria-invalid="true" aria-describedby="password2-errors"{% endif %}>
+          {% if form.password2.errors %}<div id="password2-errors" class="app-field-error">{{ form.password2.errors }}</div>{% endif %}
+        </div>
+        <button type="submit" class="app-primary-button">Start tracking rivals <span aria-hidden="true">↗</span></button>
+      </form>
+      <details class="app-team-id-help"><summary>Where do I find my team ID?</summary><p>Open your team’s Points page on the FPL website. In the address, the number after <strong>/entry/</strong> is your team ID.</p></details>
+      <p class="app-auth-switch">Already have an account? <a href="{% url 'accounts:login' %}">Log in</a></p>
+    </section>
   </div>
-</c-layouts.guest>
+</c-layouts.base>

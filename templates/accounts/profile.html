@@ -1,15 +1,9 @@
 <c-layouts.base title="Profile & FPL Settings - RivalSpy">
   <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-    <div class="mb-8 text-center relative">
-      <div class="absolute inset-x-0 top-1/2 -z-10 h-px bg-gradient-to-r from-transparent via-accent/20 to-transparent"></div>
-      <span class="bg-surface-alt px-4 relative z-10 inline-block">
-        <h1 class="text-4xl sm:text-5xl font-black text-text-main uppercase italic tracking-tighter transform -skew-x-6">
-          Profile & <span class="text-accent">Settings</span>
-        </h1>
-      </span>
-      <p class="text-muted mt-2 font-medium uppercase tracking-widest text-xs">
-        Manage your FPL Account & Tactical Data
-      </p>
+    <div class="app-masthead">
+      <p class="app-kicker">Off the pitch / Your account</p>
+      <h1 class="app-page-title">Profile & settings</h1>
+      <p class="app-lede">Your manager details, FPL team and season setup.</p>
     </div>
 
     {% if messages %}
@@ -39,10 +33,10 @@
 
     <div class="grid gap-8 md:grid-cols-3">
       <!-- Account Info Panel -->
-      <div class="md:col-span-1 bg-surface rounded-2xl p-6 shadow-sm border border-gray-100 space-y-6">
-        <h2 class="text-lg font-black uppercase tracking-tight text-text-main flex items-center gap-2 border-b border-gray-100 pb-3">
+      <div class="md:col-span-1 app-panel bg-surface rounded-2xl p-6 shadow-sm border border-gray-100 space-y-6">
+        <h2 class="app-section-title text-lg font-black uppercase tracking-tight text-text-main flex items-center gap-2 border-b border-gray-100 pb-3">
           <span class="w-1.5 h-5 bg-accent skew-x-12 rounded-sm"></span>
-          Manager Identity
+          Manager details
         </h2>
 
         <div class="space-y-4 text-sm">
@@ -63,7 +57,7 @@
 
           <div>
             <span class="text-xs uppercase font-bold text-muted block">Current FPL Team ID</span>
-            <span class="font-mono font-bold bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-sm">{{ user.fpl_id|default:"None" }}</span>
+            <span class="tabular-nums font-bold bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-sm">{{ user.fpl_id|default:"None" }}</span>
           </div>
 
           {% if user.team and user.team.current_season %}
@@ -76,8 +70,8 @@
       </div>
 
       <!-- Update FPL ID Form -->
-      <div class="md:col-span-2 bg-surface rounded-2xl p-6 shadow-sm border border-gray-100">
-        <h2 class="text-lg font-black uppercase tracking-tight text-text-main flex items-center gap-2 border-b border-gray-100 pb-3 mb-6">
+      <div class="md:col-span-2 app-panel bg-surface rounded-2xl p-6 shadow-sm border border-gray-100">
+        <h2 class="app-section-title text-lg font-black uppercase tracking-tight text-text-main flex items-center gap-2 border-b border-gray-100 pb-3 mb-6">
           <span class="w-1.5 h-5 bg-highlight skew-x-12 rounded-sm"></span>
           Update / Refresh FPL Team ID
         </h2>
@@ -98,7 +92,7 @@
               id="id_fpl_id_update"
               name="fpl_id"
               value="{{ form.fpl_id.value|default:user.fpl_id|default:'' }}"
-              class="block w-full px-4 py-3 rounded-xl bg-surface-alt border border-gray-300 text-text-main focus:ring-2 focus:ring-accent focus:border-accent font-mono text-lg transition-all"
+              class="block w-full px-4 py-3 rounded-xl bg-surface-alt border border-gray-300 text-text-main focus:ring-2 focus:ring-accent focus:border-accent tabular-nums text-lg transition-all"
               placeholder="e.g. 1234567"
               required
             />

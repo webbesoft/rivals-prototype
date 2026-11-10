@@ -7,9 +7,9 @@
   <p class="text-danger font-bold">Comparison failed: {{ comparison.error }}</p>
 </div>
 {% else %}
-<div class="bg-surface rounded-2xl shadow-xl border border-gray-100 p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+<div class="app-panel bg-surface rounded-2xl shadow-xl border border-gray-100 p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
   <div class="flex items-center justify-between mb-6">
-    <h3 class="text-xl font-black text-text-main uppercase tracking-tight flex items-center gap-2">
+    <h3 class="app-section-title text-xl font-black text-text-main uppercase tracking-tight flex items-center gap-2">
       <span class="w-2 h-2 bg-accent rounded-full animate-pulse"></span>
       Head-to-Head
     </h3>
@@ -27,14 +27,14 @@
       <div class="text-xs font-bold text-muted uppercase tracking-wider mb-2">Expected Points (GW{{ comparison.current_gameweek|add:1 }})</div>
       <div class="flex items-center justify-between mb-2">
         <div>
-          <div class="text-sm text-gray-500 font-mono">You</div>
+          <div class="text-sm text-gray-500 tabular-nums">You</div>
           <div class="text-2xl font-black {% if comparison.expected_points.difference > 0 %}text-accent{% elif comparison.expected_points.difference < 0 %}text-danger{% else %}text-text-main{% endif %}">
             {{ comparison.expected_points.mine|floatformat:1 }}
           </div>
         </div>
         <div class="text-gray-400">vs</div>
         <div class="text-right">
-          <div class="text-sm text-gray-500 font-mono">Rival</div>
+          <div class="text-sm text-gray-500 tabular-nums">Rival</div>
           <div class="text-2xl font-black text-text-main">
             {{ comparison.expected_points.rival|floatformat:1 }}
           </div>

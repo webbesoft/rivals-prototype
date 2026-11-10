@@ -1,12 +1,12 @@
 {% if url %}
 <a href="{% url url %}"
-  class="{% if variant == 'primary' %}bg-accent text-pitch hover:bg-white{% elif variant == 'secondary' %}bg-transparent text-white border border-white/30 hover:border-white{% endif %} {% if size == 'sm' %}px-3 py-1.5 text-xs{% elif size == 'md' %}px-5 py-2.5 text-sm{% elif size == 'lg' %}px-6 py-3 text-base{% endif %} font-black uppercase tracking-wide transition-colors duration-150 inline-flex items-center justify-center {{ attrs.class }}"
+  class="{% if variant == 'primary' %}bg-pitch text-white hover:bg-pitch/90{% elif variant == 'secondary' %}bg-transparent text-text-main border border-gray-300 hover:border-pitch{% endif %} {% if size == 'sm' %}px-3 py-1.5 text-xs{% elif size == 'md' %}px-5 py-2.5 text-sm{% elif size == 'lg' %}px-6 py-3 text-base{% endif %} app-control font-semibold transition-colors duration-150 inline-flex items-center justify-center {{ attrs.class }}"
 >
   {{ text }}
 </a>
 {% else %}
 <button
-  class="cursor-pointer {% if variant == 'primary' %}bg-accent text-pitch hover:bg-white{% elif variant == 'secondary' %}bg-transparent text-text-main border border-gray-200 hover:border-accent hover:text-accent{% endif %} {% if size == 'sm' %}px-3 py-1.5 text-xs{% elif size == 'md' %}px-5 py-2.5 text-sm{% elif size == 'lg' %}px-6 py-3 text-base{% endif %} font-black uppercase tracking-wide transition-colors duration-150 inline-flex items-center justify-center {{ attrs.class }}"
+  class="cursor-pointer {% if variant == 'primary' %}bg-pitch text-white hover:bg-pitch/90{% elif variant == 'secondary' %}bg-transparent text-text-main border border-gray-200 hover:border-accent hover:text-accent{% endif %} {% if size == 'sm' %}px-3 py-1.5 text-xs{% elif size == 'md' %}px-5 py-2.5 text-sm{% elif size == 'lg' %}px-6 py-3 text-base{% endif %} app-control font-semibold transition-colors duration-150 inline-flex items-center justify-center {{ attrs.class }}"
 >
   {{ text }}
 </button>

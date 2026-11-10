@@ -1,17 +1,17 @@
-<div class="bg-white border border-gray-200 shadow-sm" data-team-id="{{ team.id }}" data-last-gameweek="{% if team.get_available_gameweeks %}{{ team.get_available_gameweeks|last }}{% endif %}">
+<div class="app-panel bg-white border border-gray-200 shadow-sm" data-team-id="{{ team.id }}" data-last-gameweek="{% if team.get_available_gameweeks %}{{ team.get_available_gameweeks|last }}{% endif %}">
   <!-- Header Bar with Navigation Controls -->
   <div class="px-5 py-3 border-b border-gray-200 bg-gray-50/75 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
     <div>
       <div class="flex items-center gap-2">
-        <h3 class="text-xs font-black uppercase tracking-wider text-pitch font-mono">Tactical Lineup & Squad History</h3>
-        <span class="text-gray-300 font-mono">/</span>
-        <span class="text-xs font-mono text-gray-500">Historical Team Sheet</span>
+        <h3 class="text-xs font-black uppercase tracking-wider text-pitch tabular-nums">Lineup & squad history</h3>
+        <span class="text-gray-300 tabular-nums">/</span>
+        <span class="text-xs tabular-nums text-gray-500">The team sheet</span>
       </div>
-      <p class="text-[11px] font-mono text-gray-500 mt-0.5">Formations, active multipliers, individual returns, and bench order</p>
+      <p class="text-[11px] tabular-nums text-gray-500 mt-0.5">Formations, active multipliers, individual returns, and bench order</p>
     </div>
 
     <!-- Gameweek Switcher -->
-    <div class="inline-flex items-center border border-gray-300 bg-white font-mono text-xs shadow-sm self-start sm:self-auto">
+    <div class="inline-flex items-center border border-gray-300 bg-white tabular-nums text-xs shadow-sm self-start sm:self-auto">
       <button
         id="prev-gw-btn"
         onclick="changeGameweek(-1)"
@@ -39,7 +39,7 @@
   <!-- Squad Display Container -->
   <div class="p-5 sm:p-6">
     <div id="squad-container" class="min-h-[280px]">
-      <div class="flex flex-col items-center justify-center h-48 text-center font-mono">
+      <div class="flex flex-col items-center justify-center h-48 text-center tabular-nums">
         <div class="w-6 h-6 border-2 border-pitch border-t-transparent rounded-full animate-spin mb-3"></div>
         <p class="text-gray-500 text-xs uppercase tracking-wider">Loading squad setup...</p>
       </div>
@@ -86,7 +86,7 @@
     if (!container) return;
 
     container.innerHTML = `
-      <div class="flex flex-col items-center justify-center h-48 text-center font-mono">
+      <div class="flex flex-col items-center justify-center h-48 text-center tabular-nums">
         <div class="w-6 h-6 border-2 border-pitch border-t-transparent rounded-full animate-spin mb-3"></div>
         <p class="text-gray-500 text-xs uppercase tracking-wider">Accessing Gameweek ${gameweek} Lineup...</p>
       </div>
@@ -107,7 +107,7 @@
       .catch((error) => {
         console.error("Error loading squad history:", error);
         container.innerHTML = `
-          <div class="p-8 text-center font-mono">
+          <div class="p-8 text-center tabular-nums">
             <p class="text-danger text-xs font-bold uppercase tracking-wide">Squad record unavailable</p>
             <p class="text-gray-500 text-xs mt-1">Could not load tactical data for Gameweek ${gameweek}.</p>
           </div>
@@ -135,14 +135,14 @@
         <!-- Starting XI Section Header -->
         <div class="pb-3 border-b border-gray-200 flex flex-wrap items-center justify-between gap-2">
           <div class="flex items-center gap-2">
-            <span class="text-xs font-mono font-black uppercase tracking-wider text-text-main">
+            <span class="text-xs tabular-nums font-black uppercase tracking-wider text-text-main">
               Starting XI
             </span>
-            <span class="text-xs font-mono text-pitch font-bold bg-pitch/10 px-2 py-0.5 border border-pitch/30 rounded-sm">
+            <span class="text-xs tabular-nums text-pitch font-bold bg-pitch/10 px-2 py-0.5 border border-pitch/30 rounded-sm">
               Formation ${formationStr}
             </span>
           </div>
-          <div class="text-xs font-mono text-gray-600">
+          <div class="text-xs tabular-nums text-gray-600">
             XI Total Points: <span class="font-bold text-text-main">${totalStartingPts} pts</span>
           </div>
         </div>
@@ -152,7 +152,7 @@
           <!-- Goalkeeper Line -->
           <div>
             <div class="flex items-center gap-2 mb-2">
-              <span class="text-[11px] font-mono font-bold uppercase tracking-wider text-amber-800">
+              <span class="text-[11px] tabular-nums font-bold uppercase tracking-wider text-amber-800">
                 Goalkeeper
               </span>
               <span class="h-px bg-amber-200 flex-1"></span>
@@ -165,7 +165,7 @@
           <!-- Defenders Line -->
           <div>
             <div class="flex items-center gap-2 mb-2">
-              <span class="text-[11px] font-mono font-bold uppercase tracking-wider text-blue-800">
+              <span class="text-[11px] tabular-nums font-bold uppercase tracking-wider text-blue-800">
                 Defenders (${defs.length})
               </span>
               <span class="h-px bg-blue-200 flex-1"></span>
@@ -178,7 +178,7 @@
           <!-- Midfielders Line -->
           <div>
             <div class="flex items-center gap-2 mb-2">
-              <span class="text-[11px] font-mono font-bold uppercase tracking-wider text-emerald-800">
+              <span class="text-[11px] tabular-nums font-bold uppercase tracking-wider text-emerald-800">
                 Midfielders (${mids.length})
               </span>
               <span class="h-px bg-emerald-200 flex-1"></span>
@@ -191,7 +191,7 @@
           <!-- Forwards Line -->
           <div>
             <div class="flex items-center gap-2 mb-2">
-              <span class="text-[11px] font-mono font-bold uppercase tracking-wider text-rose-800">
+              <span class="text-[11px] tabular-nums font-bold uppercase tracking-wider text-rose-800">
                 Forwards (${fwds.length})
               </span>
               <span class="h-px bg-rose-200 flex-1"></span>
@@ -206,12 +206,12 @@
         <div class="pt-4 border-t border-gray-200">
           <div class="flex items-center justify-between mb-3">
             <div class="flex items-center gap-2">
-              <span class="text-xs font-mono font-bold uppercase tracking-wider text-gray-500">
+              <span class="text-xs tabular-nums font-bold uppercase tracking-wider text-gray-500">
                 Bench Substitutes
               </span>
-              <span class="text-[10px] font-mono text-gray-400">Order by priority</span>
+              <span class="text-[10px] tabular-nums text-gray-400">Order by priority</span>
             </div>
-            <span class="text-[11px] font-mono text-gray-400">4 Reserves</span>
+            <span class="text-[11px] tabular-nums text-gray-400">4 Reserves</span>
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             ${bench.map((player) => createPlayerCard(player, true)).join("")}
@@ -226,10 +226,10 @@
 
   function createPlayerCard(player, isBench = false) {
     const captainBadge = player.is_captain
-      ? `<span class="inline-flex items-center justify-center px-1.5 py-0.5 bg-pitch text-white text-[10px] font-mono font-black border border-pitch rounded-sm tracking-wide" title="Captain">C${player.multiplier > 1 ? ` ×${player.multiplier}` : ''}</span>`
+      ? `<span class="inline-flex items-center justify-center px-1.5 py-0.5 bg-pitch text-white text-[10px] tabular-nums font-black border border-pitch rounded-sm tracking-wide" title="Captain">C${player.multiplier > 1 ? ` ×${player.multiplier}` : ''}</span>`
       : "";
     const viceCaptainBadge = player.is_vice_captain
-      ? `<span class="inline-flex items-center justify-center px-1.5 py-0.5 bg-gray-700 text-white text-[10px] font-mono font-black border border-gray-800 rounded-sm tracking-wide" title="Vice Captain">V</span>`
+      ? `<span class="inline-flex items-center justify-center px-1.5 py-0.5 bg-gray-700 text-white text-[10px] tabular-nums font-black border border-gray-800 rounded-sm tracking-wide" title="Vice Captain">V</span>`
       : "";
 
     const positionStyles = {
@@ -261,7 +261,7 @@
       : "bg-white border-gray-200 hover:border-pitch";
 
     const benchTag = isBench
-      ? `<span class="text-[10px] font-mono text-gray-500 bg-gray-200/70 px-1 py-0.5 border border-gray-300 rounded-sm">${player.position === 12 ? 'GK Sub' : `Sub ${player.position - 12}`}</span>`
+      ? `<span class="text-[10px] tabular-nums text-gray-500 bg-gray-200/70 px-1 py-0.5 border border-gray-300 rounded-sm">${player.position === 12 ? 'GK Sub' : `Sub ${player.position - 12}`}</span>`
       : "";
 
     // Parse xG / xA
@@ -282,12 +282,12 @@
     }
 
     return `
-      <div class="p-3 border shadow-xs transition-colors ${cardBg} ${style.border}">
+      <div class="app-player-card p-3 border shadow-xs transition-colors ${cardBg} ${style.border}">
         <!-- Top Row: Position Badge, Captain/Vice Badge & Points -->
         <div class="flex items-center justify-between gap-2 mb-2">
           <!-- Position & Role Group with clean gap -->
           <div class="flex items-center gap-2">
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.5 border ${style.badge} rounded-sm">
+            <span class="text-[10px] tabular-nums font-bold px-1.5 py-0.5 border ${style.badge} rounded-sm">
               ${player.position_type}
             </span>
             ${captainBadge}
@@ -297,10 +297,10 @@
 
           <!-- Points Display -->
           <div class="text-right shrink-0">
-            <span class="font-mono font-bold text-sm tabular-nums ${ptsColor}">
+            <span class="tabular-nums font-bold text-sm tabular-nums ${ptsColor}">
               ${effectivePts !== null ? effectivePts : '—'}
             </span>
-            <span class="text-[10px] font-mono text-gray-400 font-normal ml-0.5">pts</span>
+            <span class="text-[10px] tabular-nums text-gray-400 font-normal ml-0.5">pts</span>
           </div>
         </div>
 
@@ -309,7 +309,7 @@
           <p class="font-bold text-xs text-text-main truncate uppercase tracking-tight">
             ${player.player_name}
           </p>
-          <div class="flex items-center gap-2 text-[11px] font-mono text-gray-500 mt-0.5">
+          <div class="flex items-center gap-2 text-[11px] tabular-nums text-gray-500 mt-0.5">
             <span class="font-semibold text-gray-700">${player.formatted_cost}</span>
             ${player.form ? `<span class="text-gray-300">·</span><span>Form ${player.form}</span>` : ""}
           </div>
@@ -317,7 +317,7 @@
 
         <!-- Bottom Row: xG & xA with distinct spacing -->
         ${hasMetrics ? `
-          <div class="flex items-center gap-2 text-[10px] font-mono text-gray-600 border-t border-gray-100 pt-2 mt-1">
+          <div class="flex items-center gap-2 text-[10px] tabular-nums text-gray-600 border-t border-gray-100 pt-2 mt-1">
             ${xgNum > 0
               ? `<span class="px-1.5 py-0.5 bg-gray-50 border border-gray-200 rounded-sm">xG ${xgNum.toFixed(2)}</span>`
               : ""

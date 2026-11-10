@@ -1,6 +1,6 @@
-<div class="bg-white border border-gray-200 shadow-sm p-6 sm:p-8">
+<div class="app-panel bg-white border border-gray-200 shadow-sm p-6 sm:p-8">
   {% if analysis.error %}
-  <div class="border-l-4 border-danger bg-danger/5 p-4 text-xs font-mono text-danger">
+  <div class="border-l-4 border-danger bg-danger/5 p-4 text-xs tabular-nums text-danger">
     <span class="font-bold uppercase tracking-wider block mb-1">Analysis Failed</span>
     <span>{{ analysis.error }}</span>
   </div>
@@ -9,13 +9,13 @@
     <div>
       <div class="flex items-center gap-2 mb-1">
         <span class="w-2 h-2 bg-pitch rounded-full"></span>
-        <h3 class="text-lg font-black text-text-main uppercase tracking-tight font-sans">Tactical Assessment</h3>
+        <h3 class="app-section-title text-lg font-black text-text-main uppercase tracking-tight font-sans">The squad briefing</h3>
       </div>
-      <p class="text-[11px] font-mono font-bold text-muted uppercase tracking-widest">
-        Gameweek {{ analysis.current_gameweek }} Intelligence Report
+      <p class="text-[11px] tabular-nums font-bold text-muted uppercase tracking-widest">
+        Gameweek {{ analysis.current_gameweek }} Squad briefing
       </p>
     </div>
-    <div class="text-right font-mono text-xs">
+    <div class="text-right tabular-nums text-xs">
       <span class="text-[11px] text-gray-400 block">{{ analysis.analysis_timestamp }}</span>
       <div class="text-text-main mt-0.5">
         <span class="font-bold text-pitch">{{ analysis.team_summary.total_points }} pts</span>
@@ -29,16 +29,16 @@
     <!-- Recommendations -->
     <div>
       <div class="flex items-center justify-between mb-4 pb-2 border-b border-gray-100">
-        <h4 class="font-mono font-bold text-text-main uppercase tracking-wider text-xs flex items-center gap-2">
+        <h4 class="tabular-nums font-bold text-text-main uppercase tracking-wider text-xs flex items-center gap-2">
           <span class="text-pitch font-black">#</span> Recommended Transfer Targets
         </h4>
-        <span class="text-[10px] font-mono text-gray-400">High priority moves</span>
+        <span class="text-[10px] tabular-nums text-gray-400">High priority moves</span>
       </div>
 
       {% if analysis.transfer_recommendations %}
       <ul class="space-y-3">
         {% for rec in analysis.transfer_recommendations %}
-        <li class="bg-gray-50/75 border border-gray-200 p-4 font-mono">
+        <li class="bg-gray-50/75 border border-gray-200 p-4 tabular-nums">
           <div class="flex justify-between items-center mb-2.5">
             <span class="bg-pitch text-white text-[10px] font-bold uppercase px-2 py-0.5">
               Priority {{ rec.priority_score }}
@@ -66,8 +66,8 @@
         {% endfor %}
       </ul>
       {% else %}
-      <div class="p-6 bg-gray-50 border border-gray-200 text-center font-mono text-xs text-gray-500">
-        No immediate transfer actions recommended. Squad is structurally sound for the upcoming fixtures.
+      <div class="p-6 bg-gray-50 border border-gray-200 text-center tabular-nums text-xs text-gray-500">
+        No immediate transfer actions recommended. Your squad is set for the upcoming fixtures.
       </div>
       {% endif %}
     </div>
@@ -77,43 +77,43 @@
       <!-- Captaincy Options -->
       <div>
         <div class="flex items-center justify-between mb-4 pb-2 border-b border-gray-100">
-          <h4 class="font-mono font-bold text-text-main uppercase tracking-wider text-xs flex items-center gap-2">
+          <h4 class="tabular-nums font-bold text-text-main uppercase tracking-wider text-xs flex items-center gap-2">
             <span class="text-pitch font-black">©</span> Optimal Captaincy Options
           </h4>
-          <span class="text-[10px] font-mono text-gray-400">Model projections</span>
+          <span class="text-[10px] tabular-nums text-gray-400">Model projections</span>
         </div>
 
         <div class="space-y-2">
           {% for c in analysis.captain_suggestions %}
           <div class="flex items-center justify-between p-3 bg-gray-50/75 border border-gray-200">
             <div class="flex items-center gap-3">
-              <span class="w-6 h-6 bg-pitch text-white flex items-center justify-center font-mono font-bold text-xs">
+              <span class="w-6 h-6 bg-pitch text-white flex items-center justify-center tabular-nums font-bold text-xs">
                 {{ forloop.counter }}
               </span>
               <div>
                 <p class="font-bold text-text-main text-xs">{{ c.name }}</p>
-                <p class="text-[10px] font-mono uppercase text-gray-500">{{ c.team }} · {{ c.position }}</p>
+                <p class="text-[10px] tabular-nums uppercase text-gray-500">{{ c.team }} · {{ c.position }}</p>
               </div>
             </div>
-            <div class="text-right font-mono">
+            <div class="text-right tabular-nums">
               <p class="text-base font-black tabular-nums text-pitch">{{ c.expected_points_next_gw|floatformat:1 }}</p>
               <p class="text-[10px] text-gray-400 uppercase">Proj. Pts</p>
             </div>
           </div>
           {% empty %}
-          <p class="text-xs font-mono text-gray-400 italic">No captain data available.</p>
+          <p class="text-xs tabular-nums text-gray-400 italic">No captain data available.</p>
           {% endfor %}
         </div>
       </div>
 
       <!-- Budget & Transfers -->
       <div class="bg-gray-50 border border-gray-200 p-4">
-        <h4 class="font-mono font-bold text-text-main uppercase tracking-wider text-xs mb-3">
+        <h4 class="tabular-nums font-bold text-text-main uppercase tracking-wider text-xs mb-3">
           Budget & Transfer Ledger
         </h4>
         <ul class="space-y-2">
           {% for insight in analysis.budget_insights %}
-          <li class="flex items-start gap-2 text-xs font-mono text-gray-600">
+          <li class="flex items-start gap-2 text-xs tabular-nums text-gray-600">
             <span class="text-pitch font-bold">•</span>
             <span>{{ insight }}</span>
           </li>

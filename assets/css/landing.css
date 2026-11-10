@@ -1,10 +1,5 @@
 /* RivalSpy's public matchday programme. Scoped away from the application UI. */
 .matchday {
-  --paper:#f5f3eb;
-  --ink:#183f30;
-  --soft-ink:#59685e;
-  --rule:#d6dace;
-  --yellow:#f0d66a;
   background:var(--paper);
   color:var(--ink);
   font-family:"Instrument Sans",ui-sans-serif,system-ui,sans-serif;

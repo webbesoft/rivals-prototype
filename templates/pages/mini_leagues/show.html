@@ -8,7 +8,7 @@
     {% if messages %}
     <div class="mb-6 space-y-2">
       {% for message in messages %}
-      <div class="border-l-4 px-4 py-2.5 text-xs font-mono font-medium {% if message.tags == 'error' %}border-danger bg-danger/5 text-danger{% else %}border-success bg-success/5 text-pitch{% endif %}">
+      <div class="border-l-4 px-4 py-2.5 text-xs tabular-nums font-medium {% if message.tags == 'error' %}border-danger bg-danger/5 text-danger{% else %}border-success bg-success/5 text-pitch{% endif %}">
         {{ message }}
       </div>
       {% endfor %}
@@ -16,13 +16,13 @@
     {% endif %}
 
     <!-- League Header / Masthead -->
-    <div class="bg-white border border-gray-200 shadow-sm mb-8">
+    <div class="app-panel bg-white border border-gray-200 shadow-sm mb-8">
       <!-- Meta row -->
-      <div class="px-5 py-2.5 border-b border-gray-200 bg-gray-50/75 flex flex-wrap items-center justify-between text-xs font-mono gap-2">
+      <div class="px-5 py-2.5 border-b border-gray-200 bg-gray-50/75 flex flex-wrap items-center justify-between text-xs tabular-nums gap-2">
         <div class="flex items-center gap-2">
           <span class="font-bold uppercase tracking-wider text-pitch">Mini-League Standings</span>
           <span class="text-gray-300">/</span>
-          <span class="text-gray-500 font-mono">FPL ID: {{ mini_league.fpl_league_id }}</span>
+          <span class="text-gray-500 tabular-nums">FPL ID: {{ mini_league.fpl_league_id }}</span>
           {% if mini_league.scoring_type %}
           <span class="text-gray-300">/</span>
           <span class="text-gray-700 font-semibold uppercase">Classic Scoring</span>
@@ -36,10 +36,10 @@
       <!-- Identity & Primary Actions -->
       <div class="p-5 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 class="text-2xl sm:text-3xl font-black text-text-main uppercase tracking-tight font-sans">
+          <h1 class="app-page-title text-2xl sm:text-3xl font-black text-text-main uppercase tracking-tight font-sans">
             {{ mini_league.name }}
           </h1>
-          <p class="text-xs sm:text-sm text-gray-500 font-mono mt-1">
+          <p class="text-xs sm:text-sm text-gray-500 tabular-nums mt-1">
             Competition: <span class="text-text-main font-bold">{{ standings|length }} Teams</span>
             {% if mini_league.start_event %}
             <span class="mx-2 text-gray-300">·</span>
@@ -54,14 +54,14 @@
             {% csrf_token %}
             <button
               type="submit"
-              class="px-4 py-2 bg-pitch text-white font-mono text-xs font-bold uppercase tracking-wide hover:bg-pitch/90 transition-colors cursor-pointer flex items-center gap-1.5"
+              class="px-4 py-2 bg-pitch text-white tabular-nums text-xs font-bold uppercase tracking-wide hover:bg-pitch/90 transition-colors cursor-pointer flex items-center gap-1.5"
             >
               Sync Standings
             </button>
           </form>
           <a
             href="{% url 'rivals:dashboard' %}"
-            class="px-3.5 py-2 text-text-main border border-gray-300 font-mono text-xs font-bold uppercase tracking-wide hover:border-gray-500 transition-colors"
+            class="px-3.5 py-2 text-text-main border border-gray-300 tabular-nums text-xs font-bold uppercase tracking-wide hover:border-gray-500 transition-colors"
           >
             Dashboard →
           </a>
@@ -71,14 +71,14 @@
 
     <!-- User League Projection Strip -->
     {% if user_league_projection %}
-    <div class="mb-8 bg-white border border-gray-200 shadow-sm">
-      <div class="px-5 py-2.5 border-b border-gray-200 bg-gray-50/75 flex flex-wrap items-center justify-between text-xs font-mono gap-2">
+    <div class="mb-8 app-panel bg-white border border-gray-200 shadow-sm">
+      <div class="px-5 py-2.5 border-b border-gray-200 bg-gray-50/75 flex flex-wrap items-center justify-between text-xs tabular-nums gap-2">
         <span class="font-bold uppercase tracking-wider text-text-main">Your Projected League Campaign</span>
         <span class="text-gray-500">
           {% if user_league_projection.gap_to_leader > 0 %}
-            <span class="text-danger font-semibold font-mono">-{{ user_league_projection.gap_to_leader }} pts</span> behind projected winner
+            <span class="text-danger font-semibold tabular-nums">-{{ user_league_projection.gap_to_leader }} pts</span> behind projected winner
           {% else %}
-            <span class="text-pitch font-bold font-mono">Projected Champion Pace</span>
+            <span class="text-pitch font-bold tabular-nums">Projected Champion Pace</span>
           {% endif %}
         </span>
       </div>
@@ -86,30 +86,30 @@
       <div class="grid grid-cols-2 md:grid-cols-5 divide-y md:divide-y-0 md:divide-x divide-gray-200">
         <!-- 1. Current Rank -->
         <div class="p-4 sm:p-5">
-          <p class="text-[11px] font-mono uppercase tracking-wider text-gray-500 mb-1">Current Standing</p>
-          <p class="text-2xl font-black font-mono tabular-nums text-text-main">
+          <p class="text-[11px] tabular-nums uppercase tracking-wider text-gray-500 mb-1">Current Standing</p>
+          <p class="text-2xl font-black tabular-nums text-text-main">
             #{{ user_league_projection.current_rank }}
           </p>
-          <p class="text-xs text-gray-500 font-mono mt-0.5">
+          <p class="text-xs text-gray-500 tabular-nums mt-0.5">
             {% if user_standing %}{{ user_standing.total_points|intcomma }} pts{% else %}Active squad{% endif %}
           </p>
         </div>
 
         <!-- 2. Projected Finish -->
         <div class="p-4 sm:p-5">
-          <p class="text-[11px] font-mono uppercase tracking-wider text-gray-500 mb-1">Projected Finish</p>
-          <p class="text-2xl font-black font-mono tabular-nums text-pitch">
+          <p class="text-[11px] tabular-nums uppercase tracking-wider text-gray-500 mb-1">Projected Finish</p>
+          <p class="text-2xl font-black tabular-nums text-pitch">
             #{{ user_league_projection.projected_rank }}
           </p>
-          <p class="text-xs text-gray-600 font-mono mt-0.5">
+          <p class="text-xs text-gray-600 tabular-nums mt-0.5">
             of {{ user_league_projection.total_teams }} teams
           </p>
         </div>
 
         <!-- 3. Trajectory -->
         <div class="p-4 sm:p-5">
-          <p class="text-[11px] font-mono uppercase tracking-wider text-gray-500 mb-1">Projected Trend</p>
-          <p class="text-2xl font-black font-mono tabular-nums {% if user_league_projection.rank_change > 0 %}text-success{% elif user_league_projection.rank_change < 0 %}text-danger{% else %}text-gray-500{% endif %}">
+          <p class="text-[11px] tabular-nums uppercase tracking-wider text-gray-500 mb-1">Projected Trend</p>
+          <p class="text-2xl font-black tabular-nums {% if user_league_projection.rank_change > 0 %}text-success{% elif user_league_projection.rank_change < 0 %}text-danger{% else %}text-gray-500{% endif %}">
             {% if user_league_projection.rank_change > 0 %}
               ▲ +{{ user_league_projection.rank_change }}
             {% elif user_league_projection.rank_change < 0 %}
@@ -118,33 +118,33 @@
               — Steady
             {% endif %}
           </p>
-          <p class="text-xs text-gray-500 font-mono mt-0.5">
+          <p class="text-xs text-gray-500 tabular-nums mt-0.5">
             vs current rank
           </p>
         </div>
 
         <!-- 4. Target Points -->
         <div class="p-4 sm:p-5">
-          <p class="text-[11px] font-mono uppercase tracking-wider text-gray-500 mb-1">Target Total</p>
-          <p class="text-2xl font-black font-mono tabular-nums text-text-main">
+          <p class="text-[11px] tabular-nums uppercase tracking-wider text-gray-500 mb-1">Target Total</p>
+          <p class="text-2xl font-black tabular-nums text-text-main">
             {{ user_league_projection.projected_points|intcomma }} <span class="text-xs font-normal text-gray-400">pts</span>
           </p>
-          <p class="text-xs text-gray-500 font-mono mt-0.5">
+          <p class="text-xs text-gray-500 tabular-nums mt-0.5">
             Forecasted points
           </p>
         </div>
 
         <!-- 5. Gap to Podium / Leader -->
         <div class="p-4 sm:p-5 col-span-2 md:col-span-1">
-          <p class="text-[11px] font-mono uppercase tracking-wider text-gray-500 mb-1">Title Gap</p>
-          <p class="text-xl sm:text-2xl font-black font-mono tabular-nums {% if user_league_projection.gap_to_leader > 0 %}text-gray-700{% else %}text-pitch{% endif %}">
+          <p class="text-[11px] tabular-nums uppercase tracking-wider text-gray-500 mb-1">Title Gap</p>
+          <p class="text-xl sm:text-2xl font-black tabular-nums {% if user_league_projection.gap_to_leader > 0 %}text-gray-700{% else %}text-pitch{% endif %}">
             {% if user_league_projection.gap_to_leader > 0 %}
               -{{ user_league_projection.gap_to_leader }} <span class="text-xs font-normal text-gray-400">pts</span>
             {% else %}
               Leading
             {% endif %}
           </p>
-          <p class="text-xs text-gray-500 font-mono mt-0.5">
+          <p class="text-xs text-gray-500 tabular-nums mt-0.5">
             {% if user_league_projection.gap_to_podium > 0 %}-{{ user_league_projection.gap_to_podium }} pts to podium{% else %}In medal contention{% endif %}
           </p>
         </div>
@@ -153,19 +153,19 @@
     {% endif %}
 
     <!-- League Standings Table -->
-    <div class="bg-white border border-gray-200 shadow-sm mb-8">
+    <div class="app-panel bg-white border border-gray-200 shadow-sm mb-8">
       <div class="px-5 py-3 border-b border-gray-200 flex items-center justify-between bg-gray-50/50">
         <div class="flex items-center gap-3">
-          <h2 class="text-xs font-black uppercase tracking-wider text-text-main font-mono">League Standings & Projections</h2>
-          <span class="text-xs font-mono text-gray-500">{{ standings|length }} Teams Total</span>
+          <h2 class="app-section-title text-xs font-black uppercase tracking-wider text-text-main tabular-nums">League Standings & Projections</h2>
+          <span class="text-xs tabular-nums text-gray-500">{{ standings|length }} Teams Total</span>
         </div>
-        <span class="text-[11px] font-mono text-gray-400">Official Standings</span>
+        <span class="text-[11px] tabular-nums text-gray-400">Official Standings</span>
       </div>
 
       <div class="overflow-x-auto">
         <table class="w-full text-left border-collapse">
           <thead>
-            <tr class="border-b border-gray-200 bg-gray-50/25 text-[11px] font-mono uppercase tracking-wider text-gray-500">
+            <tr class="border-b border-gray-200 bg-gray-50/25 text-[11px] tabular-nums uppercase tracking-wider text-gray-500">
               <th class="py-2.5 px-4 font-semibold text-center w-14">Rank</th>
               <th class="py-2.5 px-4 font-semibold">Team & Manager</th>
               <th class="py-2.5 px-3 font-semibold text-right">Points</th>
@@ -179,7 +179,7 @@
             {% for standing in standings %}
             <tr class="hover:bg-gray-50/75 transition-colors group {% if user.team and user.team.id == standing.team.id %}bg-pitch/5 border-l-4 border-pitch{% endif %}">
               <!-- Rank -->
-              <td class="py-3 px-4 text-center font-mono font-black text-sm text-text-main tabular-nums">
+              <td class="py-3 px-4 text-center tabular-nums font-black text-sm text-text-main tabular-nums">
                 #{{ standing.current_rank }}
               </td>
 
@@ -188,23 +188,23 @@
                 <a href="{% url 'rivals:teams.show' standing.team.id %}" class="font-bold text-text-main group-hover:text-pitch transition-colors block">
                   {{ standing.team.team_name }}
                 </a>
-                <span class="text-[11px] text-gray-500 font-mono block">
+                <span class="text-[11px] text-gray-500 tabular-nums block">
                   {{ standing.team.manager_name }}
                 </span>
               </td>
 
               <!-- Total Points -->
-              <td class="py-3 px-3 text-right font-mono tabular-nums font-bold text-sm text-text-main">
+              <td class="py-3 px-3 text-right tabular-nums font-bold text-sm text-text-main">
                 {{ standing.total_points|floatformat:0|intcomma }} <span class="text-[10px] text-gray-400 font-normal">pts</span>
               </td>
 
               <!-- Projected Finish -->
               <td class="py-3 px-4 text-right">
-                <div class="font-mono tabular-nums font-bold text-pitch">
+                <div class="tabular-nums font-bold text-pitch">
                   #{{ standing.projected_rank }}
                   <span class="text-[11px] text-gray-500 font-normal">({{ standing.projected_points|intcomma }} pts)</span>
                 </div>
-                <div class="text-[10px] font-mono">
+                <div class="text-[10px] tabular-nums">
                   {% if standing.projected_rank_change > 0 %}
                     <span class="text-success font-semibold">▲ +{{ standing.projected_rank_change }} spots</span>
                   {% elif standing.projected_rank_change < 0 %}
@@ -216,7 +216,7 @@
               </td>
 
               <!-- GW Form (Rank Delta) -->
-              <td class="py-3 px-3 text-center font-mono tabular-nums text-xs">
+              <td class="py-3 px-3 text-center tabular-nums text-xs">
                 {% if standing.previous_rank %}
                   {% with change=standing.previous_rank|sub:standing.current_rank %}
                     {% if change > 0 %}
@@ -228,22 +228,22 @@
                     {% endif %}
                   {% endwith %}
                 {% else %}
-                  <span class="text-gray-400 font-mono">—</span>
+                  <span class="text-gray-400 tabular-nums">—</span>
                 {% endif %}
               </td>
 
               <!-- Status Tag -->
               <td class="py-3 px-3 text-center whitespace-nowrap">
                 {% if user.team and user.team.id == standing.team.id %}
-                  <span class="px-2 py-0.5 bg-pitch text-white text-[10px] font-mono font-bold uppercase tracking-wider">
+                  <span class="px-2 py-0.5 bg-pitch text-white text-[10px] tabular-nums font-bold uppercase tracking-wider">
                     You
                   </span>
                 {% elif standing.team.id in tracked_team_ids %}
-                  <span class="px-2 py-0.5 bg-gray-100 border border-gray-300 text-gray-700 text-[10px] font-mono font-bold uppercase tracking-wider">
+                  <span class="px-2 py-0.5 bg-gray-100 border border-gray-300 text-gray-700 text-[10px] tabular-nums font-bold uppercase tracking-wider">
                     Tracked
                   </span>
                 {% else %}
-                  <span class="text-[10px] font-mono text-gray-400 uppercase">
+                  <span class="text-[10px] tabular-nums text-gray-400 uppercase">
                     Scouted
                   </span>
                 {% endif %}
@@ -252,27 +252,27 @@
               <!-- Actions -->
               <td class="py-3 px-4 text-right whitespace-nowrap">
                 {% if user.team and user.team.id == standing.team.id %}
-                  <span class="text-[11px] font-mono text-gray-400">—</span>
+                  <span class="text-[11px] tabular-nums text-gray-400">—</span>
                 {% elif standing.team.id in tracked_team_ids %}
                   <div class="inline-flex items-center gap-2">
-                    <a href="{% url 'rivals:teams.compare' standing.team.id %}" class="text-xs font-mono font-semibold text-pitch hover:underline">
+                    <a href="{% url 'rivals:teams.compare' standing.team.id %}" class="text-xs tabular-nums font-semibold text-pitch hover:underline">
                       Compare →
                     </a>
                     <form action="{% url 'rivals:teams.untrack' standing.team.id %}" method="POST" class="inline-block">
                       {% csrf_token %}
-                      <button type="submit" class="text-gray-400 hover:text-danger font-mono text-[11px] transition-colors cursor-pointer" title="Untrack">
+                      <button type="submit" class="text-gray-400 hover:text-danger tabular-nums text-[11px] transition-colors cursor-pointer" title="Untrack">
                         Untrack
                       </button>
                     </form>
                   </div>
                 {% else %}
                   <div class="inline-flex items-center gap-2">
-                    <a href="{% url 'rivals:teams.compare' standing.team.id %}" class="text-xs font-mono font-semibold text-gray-500 hover:text-pitch hover:underline">
+                    <a href="{% url 'rivals:teams.compare' standing.team.id %}" class="text-xs tabular-nums font-semibold text-gray-500 hover:text-pitch hover:underline">
                       Compare
                     </a>
                     <form action="{% url 'rivals:teams.track' standing.team.id %}" method="POST" class="inline-block" onsubmit="this.querySelector('button').disabled=true; this.querySelector('button').innerText='...';">
                       {% csrf_token %}
-                      <button type="submit" class="text-pitch hover:underline font-mono text-xs font-bold uppercase transition-colors cursor-pointer">
+                      <button type="submit" class="text-pitch hover:underline tabular-nums text-xs font-bold uppercase transition-colors cursor-pointer">
                         + Track
                       </button>
                     </form>
@@ -282,7 +282,7 @@
             </tr>
             {% empty %}
             <tr>
-              <td colspan="7" class="py-8 px-4 text-center font-mono text-xs text-gray-400">
+              <td colspan="7" class="py-8 px-4 text-center tabular-nums text-xs text-gray-400">
                 No teams registered in this mini-league yet. Run "Sync Standings" to fetch current table.
               </td>
             </tr>
