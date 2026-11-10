@@ -331,8 +331,8 @@ class Transfer(models.Model):
         """
         if self.player_in_cost is None or self.player_out_cost is None:
             return None
-        # Note: Costs are stored as price * 10, so we divide to get millions
-        return self.player_in_cost - self.player_out_cost
+        # FPL costs are in tenths of a million (e.g. 75 means £7.5m).
+        return (self.player_in_cost - self.player_out_cost) / Decimal("10")
 
     @property
     def price_difference_display(self) -> str:
@@ -343,8 +343,8 @@ class Transfer(models.Model):
         if diff is None:
             return "N/A"
 
-        sign = "+" if diff > 0 else ""
-        return f"{sign}£{abs(diff)}M"
+        sign = "+" if diff > 0 else "-" if diff < 0 else ""
+        return f"{sign}£{abs(diff):.1f}M"
 
     @property
     def transfer_summary(self) -> str:
