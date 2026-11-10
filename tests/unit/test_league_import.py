@@ -151,17 +151,116 @@ def test_publication_failure_rolls_back_and_retries_without_http(state):
     api.fetch_mini_league_page.assert_not_called()
 
 
-def test_duplicate_entries_restart_without_publishing(state):
+def test_duplicate_boundary_is_reconciled_before_publication(state):
     api = Mock()
     api.fetch_mini_league_page.side_effect = [page(1), page(2, False, entry=1)]
+    run(state, api)
+    assert state.status == "queued"
+    checkpoint = LeagueImport.objects.get()
+    assert checkpoint.league_info["_rivals_pagination"]["expected"] == 2
+    assert Team.objects.count() == 1
+    # The tied entries swap ordering on a later read; retain their union.
+    api.fetch_mini_league_page.side_effect = [page(1), page(2, False)]
+    run(state, api)
+    assert state.status == "ok"
+    assert not LeagueImport.objects.exists()
+    members = MiniLeagueTeam.objects.filter(mini_league_id=state.object_id)
+    assert set(members.values_list("team__fpl_team_id", flat=True)) == {"1", "2"}
+    assert members.get(team__fpl_team_id="1").total_points == 101
+
+
+def test_unresolved_duplicates_retain_checkpoint_and_back_off(state):
+    api = Mock()
+    api.fetch_mini_league_page.side_effect = [page(1), page(2, False, entry=1)]
+    previous = state.last_success_at
+    run(state, api)
+    for _ in range(LeagueImportService.REPAIR_ROUNDS):
+        api.fetch_mini_league_page.side_effect = [page(1), page(2, False, entry=1)]
+        run(state, api)
+    assert state.status == "error" and state.next_attempt_at > timezone.now()
+    assert state.last_success_at == previous
+    assert Team.objects.count() == 1
+    checkpoint = LeagueImport.objects.get()
+    assert checkpoint.pages.count() == 2
+    assert checkpoint.league_info["_rivals_pagination"]["pending"] == [1, 2]
+    assert not enqueue_refresh("league", state.object_id, force=True, context=CONTEXT)
+
+
+def test_repair_outage_resumes_at_failed_boundary_page(state):
+    api = Mock()
+    api.fetch_mini_league_page.side_effect = [page(1), page(2, False, entry=1)]
+    run(state, api)
+    api.fetch_mini_league_page.side_effect = [page(1), None]
+    run(state, api)
+    assert state.status == "error"
+    assert LeagueImport.objects.get().league_info["_rivals_pagination"]["pending"] == [
+        2
+    ]
+    SyncState.objects.filter(pk=state.pk).update(next_attempt_at=None)
+    assert enqueue_refresh("league", state.object_id, context=CONTEXT)
+    api.fetch_mini_league_page.reset_mock()
+    api.fetch_mini_league_page.side_effect = [page(2, False)]
+    run(state, api)
+    assert state.status == "ok"
+    assert [call.args[1] for call in api.fetch_mini_league_page.call_args_list] == [2]
+
+
+def test_reconciled_publication_retry_needs_no_more_http(state):
+    api = Mock()
+    api.fetch_mini_league_page.side_effect = [page(1), page(2, False, entry=1)]
+    run(state, api)
+    api.fetch_mini_league_page.side_effect = [page(1), page(2, False)]
+    with patch.object(MiniLeague, "save", side_effect=RuntimeError("write failed")):
+        run(state, api)
+    assert state.status == "error" and Team.objects.count() == 1
+    SyncState.objects.filter(pk=state.pk).update(next_attempt_at=None)
+    assert enqueue_refresh("league", state.object_id, context=CONTEXT)
+    api.fetch_mini_league_page.reset_mock()
+    run(state, api)
+    assert state.status == "ok"
+    api.fetch_mini_league_page.assert_not_called()
+
+
+def test_changed_membership_during_repair_restarts_without_publication(state):
+    api = Mock()
+    api.fetch_mini_league_page.side_effect = [page(1), page(2, False, entry=1)]
+    run(state, api)
+    api.fetch_mini_league_page.side_effect = [page(2), page(3, False)]
     run(state, api)
     assert state.status == "error"
     assert not LeagueImport.objects.exists()
     assert Team.objects.count() == 1
 
 
+def test_large_tie_group_repair_yields_after_five_pages(state):
+    def tied_page(number, final=False, entry=None):
+        response = page(number, not final, entry=entry)
+        response["standings"]["results"][0].update(rank=1, total=100)
+        return response
+
+    api = Mock()
+    api.fetch_mini_league_page.side_effect = [
+        tied_page(n, n == 12, entry=1 if n == 12 else n) for n in range(1, 13)
+    ]
+    for _ in range(3):
+        run(state, api)
+    assert state.status == "queued" and Team.objects.count() == 1
+    assert LeagueImport.objects.get().league_info["_rivals_pagination"][
+        "candidates"
+    ] == list(range(1, 13))
+    for start, end in ((1, 6), (6, 11), (11, 13)):
+        api.fetch_mini_league_page.reset_mock()
+        api.fetch_mini_league_page.side_effect = [
+            tied_page(n, n == 12) for n in range(start, end)
+        ]
+        run(state, api)
+        assert api.fetch_mini_league_page.call_count == end - start
+        assert state.status == ("ok" if end == 13 else "queued")
+    assert MiniLeagueTeam.objects.filter(mini_league_id=state.object_id).count() == 12
+
+
 @pytest.mark.parametrize(
-    "invalid", ["team", "points", "empty_page", "missing_has_next"]
+    "invalid", ["team", "points", "empty_page", "missing_has_next", "wrong_page"]
 )
 def test_invalid_page_is_not_checkpointed(state, invalid):
     response = page(1)
@@ -171,8 +270,10 @@ def test_invalid_page_is_not_checkpointed(state, invalid):
         response["standings"]["results"][0]["total"] = None
     elif invalid == "empty_page":
         response["standings"]["results"] = []
-    else:
+    elif invalid == "missing_has_next":
         del response["standings"]["has_next"]
+    else:
+        response["standings"]["page"] = 2
     api = Mock()
     api.fetch_mini_league_page.return_value = response
     run(state, api)

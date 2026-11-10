@@ -14,6 +14,7 @@ from rivals.models import (
 
 class LeagueImportService:
     PAGES_PER_BATCH = 5
+    REPAIR_ROUNDS = 3
     MAX_AGE = timezone.timedelta(hours=24)
 
     def __init__(self, state, api, context):
@@ -48,31 +49,8 @@ class LeagueImportService:
                 break
             page = run.next_page
             data = self.api.fetch_mini_league_page(run.league.fpl_league_id, page)
-            if not isinstance(data, dict) or not isinstance(
-                data.get("standings"), dict
-            ):
-                raise RuntimeError(f"Standings page {page} unavailable")
+            rows = self._validated_rows(data, page)
             standings = data["standings"]
-            rows = standings.get("results")
-            if (
-                not isinstance(rows, list)
-                or not isinstance(standings.get("has_next"), bool)
-                or (not rows and standings["has_next"])
-                or (page == 1 and not data.get("league", {}).get("name"))
-            ):
-                raise RuntimeError(f"Invalid standings page {page}")
-            for row in rows:
-                if (
-                    not isinstance(row, dict)
-                    or type(row.get("entry")) is not int
-                    or row["entry"] <= 0
-                    or not isinstance(row.get("entry_name"), str)
-                    or not isinstance(row.get("player_name"), str)
-                    or type(row.get("rank")) is not int
-                    or row["rank"] < 0
-                    or type(row.get("total")) is not int
-                ):
-                    raise RuntimeError(f"Invalid team in standings page {page}")
             with transaction.atomic():
                 self._check_owner()
                 LeagueImportPage.objects.create(
@@ -85,24 +63,147 @@ class LeagueImportService:
 
         if run.next_page:
             return False
+        if not self._reconcile(run):
+            return False
         self._publish(run)
         return True
 
+    def _reconcile(self, run):
+        """Recover entries lost to unstable ordering at tied page boundaries.
+
+        Keep the original slot count: deduplication alone would silently lose teams.
+        Repair reads accumulate entries instead of replacing previously fetched ones.
+        """
+        pages = list(run.pages.order_by("number"))
+        metadata = run.league_info.get("_rivals_pagination")
+        if (
+            metadata
+            and len({row["entry"] for page in pages for row in page.standings})
+            == metadata["expected"]
+        ):
+            # Publication may have failed after reconciliation already completed.
+            return True
+        if metadata is None:
+            seen, overlaps = {}, set()
+            for page in pages:
+                for row in page.standings:
+                    if row["entry"] in seen:
+                        overlaps.add((row["rank"], row["total"]))
+                    seen[row["entry"]] = row
+            if not overlaps:
+                return True
+            boundaries = {
+                page.number
+                for page in pages
+                if any(
+                    (row["rank"], row["total"]) in overlaps for row in page.standings
+                )
+            }
+            candidates = sorted(
+                {
+                    number
+                    for boundary in boundaries
+                    for number in (boundary - 1, boundary, boundary + 1)
+                    if 1 <= number <= len(pages)
+                }
+            )
+            metadata = {
+                "expected": sum(len(page.standings) for page in pages),
+                "candidates": candidates,
+                "pending": candidates[:],
+                "round": 0,
+            }
+            run.league_info["_rivals_pagination"] = metadata
+            with transaction.atomic():
+                self._check_owner()
+                run.save(update_fields=["league_info"])
+            # Yield after the original HTTP batch before starting repair requests.
+            return False
+
+        by_number = {page.number: page for page in pages}
+        for _ in range(self.PAGES_PER_BATCH):
+            if not metadata["pending"]:
+                break
+            number = metadata["pending"][0]
+            data = self.api.fetch_mini_league_page(run.league.fpl_league_id, number)
+            rows = self._validated_rows(data, number)
+            page = by_number[number]
+            latest = {row["entry"]: row for row in rows}
+            merged = {row["entry"]: row for row in page.standings}
+            merged.update(latest)
+            page.standings = list(merged.values())
+            with transaction.atomic():
+                self._check_owner()
+                # Update every occurrence so publication always uses the newest read.
+                for stored_page in pages:
+                    if stored_page is page or any(
+                        row["entry"] in latest for row in stored_page.standings
+                    ):
+                        stored_page.standings = [
+                            latest.get(row["entry"], row)
+                            for row in stored_page.standings
+                        ]
+                        stored_page.save(update_fields=["standings"])
+                metadata["pending"] = metadata["pending"][1:]
+                run.save(update_fields=["league_info"])
+
+        unique_count = len({row["entry"] for page in pages for row in page.standings})
+        if unique_count == metadata["expected"]:
+            return True
+        if unique_count > metadata["expected"]:
+            with transaction.atomic():
+                self._check_owner()
+                run.delete()
+            raise RuntimeError(
+                "League membership changed during pagination; restarting import"
+            )
+        if not metadata["pending"]:
+            metadata["pending"] = metadata["candidates"][:]
+            metadata["round"] += 1
+            exhausted = metadata["round"] >= self.REPAIR_ROUNDS
+            if exhausted:
+                metadata["round"] = 0
+            with transaction.atomic():
+                self._check_owner()
+                run.save(update_fields=["league_info"])
+            if exhausted:
+                raise RuntimeError(
+                    f"Standings reconciliation found {unique_count} of "
+                    f"{metadata['expected']} teams; saved pages retained for retry"
+                )
+        return False
+
+    @staticmethod
+    def _validated_rows(data, page):
+        if not isinstance(data, dict) or not isinstance(data.get("standings"), dict):
+            raise RuntimeError(f"Standings page {page} unavailable")
+        standings = data["standings"]
+        rows = standings.get("results")
+        if (
+            not isinstance(rows, list)
+            or not isinstance(standings.get("has_next"), bool)
+            or (not rows and standings["has_next"])
+            or standings.get("page", page) != page
+            or (page == 1 and not data.get("league", {}).get("name"))
+        ):
+            raise RuntimeError(f"Invalid standings page {page}")
+        for row in rows:
+            if (
+                not isinstance(row, dict)
+                or type(row.get("entry")) is not int
+                or row["entry"] <= 0
+                or not isinstance(row.get("entry_name"), str)
+                or not isinstance(row.get("player_name"), str)
+                or type(row.get("rank")) is not int
+                or row["rank"] < 0
+                or type(row.get("total")) is not int
+            ):
+                raise RuntimeError(f"Invalid team in standings page {page}")
+        return rows
+
     def _publish(self, run):
         pages = list(run.pages.order_by("number").values_list("standings", flat=True))
-        # Moving upstream standings can repeat entries across page boundaries.
-        # Restart rather than publish a response with potentially missing teams.
-        seen = set()
-        for rows in pages:
-            for row in rows:
-                if row["entry"] in seen:
-                    with transaction.atomic():
-                        self._check_owner()
-                        run.delete()
-                    raise RuntimeError(
-                        "Standings changed during pagination; restarting import"
-                    )
-                seen.add(row["entry"])
+        unique_rows = {row["entry"]: row for page in pages for row in page}
 
         with transaction.atomic():
             self._check_owner()
@@ -111,7 +212,7 @@ class LeagueImportService:
                     "pk", flat=True
                 )
             )
-            rows = [row for page in pages for row in page]
+            rows = list(unique_rows.values())
             for offset in range(0, len(rows), 500):
                 self._publish_page(run, rows[offset : offset + 500], stale)
             stale = list(stale)
