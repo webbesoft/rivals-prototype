@@ -1,3 +1,4 @@
+<c-vars landing="" />
 <!DOCTYPE html>
 {% load static %}
 <html lang="{{ LANGUAGE_CODE|default:'en' }}">
@@ -53,6 +54,7 @@
     </script>
 
   <link rel="stylesheet" href="{% static 'css/output.css' %}" />
+  {% if landing %}<link rel="stylesheet" href="{% static 'css/landing.css' %}" />{% endif %}
   <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.7/dist/htmx.min.js"></script>
   {% block extra_head %}{% endblock %}
 </head>
@@ -61,11 +63,11 @@
   {% block extra_scripts %}{% endblock %}
 
   <div class="min-h-screen flex flex-col">
-    <c-components.header />
+    {% if not landing %}<c-components.header />{% endif %}
 
     <main class="flex-grow">{{ slot }}</main>
 
-    <c-components.footer />
+    {% if not landing %}<c-components.footer />{% endif %}
   </div>
 
   {% block extra_body_end %}{% endblock %}
