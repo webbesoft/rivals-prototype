@@ -95,6 +95,9 @@ def ingest(state):
     context = GameweekContextService.cached()
     if context["stale"] or not context["season"]:
         raise RuntimeError("Fresh season context required before ingestion")
+    if state.kind == "decisions":
+        from rivals.services.decision_review_service import review_decisions
+        return {"reviewed": review_decisions(api)}
     if state.kind == "players":
         from rivals.services.player_sync_service import PlayerSyncService
 
@@ -178,6 +181,7 @@ def refresh_tick():
     if context["stale"]:
         return
     enqueue_refresh("players", context=context)
+    enqueue_refresh("decisions", context=context)
     team_ids = set(
         get_user_model()
         .objects.filter(is_active=True, team__active=True)

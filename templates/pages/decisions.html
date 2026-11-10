@@ -1,0 +1,13 @@
+<c-layouts.base title="Transfer planner - RivalSpy">
+{% load static %}
+<div class="max-w-7xl mx-auto px-4 py-8" data-remote-panel data-loading-message="Comparing your options…" data-error-message="We couldn't load your plan. Please try again.">
+  <h1 class="app-page-title text-3xl font-black mb-3">Your next move</h1>
+  <p class="mb-5 text-sm text-gray-600">Compare keeping your squad with one or two transfers. Review the risks before choosing your move.</p>
+  <a class="underline text-sm" href="{% url 'rivals:decisions.journal' %}">Decision journal</a>
+  <p data-panel-status role="status" hidden class="my-4 text-sm"></p>
+  <div id="decision-workspace" class="mt-5" hx-get="{% url 'rivals:decisions.workspace' %}" hx-trigger="load" hx-request='{"timeout":25000}' hx-sync="closest [data-remote-panel]:replace">
+    <a class="underline" href="{% url 'rivals:decisions.workspace' %}">Open transfer planner</a>
+  </div>
+</div>
+<script src="{% static 'js/team-panels.js' %}"></script>
+</c-layouts.base>

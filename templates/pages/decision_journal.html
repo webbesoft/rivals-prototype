@@ -1,0 +1,18 @@
+<c-layouts.base title="Decision journal - RivalSpy">
+<div class="max-w-5xl mx-auto px-4 py-8">
+  <h1 class="app-page-title text-3xl font-black mb-3">Decision journal</h1>
+  <a class="text-pitch underline" href="{% url 'rivals:decisions' %}">Back to transfer planner</a>
+  {% for message in messages %}<p role="status" class="my-4">{{ message }}</p>{% endfor %}
+  <p class="text-sm text-gray-600 my-5">Keep the reasons behind each move. Reviews compare the saved plan with holding, using the lineups predicted when you saved it. Results don't prove that a decision was good or bad.</p>
+  {% for decision in decisions %}
+  <article class="app-panel bg-white border border-gray-200 p-5 mb-4">
+    <h2 class="font-bold">{{ decision.season }} · GW{{ decision.gameweek }} · {{ decision.created_at|date:"j M Y" }}</h2>
+    <p class="my-3">{% for move in decision.snapshot.chosen.moves %}{{ move.out_name }} → {{ move.in_name }}{% if not forloop.last %}; {% endif %}{% empty %}Hold squad{% endfor %}</p>
+    <p class="text-sm">Estimated gain after hits: {{ decision.snapshot.chosen.net_gain|default_if_none:"Unconfirmed" }} · Gain sensitivity: {{ decision.snapshot.chosen.gain_low }} to {{ decision.snapshot.chosen.gain_high }}</p>
+    <form method="POST" action="{% url 'rivals:decisions.status' decision.pk %}" class="flex gap-3 my-3">{% csrf_token %}<select name="status" class="border border-gray-300 p-2"><option value="planned" {% if decision.status == 'planned' %}selected{% endif %}>Saved plan</option><option value="acted" {% if decision.status == 'acted' %}selected{% endif %}>I followed this plan</option><option value="held" {% if decision.status == 'held' %}selected{% endif %}>I kept my squad</option></select><button class="underline" type="submit">Update choice</button></form>
+    {% if decision.outcomes.weeks %}<p class="text-sm">{{ decision.outcomes.completed }} of {{ decision.snapshot.report.horizon }} gameweeks reviewed. Fixed-lineup gain after hits: {{ decision.outcomes.net_gain|default_if_none:"Cost unconfirmed" }}.</p><p class="text-xs text-gray-500 mt-2">This comparison excludes chips, automatic substitutions, and later changes. It is a review of the saved plan, not your actual team's overall gain.</p>{% else %}<p class="text-sm text-gray-500">The review will appear after gameweek scores are final.</p>{% endif %}
+  </article>
+  {% empty %}<p class="my-6">Save a transfer route or a roll to start reviewing your decisions.</p>{% endfor %}
+  {% include "cotton/components/pagination.html" with page_obj=decisions %}
+</div>
+</c-layouts.base>

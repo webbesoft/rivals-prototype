@@ -1,5 +1,5 @@
 <c-layouts.base title="Dashboard - RivalSpy">
-  {% load humanize %}
+  {% load humanize static %}
   {% load math_filters %}
 
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
@@ -13,6 +13,15 @@
       </div>
       {% endfor %}
     </div>
+    {% endif %}
+
+    {% if user_team %}
+    <section data-remote-panel data-loading-message="Preparing your transfer outlook…" data-error-message="We couldn't load your outlook. Open the planner to try again.">
+      <p data-panel-status role="status" hidden class="my-3 text-sm"></p>
+      <div hx-get="{% url 'rivals:decisions.summary' %}" hx-trigger="load" hx-request='{"timeout":25000}'>
+        <a class="text-pitch underline" href="{% url 'rivals:decisions' %}">Plan your next move</a>
+      </div>
+    </section>
     {% endif %}
 
     {% include "partials/refresh_status.html" %}
@@ -417,4 +426,5 @@
     </div>
 
   </div>
+<script src="{% static 'js/team-panels.js' %}"></script>
 </c-layouts.base>

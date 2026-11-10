@@ -36,16 +36,23 @@ Validation: all 113 tests passed at this checkpoint. Regression coverage include
 
 Apply the two new migrations when deploying. The existing worker continues routine ingestion; lineup requests fill historical squads on demand. New JavaScript is included by the existing static-assets collection step. No production deployment or live browser test was performed in this epoch; template integration tests and JavaScript loading/failure/supersession checks passed.
 
-## Epoch 4 — A decision engine for mini-league advantage
+## Epoch 4 — A decision engine for mini-league advantage (implemented)
 
-Build evidence-based recommendations before adding AI prose. The default home view should be a short ordered action list: urgent squad risks, best transfer or roll, captain/vice choice, and approaching deadline.
+Dashboard and My Squad now lead with a short decision summary after the score: squad risks, a confirmed transfer route or hold, captain/vice options, and the next deadline. A dedicated transfer planner compares regular one- and two-transfer routes with an unchanged squad over 3–6 gameweeks.
 
-- Plan across the next 3–6 gameweeks, using fixtures (including blanks/doubles), minutes risk, availability, form, price, team limits, and positional constraints.
-- Compare transfers against holding and rolling. Show expected gain after point hits, opportunity cost, affordability assumptions, and uncertainty. Selling prices and available free transfers may need user input; public data cannot establish all private team state.
-- Rank realistic alternatives for each weak squad slot, and allow a two-transfer route or wildcard scenario. Separate model estimates from observed data.
-- Choose a target league and key rivals. Show points gaps, shared players, captain exposure, and the gains/losses driven by differentials. Pre-deadline rival transfers and squads are unknown; show scenarios rather than claim knowledge.
-- Support protecting a lead versus chasing a gap. Show conservative and higher-variance options with reasons, without treating low ownership alone as evidence of quality.
-- Keep a decision journal: recommendation, data timestamp, assumptions, user's choice, and later outcome. Backtest against a hold baseline and evaluate projection calibration rather than cherry-picked wins.
+- Forecasts account for each scheduled fixture, blanks/doubles, season minutes, current availability, and legal weekly XI/captain selection. They are transparent heuristic estimates, not calibrated probabilities.
+- Managers can update their actual squad and confirm bank, free transfers, and outgoing selling prices. The engine enforces positional/club limits and the combined budget, accounts for point hits, and shows the retained normal free-transfer allowance. Unknown private inputs remain explicit assumptions and cannot produce a confirmed transfer recommendation.
+- Automatic comparisons cover different outgoing players and positions. Several replacements for one poor defender are grouped as alternatives for that slot rather than taking over the recommendation list. Non-positive moves are not inserted merely for variety. A manual two-transfer sandbox can test routes outside the automatic shortlist.
+- Active subscribed mini-leagues and current-season rivals can be selected. Scenarios show points gaps, shared players, differentials, and possible captain exposure using the rival's last published squad. Future rival actions remain unknown.
+- Protect/chase modes alter the weight of relative uncertainty against the selected rival, with positive expected net gain still required for a confirmed move. No value is awarded merely for low ownership.
+- A private, signed-choice decision journal freezes the forecast, inputs and hold baseline. Background reviews compare those saved lineups against final checked scores, with no retrospective lineup selection. A review command reports transfer-forecast errors and excludes holds/unknown costs from net calibration metrics.
+- The existing planning API now applies owned current-season plans through the same engine, closing the previous ignored-plan behaviour. Old season-less plans require recreation rather than a guessed season.
+
+This epoch implements immediate two-transfer scenarios, not wildcard or exhaustive future-transfer scheduling. Forecasts and retrospective fixed-lineup comparisons exclude chips and automatic substitutions. Rolling's unknown future point benefit is not invented. Historical out-of-sample validation is not claimed; prospective saved-plan reviews provide the evidence to improve calibration.
+
+Validation: 35 new planner tests cover squad/budget constraints, hit costs, funding routes, blanks/doubles, private inputs, access controls, signed journal choices, final-score evaluation, and diverse recommendations. The complete workspace suite passed 178 tests. An 800-player, six-week fixture comparison ran in about 237 ms with mocked upstream data. A live FPL report for the linked squad took 2.65 seconds and covered all four positions with nine distinct outgoing players across five transfer options; no sell target repeated.
+
+See [transfer decisions and evaluation](transfer-decisions.md) for the model, safeguards, limits, deployment steps and API contract. Migrations are applied locally; no production deployment or live browser test is included.
 
 ## Epoch 5 — Secure bring-your-own-key analysis
 

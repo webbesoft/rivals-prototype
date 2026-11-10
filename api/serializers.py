@@ -5,12 +5,12 @@ from rivals.models import (
     GameweekData,
     MiniLeague,
     MiniLeagueTeam,
+    PlannedTransfer,
     Player,
     SquadHistory,
     Team,
     Transfer,
     TransferPlan,
-    PlannedTransfer,
 )
 
 User = get_user_model()
@@ -252,12 +252,18 @@ class TransferPlanSerializer(serializers.ModelSerializer):
             "user",
             "team",
             "name",
+            "season",
             "is_active",
             "created_at",
             "updated_at",
             "transfers",
         ]
-        read_only_fields = ["user", "created_at", "updated_at"]
+        read_only_fields = ["user", "season", "created_at", "updated_at"]
+
+    def validate_team(self, team):
+        if team.pk != self.context["request"].user.team_id:
+            raise serializers.ValidationError("Plans must belong to your own team.")
+        return team
 
     def create(self, validated_data):
         user = self.context["request"].user

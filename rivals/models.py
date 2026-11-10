@@ -553,6 +553,7 @@ class TransferPlan(models.Model):
         Team, on_delete=models.CASCADE, related_name="transfer_plans"
     )
     name = models.CharField(max_length=100, default="My Plan")
+    season = models.CharField(max_length=20, null=True, blank=True)
     is_active = models.BooleanField(default=True)  # Current working plan
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -625,6 +626,23 @@ class TeamPlanningInput(models.Model):
     season = models.CharField(max_length=20)
     gameweek = models.PositiveSmallIntegerField()
     free_transfers = models.PositiveSmallIntegerField(null=True, blank=True)
+    bank = models.DecimalField(max_digits=5, decimal_places=1, null=True, blank=True)
+    selling_prices = models.JSONField(default=dict)
+    squad_ids = models.JSONField(default=list)
+    squad_confirmed = models.BooleanField(default=False)
+    manual_moves = models.JSONField(default=list)
+    horizon = models.PositiveSmallIntegerField(default=5)
+    strategy = models.CharField(max_length=10, default="protect")
+    target_league = models.ForeignKey(
+        MiniLeague, on_delete=models.SET_NULL, null=True, blank=True
+    )
+    target_rival = models.ForeignKey(
+        Team,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="targeted_planning_inputs",
+    )
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -657,5 +675,33 @@ class LeagueImportPage(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=["import_run", "number"], name="unique_league_import_page"
+            )
+        ]
+
+
+class DecisionRecord(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    team = models.ForeignKey(Team, on_delete=models.CASCADE)
+    season = models.CharField(max_length=20)
+    gameweek = models.PositiveSmallIntegerField()
+    status = models.CharField(
+        max_length=10,
+        default="planned",
+        choices=[
+            ("planned", "Saved plan"),
+            ("acted", "Followed plan"),
+            ("held", "Kept squad"),
+        ],
+    )
+    fingerprint = models.CharField(max_length=64)
+    snapshot = models.JSONField(default=dict)
+    outcomes = models.JSONField(default=dict)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-pk"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "fingerprint"], name="unique_saved_decision"
             )
         ]

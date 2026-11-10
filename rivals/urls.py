@@ -2,13 +2,27 @@ from django.contrib import admin
 from django.urls import path
 
 from . import views
-from .views import dashboard_views, minileague_views, team_views
+from .views import dashboard_views, decision_views, minileague_views, team_views
 
 app_name = "rivals"
 
 urlpatterns = [
     path("", dashboard_views.dashboard, name="dashboard"),
-    path("refresh-status/", dashboard_views.dashboard_refresh_status, name="refresh-status"),
+    path("decisions/", decision_views.planner, name="decisions"),
+    path("decisions/summary/", decision_views.summary, name="decisions.summary"),
+    path("decisions/workspace/", decision_views.workspace, name="decisions.workspace"),
+    path("decisions/save/", decision_views.save_decision, name="decisions.save"),
+    path("decisions/journal/", decision_views.journal, name="decisions.journal"),
+    path(
+        "decisions/journal/<int:decision_id>/",
+        decision_views.journal_status,
+        name="decisions.status",
+    ),
+    path(
+        "refresh-status/",
+        dashboard_views.dashboard_refresh_status,
+        name="refresh-status",
+    ),
     path("intel/", dashboard_views.dashboard_intel, name="intel"),
     path("rivals/sync/", dashboard_views.dashboard_sync_rivals, name="rivals.sync"),
     path("teams/", team_views.team_show, name="teams.index"),

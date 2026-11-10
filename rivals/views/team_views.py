@@ -48,12 +48,6 @@ def team_show(request, team_id):
     projection = ProjectionService().project_team_finish(team)
 
     selection = SquadHistoryService(team).selection()
-    planning_form, free_transfers = planning_input(request, team)
-    tactical_analysis = None
-    if request.user.team_id == team.id:
-        tactical_analysis = TeamAnalysisService().get_cached_analysis(
-            int(team.fpl_team_id), include_team_obj=team, free_transfers=free_transfers
-        )
 
     return render(
         request,
@@ -67,11 +61,7 @@ def team_show(request, team_id):
             "recent_news": recent_news,
             "season_histories": season_histories,
             "projection": projection,
-            "tactical_analysis": tactical_analysis,
             "squad_selection": selection,
-            "planning_form": planning_form,
-            "planning_gameweek": GameweekContextService.cached()["decision_gameweek"],
-            "planning_season": GameweekContextService.cached()["season"],
             "score_summary": ScoreSummaryService(team).cached(),
         },
     )

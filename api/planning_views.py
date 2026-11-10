@@ -1,12 +1,14 @@
 import logging
+import math
 
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, status, views
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from rivals.models import PlannedTransfer, Player, Team, TransferPlan
-from rivals.services.team_analysis_service import TeamAnalysisService
+from rivals.models import PlannedTransfer, TransferPlan
+from rivals.services.decision_engine import DecisionEngine, DecisionUnavailable
 
 from .serializers import PlannedTransferSerializer, TransferPlanSerializer
 
@@ -23,7 +25,11 @@ class TransferPlanListCreateView(generics.ListCreateAPIView):
         return TransferPlan.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        try:
+            engine = DecisionEngine(self.request.user).load()
+        except DecisionUnavailable as error:
+            raise ValidationError(str(error)) from error
+        serializer.save(user=self.request.user, season=engine.context["season"])
 
 
 class TransferPlanDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -60,133 +66,101 @@ class PlannedTransferDeleteView(generics.DestroyAPIView):
 
 
 class ProjectionsView(views.APIView):
-    """Get 6-week projections for a team, optionally applying a plan"""
+    """Evaluate the manager's current squad, applying an owned, current-season plan."""
 
     permission_classes = [IsAuthenticated]
 
     def get(self, request, team_id):
+        if request.user.team_id != team_id:
+            return Response(
+                {"error": "Open your own team to plan transfers."}, status=403
+            )
         plan_id = request.query_params.get("plan_id")
-
-        service = TeamAnalysisService()
-        # Get base squad
+        if plan_id:
+            try:
+                plan_id = int(plan_id)
+            except (ValueError, TypeError):
+                return Response({"error": "Choose a valid saved plan."}, status=400)
+        plan = (
+            get_object_or_404(
+                TransferPlan, pk=plan_id, user=request.user, team=request.user.team
+            )
+            if plan_id
+            else None
+        )
         try:
-            service.ensure_data()
-            gw = service.current_gw
-            if gw is None:
-                return Response(
-                    {"error": "Your lineup is not available yet."},
-                    status=status.HTTP_404_NOT_FOUND,
-                )
-            team_picks = service.api.fetch_team_picks(team_id, gw)
-            if not team_picks:
-                return Response(
-                    {"error": "Team picks not found"}, status=status.HTTP_404_NOT_FOUND
-                )
-
-            base_squad = team_picks.get("picks", [])
-
-            # TODO: Apply planned transfers to base_squad if plan_id is provided
-            # This logic will be complex as we need to project squad state forward
-
-            # For MVP, just return current squad projections
-            projections = []
-
-            # Calculate projections for current squad
-            total_expected_next_5 = 0
-            for pick in base_squad:
-                player = next(
-                    (p for p in service.elements if p["id"] == pick["element"]), None
-                )
-                if player:
-                    fd = service.calculate_fixture_difficulty(player["team"], 5)
-                    expected = service.calculate_expected_points(player, fd)
-                    total_expected_next_5 += expected
-
-                    projections.append(
-                        {
-                            "id": player["id"],
-                            "web_name": player["web_name"],
-                            "expected_points_next_5": expected,
-                            "fixture_difficulty": fd,
-                        }
+            engine = DecisionEngine(request.user).load()
+            inputs = engine.inputs()
+            if plan:
+                if plan.season != engine.context["season"]:
+                    return Response(
+                        {"error": "Create a plan for the current season."}, status=400
                     )
-
-            return Response(
-                {
-                    "gameweek": gw,
-                    "total_expected_points_next_5": total_expected_next_5,
-                    "players": projections,
-                }
-            )
-
+                transfers = list(plan.transfers.all())
+                if any(
+                    move.gameweek != engine.context["decision_gameweek"]
+                    or not move.player_in_id
+                    or not move.player_out_id
+                    for move in transfers
+                ):
+                    return Response(
+                        {
+                            "error": "This comparison supports up to two transfers at the next deadline."
+                        },
+                        status=400,
+                    )
+                inputs["manual"] = [
+                    [move.player_out.fpl_id, move.player_in.fpl_id]
+                    for move in transfers
+                ]
+            return Response(engine.report(inputs))
+        except (DecisionUnavailable, ValueError) as error:
+            return Response({"error": str(error)}, status=400)
         except Exception:
-            logger.exception(
-                "Error generating projections for team %s (plan_id=%s)",
-                team_id,
-                plan_id,
-            )
+            logger.exception("Transfer projection failed for user %s", request.user.pk)
             return Response(
-                {"error": "Internal server error"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                {"error": "Your projections are temporarily unavailable."}, status=503
             )
 
 
 class SuggestionsView(views.APIView):
-    """Get transfer suggestions"""
-
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        position_type = request.query_params.get("position_type")  # 1=GKP, 2=DEF, etc
-        max_price = request.query_params.get("max_price")
-
-        if not position_type:
-            return Response(
-                {"error": "position_type is required"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        service = TeamAnalysisService()
-        service.ensure_data()
-
-        # Validate and parse inputs explicitly to avoid ValueError bubbling up
         try:
-            pos_type_int = int(position_type)
-        except ValueError:
-            return Response(
-                {"error": "position_type must be an integer"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        try:
-            alternatives = service.get_top_alternatives_by_position(
-                pos_type_int,
-                exclude_ids=[],  # TODO: exclude current squad
-                limit=20,
-            )
-        except Exception:
-            logger.exception(
-                "Error fetching alternatives for position %s", pos_type_int
-            )
-            return Response(
-                {"error": "Internal server error"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
-
-        # Filter by price if provided and validate
-        if max_price:
             try:
-                max_p = float(max_price)
-            except ValueError:
-                return Response(
-                    {"error": "max_price must be a number"},
-                    status=status.HTTP_400_BAD_REQUEST,
+                position = int(request.query_params.get("position_type", ""))
+            except (ValueError, TypeError):
+                raise ValueError("Choose a position between 1 and 4.") from None
+            if position not in (1, 2, 3, 4):
+                raise ValueError("Choose a position between 1 and 4.")
+            max_price = request.query_params.get("max_price")
+            try:
+                ceiling = float(max_price) if max_price else None
+            except (ValueError, TypeError):
+                raise ValueError("Enter a valid maximum price.") from None
+            if ceiling is not None and (not math.isfinite(ceiling) or ceiling < 0):
+                raise ValueError("Enter a valid maximum price.")
+            engine = DecisionEngine(request.user).load()
+            report = engine.report()
+            options = [
+                option
+                for option in report["options"]
+                if any(
+                    engine.players[move["in"]]["element_type"] == position
+                    and (
+                        ceiling is None
+                        or engine.players[move["in"]].get("now_cost", 0) / 10 <= ceiling
+                    )
+                    for move in option["moves"]
                 )
-
-            alternatives = [
-                a
-                for a in alternatives
-                if a.get("price") is not None and a["price"] <= max_p
             ]
-
-        return Response(alternatives[:10])
+            return Response(options)
+        except (DecisionUnavailable, ValueError) as error:
+            return Response({"error": str(error)}, status=400)
+        except Exception:
+            logger.exception("Transfer suggestions failed for user %s", request.user.pk)
+            return Response(
+                {"error": "Transfer suggestions are temporarily unavailable."},
+                status=503,
+            )

@@ -7,7 +7,7 @@ from django.utils import timezone
 from rivals.models import SyncState, Team
 from rivals.services.gameweek_context_service import GameweekContextService
 
-KINDS = {"context", "players", "profile", "history", "transfers", "league"}
+KINDS = {"context", "players", "profile", "history", "transfers", "league", "decisions"}
 
 
 def resource_key(kind, object_id=None):

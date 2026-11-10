@@ -1,0 +1,76 @@
+{% if decision_error %}
+<div class="app-panel border border-gray-200 p-5"><p role="status">{{ decision_error }}</p><a class="underline" href="{% url 'rivals:decisions' %}">Try again</a></div>
+{% else %}
+<form method="POST" action="{% url 'rivals:decisions.workspace' %}" hx-post="{% url 'rivals:decisions.workspace' %}" hx-target="#decision-workspace" hx-request='{"timeout":25000}' hx-sync="closest [data-remote-panel]:replace" hx-disabled-elt="find button" class="app-panel border border-gray-200 bg-white p-5 mb-6">
+  {% csrf_token %}{{ form.season }}{{ form.gameweek }}
+  {% if form.errors %}<div role="alert" class="text-danger mb-4">{{ form.non_field_errors }}{% for field in form %}{{ field.errors }}{% endfor %}</div>{% endif %}
+  <h2 class="text-lg font-bold mb-4">Confirm your starting point</h2>
+  <p class="mb-4 text-sm text-gray-600">Update any players you've already transferred. Use your current bank and selling prices from FPL. Only fill selling prices for players you may sell. A blank value stays unconfirmed. Update these details after each FPL transfer. This planner compares normal transfers without a chip.</p>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+    <label>{{ form.free_transfers.label }}<br>{{ form.free_transfers }}</label>
+    <label>{{ form.bank.label }}<br>{{ form.bank }}</label>
+    <label>{{ form.horizon.label }}<br>{{ form.horizon }}</label>
+    <label>{{ form.strategy.label }}<br>{{ form.strategy }}</label>
+    <label>{{ form.target_league.label }}<br>{{ form.target_league }}</label>
+    <label>{{ form.target_rival.label }}<br>{{ form.target_rival }}</label>
+  </div>
+  <details class="mb-4" {% if form.errors %}open{% endif %}>
+    <summary class="cursor-pointer font-bold">Your 15 players and selling prices</summary>
+    <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+      {% for row in form.squad_rows %}<div class="border border-gray-200 p-3 text-sm"><label>{{ row.player_field.label }} {{ row.player_field }}</label><label class="block mt-2">{{ row.price_field.label }} {{ row.price_field }}</label></div>{% endfor %}
+    </div>
+  </details>
+  <label class="block mb-5">{{ form.squad_confirmed }} {{ form.squad_confirmed.label }}</label>
+  <details class="mb-4"><summary class="cursor-pointer font-bold">Try your own transfer route</summary>
+    <p class="my-3 text-sm text-gray-600">Compare up to two moves at this deadline. Leave both moves empty for automatic suggestions. This comparison assumes no chip.</p>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4"><label>{{ form.out_1.label }} {{ form.out_1 }}</label><label>{{ form.in_1.label }} {{ form.in_1 }}</label><label>{{ form.out_2.label }} {{ form.out_2 }}</label><label>{{ form.in_2.label }} {{ form.in_2 }}</label></div>
+  </details>
+  <button class="bg-pitch text-white px-4 py-2 font-bold" type="submit">Compare options</button>
+</form>
+{% if report %}
+  {% include "partials/decision_summary.html" %}
+  {% if report.risks %}<div class="app-panel border border-gray-200 bg-white p-5 mb-6"><h2 class="text-lg font-bold mb-3">Availability watch</h2><ul class="space-y-2 text-sm">{% for risk in report.risks %}<li><strong>{{ risk.name }}</strong>: {{ risk.news }}</li>{% endfor %}</ul></div>{% endif %}
+  <div class="app-panel border border-gray-200 bg-white p-5 mb-6">
+    <h2 class="text-lg font-bold mb-4">Transfer versus hold</h2>
+    <p class="text-sm text-gray-600 mb-4">{% if report.strategy == 'protect' %}Protecting a lead favours gains with less uncertainty.{% else %}Chasing a gap gives more weight to upside, while still requiring a positive expected gain for a confirmed recommendation.{% endif %} These are possible outcomes, not guarantees.</p>
+    <div class="space-y-4">
+    {% for option in report.options %}
+      <article class="border border-gray-200 p-4">
+        <h3 class="font-bold">{% if report.manual and option.key == report.manual.key %}Your route · {% endif %}{% if option.moves %}{% for move in option.moves %}{{ move.out_name }} → {{ move.in_name }}{% if not forloop.last %} + {% endif %}{% endfor %}{% else %}Hold / roll{% endif %}</h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3 text-sm">
+          <p>Forecast squad points<br><strong>{{ option.points }}</strong></p>
+          <p>Points cost<br><strong>{% if option.hits != None %}{{ option.hits }}{% else %}Unconfirmed{% endif %}</strong></p>
+          <p>Gain versus hold<br><strong>{% if option.net_gain != None %}{{ option.net_gain }}{% else %}{{ option.gain_low }} to {{ option.gain_high }}{% endif %}</strong></p>
+          <p>Gain sensitivity<br><strong>{{ option.gain_low }} to {{ option.gain_high }}</strong></p>
+        </div>
+        {% for move in option.moves %}<details class="my-3 text-sm"><summary class="cursor-pointer">{{ move.in_name }} · £{{ move.buy_price }}m · fixtures and news</summary><p class="mt-2">{% for fixture in move.schedule %}GW{{ fixture.gameweek }}: {{ fixture.opponents|join:", "|default:"Blank" }} ({{ fixture.points }} est. pts){% if not forloop.last %} · {% endif %}{% endfor %}</p>{% if move.news %}<p class="mt-2">{{ move.news }}</p>{% endif %}{% if move.minutes_risk %}<p>Limited season minutes make this projection less certain.</p>{% endif %}</details>{% endfor %}
+        {% if option.moves %}<p class="text-sm mt-3">{% if option.unknown %}Needs confirmation: {{ option.unknown|join:", " }}. At least £{{ option.required_sales }}m in sale proceeds is needed{% if report.inputs.bank == None %} if your bank is £0m{% endif %}.{% else %}Affordable with the figures you entered. Bank after moves: £{{ option.bank_after }}m.{% endif %}</p>{% endif %}
+        {% if option.free_next != None %}<p class="text-xs text-gray-600 mt-2">{{ option.free_next }} free transfer{{ option.free_next|pluralize }} next gameweek if the normal allowance applies. The forecast assumes you keep the resulting squad for the whole window.</p>{% endif %}
+        {% if option.vs_rival != None %}<p class="text-sm mt-2">Estimated points versus your rival's unchanged squad: {{ option.vs_rival }}.</p>{% endif %}
+        <form method="POST" action="{% url 'rivals:decisions.save' %}" class="mt-3">{% csrf_token %}<input type="hidden" name="choice" value="{{ option.save_token }}"><button class="underline text-pitch" type="submit">Save this plan</button></form>
+      </article>
+    {% endfor %}
+    </div>
+  </div>
+  {% if report.alternatives %}<details class="app-panel border border-gray-200 bg-white p-5 mb-6"><summary class="cursor-pointer font-bold">Other alternatives for squad slots</summary>{% for slot in report.alternatives %}<div class="mt-4 text-sm"><h3 class="font-bold">Replacing {{ slot.player }} · {{ slot.position }}</h3><ul>{% for option in slot.options %}<li>{{ option.moves.0.in_name }} · estimated gross gain {{ option.gross_gain }} · points cost {{ option.hits|default_if_none:"unconfirmed" }}{% if option.unknown %} · needs {{ option.unknown|join:", " }}{% endif %}</li>{% endfor %}</ul></div>{% endfor %}</details>{% endif %}
+  {% if report.rival %}
+  <div class="app-panel bg-white border border-gray-200 p-5 mb-6">
+    <h2 class="text-lg font-bold mb-3">{{ report.rival.league }} · Rival scenarios</h2>
+    {% if report.rival.unavailable %}<p class="text-sm">The latest rival lineup or standings aren't available yet. Choose a subscribed league and check again after its updates arrive.</p>
+    {% else %}
+      <p class="text-sm mb-3">Target {{ report.rival.rival }} · {{ report.rival.shared }} shared players · {% if report.rival.updated_at %}Standings updated {{ report.rival.updated_at|timesince }} ago.{% endif %}</p>
+      <p class="text-sm mb-3">If both squads stay unchanged, your estimated points gap over this window is {{ report.rival.hold_gap }}. A possible rival captain is {{ report.rival.captain_name }}; your estimated captain-points difference next week is {{ report.rival.hold_captain_swing }}.</p>
+      <p class="text-xs text-gray-600 mb-4">Your rival's next transfers and captain choice are unknown. These scenarios use the last published squad, not inside information.</p>
+      <ul class="text-sm space-y-1">{% for player in report.rival.different_players %}<li>{{ player.side }}: {{ player.name }} · {{ player.points }} projected player points across the window</li>{% endfor %}</ul>
+    {% endif %}
+  </div>
+  {% endif %}
+  <div class="app-panel border border-gray-200 bg-white p-5 mb-6 overflow-x-auto">
+    <h2 class="text-lg font-bold mb-3">Fixtures and playing-time risks</h2>
+    <table class="w-full text-sm text-left"><thead><tr><th>Player</th>{% for gw in report.weeks %}<th class="p-2">GW{{ gw }}</th>{% endfor %}</tr></thead><tbody>
+      {% for player in report.players %}<tr class="border-t border-gray-100"><td class="py-3">{{ player.name }} · {{ player.position }}</td>{% for fixture in player.schedule %}<td class="p-2">{{ fixture.opponents|join:", "|default:"Blank" }}<br><span class="text-gray-500">{{ fixture.points }} est. pts</span></td>{% endfor %}</tr>{% endfor %}
+    </tbody></table>
+  </div>
+  <details class="text-sm text-gray-600 mb-6"><summary class="cursor-pointer">How to read these estimates</summary><p class="mt-3">{{ report.model.method }}</p><p class="mt-2">A roll preserves flexibility for information that arrives later; its future benefit isn't included as invented extra points. Selling-price assumptions can change affordability. Ownership alone isn't used to rate a transfer.</p></details>
+{% endif %}
+{% endif %}

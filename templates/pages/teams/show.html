@@ -198,26 +198,10 @@
     </div>
 
     {% if user.team_id == team.id %}
-    <section id="squad-briefing" class="mb-8" data-remote-panel
-             data-loading-message="Preparing your briefing…" data-error-message="We couldn't prepare your briefing. Please try again.">
-      <form method="POST" action="{% url 'rivals:teams.analysis' team.id %}"
-            hx-post="{% url 'rivals:teams.analysis' team.id %}" hx-target="#analysis-container"
-            hx-request='{"timeout":18000}' hx-disabled-elt="find button"
-            hx-sync="closest [data-remote-panel]:replace"
-            class="app-panel border border-gray-200 bg-white p-5 mb-3 flex flex-wrap items-end gap-3 text-xs">
-        {% csrf_token %}
-        <input type="hidden" name="season" value="{{ planning_season|default_if_none:'' }}">
-        <input type="hidden" name="gameweek" value="{{ planning_gameweek|default_if_none:'' }}">
-        <label>{{ planning_form.free_transfers.label }}{% if planning_gameweek %} for GW{{ planning_gameweek }}{% endif %}
-          {{ planning_form.free_transfers }}
-        </label>
-        <button type="submit" class="px-4 py-2 bg-pitch text-white font-bold">Prepare briefing</button>
-        <p class="w-full text-gray-500">Use the free-transfer count shown in your FPL team. Leave blank if you're unsure.</p>
-      </form>
-      <p data-panel-status role="status" hidden class="mb-3 text-xs text-gray-600"></p>
-      <div id="analysis-container" {% if not tactical_analysis %}hx-get="{% url 'rivals:teams.analysis' team.id %}" hx-trigger="load"{% endif %}
-           hx-request='{"timeout":18000}' hx-sync="closest [data-remote-panel]:replace">
-        {% if tactical_analysis %}{% include "partials/analysis.html" with analysis=tactical_analysis team=team %}{% endif %}
+    <section id="squad-briefing" class="mb-8" data-remote-panel data-loading-message="Preparing your transfer outlook…" data-error-message="We couldn't load your outlook. Open the planner to try again.">
+      <p data-panel-status role="status" hidden class="mb-3 text-sm"></p>
+      <div hx-get="{% url 'rivals:decisions.summary' %}" hx-trigger="load" hx-request='{"timeout":25000}'>
+        <a class="text-pitch underline" href="{% url 'rivals:decisions' %}">Plan transfers</a>
       </div>
     </section>
     {% elif user.team %}
