@@ -242,7 +242,7 @@ class LeagueSyncView(APIView):
         return Response(
             {
                 "success": True,
-                "message": "League refresh queued.",
+                "message": "Standings update requested.",
                 "league": MiniLeagueDetailSerializer(league).data,
             },
             status=status.HTTP_202_ACCEPTED,
@@ -402,7 +402,7 @@ class TeamSyncView(APIView):
         return Response(
             {
                 "success": True,
-                "message": "Team refresh queued.",
+                "message": "Team update requested.",
                 "team": TeamSerializer(team).data,
             },
             status=status.HTTP_202_ACCEPTED,

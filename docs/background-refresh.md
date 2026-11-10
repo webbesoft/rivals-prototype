@@ -56,7 +56,7 @@ kamal app logs -r job
 kamal app exec --roles web "uv run python manage.py check_fpl_worker"
 ```
 
-The command exits unsuccessfully for a missing/older-than-five-minutes heartbeat or overdue leases. Retry it after the initial dispatcher run if startup has just completed. A current heartbeat plus a nonzero retry count means the worker is alive but some upstream imports are failing. The dashboard's Data freshness panel exposes the same per-resource success and retry information.
+The command exits unsuccessfully for a missing/older-than-five-minutes heartbeat or overdue leases. Retry it after the initial dispatcher run if startup has just completed. A current heartbeat plus a nonzero retry count means the worker is alive but some upstream imports are failing. The dashboard shows a simple notice when updates are delayed. Per-resource success and retry details remain in SyncState and operational diagnostics.
 
 Kamal role and command configuration follows its [deployment command reference](https://kamal-deploy.org/docs/commands/deploy/) and [app command reference](https://kamal-deploy.org/docs/commands/app/).
 

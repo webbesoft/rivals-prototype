@@ -122,5 +122,5 @@ def mini_league_sync(request, mini_league_id):
     ).exists():
         return render(request, "404.html", status=404)
     enqueue_refresh("league", mini_league.id, force=True)
-    messages.info(request, "League refresh queued. Saved standings remain available.")
+    messages.info(request, "Standings update requested.")
     return redirect("rivals:minileagues.show", mini_league_id=mini_league.id)

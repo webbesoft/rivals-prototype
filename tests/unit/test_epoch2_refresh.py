@@ -527,7 +527,7 @@ def test_cold_dashboard_and_unknown_context_do_not_fetch_fpl(manager):
     with patch("requests.get", side_effect=AssertionError("No synchronous FPL reads")):
         response = client.get(reverse("rivals:dashboard"))
     assert response.status_code == 200
-    assert "context is unavailable or stale" in response.content.decode()
+    assert "Figures may be out of date" in response.content.decode()
     assert SyncState.objects.get(key="context").status == "queued"
 
 

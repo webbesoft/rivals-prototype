@@ -4,6 +4,6 @@
          hx-trigger="load, every 120s"
          hx-swap="innerHTML"
          hx-request='{"timeout":12000}'
-         hx-on::after-request="if (!event.detail.successful) this.querySelector('[data-score-status]').textContent = 'Could not refresh scores. Retrying automatically.';">
+         hx-on::after-request="if (!event.detail.successful) this.querySelector('[data-score-status]').textContent = 'Latest scores are temporarily unavailable.';">
   {% include "partials/score_summary.html" %}
 </section>

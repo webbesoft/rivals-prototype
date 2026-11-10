@@ -137,9 +137,7 @@ def dashboard_sync_rivals(request):
     ):
         for kind in ("profile", "history", "transfers"):
             enqueue_refresh(kind, team_id, force=True)
-    messages.info(
-        request, "Rival refresh queued. Saved intel remains available while it updates."
-    )
+    messages.info(request, "Rival updates requested.")
     return redirect("rivals:dashboard")
 
 

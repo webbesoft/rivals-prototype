@@ -81,9 +81,7 @@ def team_track(request, team_id):
     request.user.tracked_teams.get_or_create(team=team)
 
     enqueue_team(team.id, force=True)
-    messages.success(
-        request, "Team is now being tracked. Updates are queued automatically."
-    )
+    messages.success(request, "Team is now being tracked.")
 
     return redirect("rivals:teams.show", team_id=team.id)
 
@@ -111,7 +109,7 @@ def team_sync(request, team_id):
     enqueue_team(team.id, force=True)
     messages.info(
         request,
-        "Team refresh queued. Scores update automatically; full squad history is separate.",
+        "Team update requested.",
     )
     return redirect("rivals:teams.show", team_id=team.id)
 
