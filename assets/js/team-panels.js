@@ -16,13 +16,24 @@
     status.hidden = false;
     status.textContent = panel.dataset.loadingMessage;
   });
-  document.addEventListener('htmx:afterRequest', (event) => {
+  function finishRequest(event, message) {
     const panel = requestPanels.get(event.detail.xhr) || panelFor(event);
     if (!panel || latestRequests.get(panel) !== event.detail.xhr) return;
     panel.setAttribute('aria-busy', 'false');
     const status = panel.querySelector('[data-panel-status]');
     if (!status) return;
-    status.hidden = event.detail.successful;
-    if (!event.detail.successful) status.textContent = panel.dataset.errorMessage;
+    status.hidden = !message && event.detail.successful === true;
+    if (!status.hidden) status.textContent = message || panel.dataset.errorMessage;
+  }
+  document.addEventListener('htmx:afterRequest', (event) => finishRequest(event));
+  document.addEventListener('htmx:timeout', (event) => {
+    const panel = requestPanels.get(event.detail.xhr) || panelFor(event);
+    finishRequest(event, panel?.dataset.timeoutMessage || 'This is taking longer than expected. Please try again.');
   });
+  for (const name of ['htmx:onLoadError', 'htmx:swapError']) {
+    document.addEventListener(name, (event) => {
+      const panel = requestPanels.get(event.detail.xhr) || panelFor(event);
+      finishRequest(event, panel?.dataset.errorMessage);
+    });
+  }
 })();

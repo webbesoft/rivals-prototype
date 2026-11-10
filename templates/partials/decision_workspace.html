@@ -7,7 +7,7 @@
 {% include "partials/decision_summary.html" %}
 {% if ai_enabled %}<div id="gemini-briefing" hx-get="{% url 'rivals:decisions.ai' %}?fingerprint={{ report.fingerprint|urlencode }}" hx-trigger="load" hx-swap="outerHTML" hx-request='{"timeout":10000}'></div>{% endif %}
 {% endif %}
-<form method="POST" action="{% url 'rivals:decisions.workspace' %}" hx-post="{% url 'rivals:decisions.workspace' %}" hx-target="#decision-workspace" hx-request='{"timeout":25000}' hx-sync="closest [data-remote-panel]:replace" hx-disabled-elt="find button" class="app-panel border border-gray-200 bg-white p-5 mb-6">
+<form method="POST" action="{% url 'rivals:decisions.workspace' %}" hx-post="{% url 'rivals:decisions.workspace' %}" hx-target="#decision-workspace" hx-request='{"timeout":120000}' hx-sync="closest [data-remote-panel]:replace" hx-disabled-elt="find button" class="app-panel border border-gray-200 bg-white p-5 mb-6">
   {% csrf_token %}{{ form.season }}{{ form.gameweek }}{{ form.defaults_token }}{{ form.squad_confirmed }}
   {% if form.errors %}<div role="alert" class="text-danger mb-4">{{ form.non_field_errors }}{% for field in form %}{{ field.errors }}{% endfor %}</div>{% endif %}
   <details {% if form.errors %}open{% endif %}>

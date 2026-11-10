@@ -47,3 +47,37 @@ test('an older request cannot clear a newer loading state; errors stay visible',
   assert.equal(status.hidden, false);
   assert.equal(status.textContent, 'Please try again.');
 });
+
+test('a timeout without a successful flag clears loading and explains the failure', () => {
+  const { panel, status, elt, fire } = setup();
+  panel.dataset.timeoutMessage = 'Comparing your options took too long. Reload this page to try again.';
+  const xhr = {};
+  fire('beforeRequest', { elt, xhr });
+  fire('afterRequest', { elt, xhr });
+  fire('timeout', { elt, xhr });
+  assert.equal(panel.attributes['aria-busy'], 'false');
+  assert.equal(status.hidden, false);
+  assert.equal(status.textContent, panel.dataset.timeoutMessage);
+});
+
+test('an older timeout cannot replace the current loading message', () => {
+  const { panel, status, elt, fire } = setup();
+  const first = {}, latest = {};
+  fire('beforeRequest', { elt, xhr: first });
+  fire('beforeRequest', { elt, xhr: latest });
+  fire('timeout', { elt, xhr: first });
+  assert.equal(panel.attributes['aria-busy'], 'true');
+  assert.equal(status.textContent, 'Loading lineup…');
+});
+
+for (const name of ['onLoadError', 'swapError']) {
+  test(`${name} clears loading even when afterRequest is never emitted`, () => {
+    const { panel, status, elt, fire } = setup();
+    const xhr = {};
+    fire('beforeRequest', { elt, xhr });
+    fire(name, { elt, xhr, successful: true });
+    assert.equal(panel.attributes['aria-busy'], 'false');
+    assert.equal(status.hidden, false);
+    assert.equal(status.textContent, 'Please try again.');
+  });
+}
