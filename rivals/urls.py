@@ -2,11 +2,18 @@ from django.contrib import admin
 from django.urls import path
 
 from . import views
-from .views import dashboard_views, decision_views, minileague_views, team_views
+from .views import (
+    ai_views,
+    dashboard_views,
+    decision_views,
+    minileague_views,
+    team_views,
+)
 
 app_name = "rivals"
 
 urlpatterns = [
+    path("decisions/ai/", ai_views.briefing, name="decisions.ai"),
     path("", dashboard_views.dashboard, name="dashboard"),
     path("decisions/", decision_views.planner, name="decisions"),
     path("decisions/summary/", decision_views.summary, name="decisions.summary"),

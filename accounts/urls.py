@@ -1,11 +1,12 @@
 from django.contrib import admin
 from django.urls import path
 
-from accounts import views
+from accounts import ai_views, views
 
 app_name = "accounts"
 
 urlpatterns = [
+    path("gemini/", ai_views.gemini_settings, name="gemini"),
     path("signup/", views.signup_view, name="signup"),
     path("login/", views.login_view, name="login"),
     path("logout/", views.logout_view, name="logout"),

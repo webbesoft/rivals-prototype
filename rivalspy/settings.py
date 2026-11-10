@@ -26,6 +26,8 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "rivalspy.settings")
 # ---------------------------------------------------------------------------
 # Sentry
 # ---------------------------------------------------------------------------
+from core.ai_privacy import filter_ai_breadcrumb, filter_ai_event
+
 SENTRY_DSN = os.getenv("SENTRY_DSN", "")
 
 sentry_sdk.init(
@@ -40,6 +42,11 @@ sentry_sdk.init(
     ],
     traces_sample_rate=float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "1.0")),
     send_default_pii=False,
+    include_local_variables=False,
+    max_request_body_size="never",
+    before_send=filter_ai_event,
+    before_send_transaction=filter_ai_event,
+    before_breadcrumb=filter_ai_breadcrumb,
 )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -342,3 +349,8 @@ if not DEBUG and not TESTING:
         "SECURE_HSTS_INCLUDE_SUBDOMAINS", "False"
     ).lower() in ("1", "true", "yes")
     SECURE_HSTS_PRELOAD = True
+
+# A versioned, external keyring, independent of Django's SECRET_KEY. Empty disables
+# new Gemini connections and runs without affecting deterministic transfer advice.
+AI_CREDENTIAL_KEYS = os.getenv("AI_CREDENTIAL_KEYS", "")
+AI_CREDENTIAL_ACTIVE_KEY = os.getenv("AI_CREDENTIAL_ACTIVE_KEY", "v1")

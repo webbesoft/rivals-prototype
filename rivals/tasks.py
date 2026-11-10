@@ -97,6 +97,7 @@ def ingest(state):
         raise RuntimeError("Fresh season context required before ingestion")
     if state.kind == "decisions":
         from rivals.services.decision_review_service import review_decisions
+
         return {"reviewed": review_decisions(api)}
     if state.kind == "players":
         from rivals.services.player_sync_service import PlayerSyncService
@@ -203,3 +204,7 @@ def refresh_tick():
     )
     for league_id in league_ids:
         enqueue_refresh("league", league_id, context=context)
+
+
+# Register reference-only Gemini work with the existing task worker.
+from rivals.services.ai_briefing_service import prepare_briefing  # noqa: E402, F401

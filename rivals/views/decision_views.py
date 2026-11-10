@@ -12,6 +12,7 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET, require_POST
 
 from rivals.forms import DecisionInputForm
+from rivals.services.ai_credentials import configured
 from rivals.models import DecisionRecord, TeamPlanningInput
 from rivals.services.decision_engine import DecisionEngine, DecisionUnavailable, digest
 
@@ -143,7 +144,7 @@ def workspace(request):
                 )
         elif request.method == "GET":
             report = engine.report()
-        context = {"form": form}
+        context = {"form": form, "ai_enabled": configured()}
         if report:
             context.update(report_context(report, request.user))
         return render(request, "partials/decision_workspace.html", context)

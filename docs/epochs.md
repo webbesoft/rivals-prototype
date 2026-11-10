@@ -64,16 +64,19 @@ Secondary replacement comparisons use compact, expandable rows showing the sell 
 
 Apply migration `0014`; routine history ingestion fills gameweek bank/chip snapshots. The previous Epoch 3 requirement to re-enter the transfer count at every deadline is superseded for planner defaults. See [transfer decisions](transfer-decisions.md) for default sources and limits.
 
-## Epoch 5 — Secure bring-your-own-key analysis
+## Epoch 5 — Secure bring-your-own-key analysis (implemented)
 
-Start with one supported provider (Gemini is a candidate), after checking its current API and data-handling documentation. AI explains the structured decision engine's evidence; it should not invent fixtures, prices, rules, or player news.
+Verified-email managers can connect, replace and remove a Gemini key from account settings, then request a short priority briefing from the transfer planner. Regular advice remains available without a key or if Google fails. No email digests are enabled in this epoch.
 
-- Save keys encrypted using authenticated encryption and a dedicated, externally managed encryption key; plan versioned rotation and backup/restore. Do not reuse Django's session secret as the encryption key.
-- Accept keys through authenticated, CSRF-protected writes, show only a masked indicator, and support replacement and deletion. Never return plaintext through forms, APIs, admin, logs, tracing, error reporting, task arguments, or emails.
-- Restrict requests to fixed provider endpoints and approved models; do not accept arbitrary provider URLs. Apply timeouts, per-user quotas, token/spend bounds, and rate limits.
-- Isolate users' credentials and analysis data; test cross-user access and failure redaction. Minimise data sent to the provider and explain the disclosure and costs to users.
-- Queue credential references rather than raw keys, decrypt only at execution, and invalidate outstanding work when a key is deleted. Treat imported news as untrusted content.
-- Require provider account verification before enabling AI runs. Keep deterministic advice available if a key is missing, invalid, or rate-limited.
+- Credentials use Fernet authenticated encryption with a dedicated external versioned keyring, separate from Django's secret. Ciphertext is bound to its manager and credential revision. A transactional rotation command and backup/recovery instructions are included.
+- Authenticated, CSRF-protected writes validate access to the fixed supported Gemini model before saving. Forms never redisplay a key. Replacement/deletion cancels outstanding results; no key is exposed through admin, APIs or task arguments.
+- Gemini receives a minimal planning summary and selects up to three evidence priorities. The transfer/hold recommendation must remain included. The app renders its own evidence text and figures, rejecting unknown IDs or free-form model output, so the model cannot invent a transfer, price or news claim.
+- Fixed provider endpoints/model, bounded input/output, transport timeouts, no automatic retries, durable per-user request/token reservations and connection rate limits constrain use. The settings screen explains Google disclosure and potential costs. Key validation does not prove Google identity, billing status or future quota.
+- The existing worker processes UUID-only tasks, checks the latest plan and credential revision, skips stale/expired work, and avoids duplicate paid requests. Result polling makes no upstream requests. Sentry excludes credential operations and captures no request bodies or local variables; provider failures are redacted.
+
+Validation: 47 new security/provider tests pass, including execution through the existing task worker. The isolated epoch suite passes 246 tests; Django system checks and application migration checks pass.
+
+The keyring must be configured on both web/job roles before connections are available. See [Gemini briefings operations and privacy](gemini-briefings.md) for setup, current primary provider references, exact limits, rotation, backup/restore and remaining smoke checks. Apply migration `0015`; no production deployment, real provider key or live Google charge was part of implementation.
 
 ## Epoch 6 — Deadline digests
 

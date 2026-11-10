@@ -1,7 +1,50 @@
 from decimal import Decimal
+import uuid
 
 from django.conf import settings
 from django.db import models
+
+
+class AICredential(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    ciphertext = models.TextField(editable=False)
+    key_version = models.CharField(max_length=32, editable=False)
+    revision = models.UUIDField(default=uuid.uuid4, editable=False)
+    verified_at = models.DateTimeField()
+    consented_at = models.DateTimeField()
+    updated_at = models.DateTimeField(auto_now=True)
+
+
+class AIUsage(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    date = models.DateField()
+    connections = models.PositiveSmallIntegerField(default=0)
+    generations = models.PositiveSmallIntegerField(default=0)
+    reserved_tokens = models.PositiveIntegerField(default=0)
+    last_connection_at = models.DateTimeField(null=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["user", "date"], name="ai_daily_usage")
+        ]
+
+
+class AIBriefing(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    team = models.ForeignKey("Team", on_delete=models.CASCADE)
+    credential_revision = models.UUIDField()
+    fingerprint = models.CharField(max_length=64)
+    status = models.CharField(max_length=16, default="queued")
+    evidence = models.JSONField(default=list)
+    priorities = models.JSONField(default=list)
+    model = models.CharField(max_length=64)
+    error_code = models.CharField(max_length=24, blank=True)
+    input_tokens = models.PositiveIntegerField(null=True)
+    output_tokens = models.PositiveIntegerField(null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    started_at = models.DateTimeField(null=True)
 
 
 # Create your models here.

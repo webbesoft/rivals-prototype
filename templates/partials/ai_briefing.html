@@ -1,0 +1,27 @@
+<section id="gemini-briefing" class="app-panel p-5 mb-6" aria-label="Gemini priorities"
+  {% if ai_state == 'queued' or ai_state == 'running' %}hx-get="{% url 'rivals:decisions.ai' %}?fingerprint={{ ai_fingerprint|urlencode }}" hx-trigger="every 4s" hx-target="this" hx-swap="outerHTML" hx-request='{"timeout":10000}'{% endif %}>
+  <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+    <h2 class="app-section-title">Gemini priorities</h2>
+    <a class="text-sm underline" href="{% url 'accounts:gemini' %}">Gemini settings</a>
+  </div>
+  {% if ai_error %}<p role="status" class="text-sm mb-3">{{ ai_error }}</p>{% endif %}
+  {% if ai_cards %}
+    <p class="text-xs text-gray-600 mb-4">Gemini selected these priorities from your current plan. Figures are estimates.</p>
+    <ol class="space-y-3 list-decimal pl-5">{% for card in ai_cards %}<li class="text-sm pl-1"><h3 class="font-bold">{{ card.title }}</h3><p class="text-gray-600 mt-1">{{ card.detail }}</p></li>{% endfor %}</ol>
+  {% elif ai_state == 'queued' or ai_state == 'running' %}
+    <p role="status" class="text-sm">Preparing your priorities… Your transfer options are ready below.</p>
+  {% elif not ai_configured %}
+    <p class="text-sm">Gemini is temporarily unavailable. Your transfer options are ready below.</p>
+  {% elif ai_state == 'disconnected' %}
+    <p class="text-sm">Connect Gemini for a short, personalised briefing on your next moves.</p>
+    <a class="underline text-sm inline-block mt-3" href="{% url 'accounts:gemini' %}">Connect Gemini</a>
+  {% else %}
+    {% if ai_state == 'stale' %}<p class="text-sm mb-3">Your plan has changed or this briefing has expired. Prepare an updated briefing.</p>
+    {% elif ai_state == 'failed' or ai_state == 'delayed' %}<p class="text-sm mb-3">Gemini couldn't prepare this briefing. Check your connection or try again later. Your transfer advice is ready below.</p>
+    {% else %}<p class="text-sm mb-3">Get a short list of what matters most before the deadline, using your Gemini key.</p>{% endif %}
+    <form method="POST" action="{% url 'rivals:decisions.ai' %}" hx-post="{% url 'rivals:decisions.ai' %}" hx-target="#gemini-briefing" hx-swap="outerHTML" hx-request='{"timeout":25000}' hx-disabled-elt="find button">
+      {% csrf_token %}<input type="hidden" name="fingerprint" value="{{ ai_fingerprint }}">
+      <button class="underline text-pitch text-sm font-bold" type="submit">Prepare Gemini briefing</button>
+    </form>
+  {% endif %}
+</section>
