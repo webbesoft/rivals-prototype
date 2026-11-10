@@ -26,6 +26,23 @@ def refresh_resource(key, generation):
     state = SyncState.objects.get(key=key)
     try:
         payload = ingest(state)
+        if payload is None:
+            # Checkpoint and continuation are separate from successful publication.
+            # Queue insertion and lease handoff commit together.
+            with transaction.atomic():
+                continued = SyncState.objects.filter(
+                    pk=state.pk, generation=generation, status="running"
+                ).update(
+                    status="queued",
+                    generation=generation + 1,
+                    failures=0,
+                    error="",
+                    next_attempt_at=None,
+                    lease_until=timezone.now() + timezone.timedelta(minutes=15),
+                )
+                if continued:
+                    refresh_resource(key, generation + 1, schedule=5)
+            return
     except Exception:
         # A bounded, generic error is sufficient for users; detailed trace stays in logs.
         logger.exception("FPL refresh failed for %s", key)
@@ -44,7 +61,9 @@ def refresh_resource(key, generation):
         if state.kind == "context"
         else GameweekContextService.cached()
     )
-    payload["stamp"] = f'{context.get("season")}:{context.get("scoring_gameweek")}'
+    payload.setdefault(
+        "stamp", f'{context.get("season")}:{context.get("scoring_gameweek")}'
+    )
     SyncState.objects.filter(pk=state.pk, generation=generation).update(
         status="ok",
         last_success_at=timezone.now(),
@@ -90,12 +109,19 @@ def ingest(state):
             season=context["season"]
         )
     elif state.kind == "league":
-        from rivals.services.mini_league_sync_service import MiniLeagueSyncService
+        from rivals.services.league_import_service import LeagueImportService
 
-        service = MiniLeagueSyncService(MiniLeague.objects.get(pk=state.object_id))
-        service.fpl_api_service = api
-        if not service.sync(include_transfers=False, require_complete=True):
-            raise RuntimeError("League import failed")
+        service = LeagueImportService(state, api, context)
+        try:
+            complete = service.run_batch()
+        except Exception as exc:
+            league = MiniLeague.objects.get(pk=state.object_id)
+            raise RuntimeError(
+                f"League import failed (FPL league {league.fpl_league_id}): {exc}"
+            ) from exc
+        if not complete:
+            return None
+        return {"stamp": service.stamp}
     else:
         from rivals.services.team_sync_service import TeamSyncService
 

@@ -48,12 +48,14 @@ class FplApiService:
         results = list(standings_data.get("results", []))
         has_next = standings_data.get("has_next", False)
         is_complete = not has_next
+        incomplete_reason = None
 
         page = 2
         while has_next and page <= max_pages:
             next_resp = self.make_request(f"{url}?page_standings={page}")
             if not next_resp or "standings" not in next_resp:
                 is_complete = False
+                incomplete_reason = f"Standings page {page} unavailable"
                 break
             page_standings = next_resp.get("standings", {})
             results.extend(page_standings.get("results", []))
@@ -64,12 +66,23 @@ class FplApiService:
 
         if has_next and page > max_pages:
             is_complete = False
+            incomplete_reason = (
+                f"Standings exceed the {max_pages}-page import limit "
+                f"({len(results)} entries fetched)"
+            )
 
         return {
             "league_info": response["league"],
             "standings": results,
             "is_complete": is_complete,
+            "incomplete_reason": incomplete_reason,
         }
+
+    def fetch_mini_league_page(self, league_id, page):
+        return self.make_request(
+            f"{self.BASE_URL}/leagues-classic/{league_id}/standings/"
+            f"?page_standings={page}"
+        )
 
     def fetch_team_history(self, team_id: str) -> dict | None:
         return self.make_request(f"{self.BASE_URL}/entry/{team_id}/history/")

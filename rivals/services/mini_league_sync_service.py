@@ -14,24 +14,32 @@ class MiniLeagueSyncService:
     def __init__(self, mini_league: MiniLeague):
         self.mini_league = mini_league
         self.fpl_api_service = FplApiService()
+        self.last_error = None
 
     def sync(self, include_transfers=True, require_complete=False) -> bool:
         """
         Fetch league info + standings from FPL API,
         update the MiniLeague and associated teams.
         """
+        self.last_error = None
         try:
             league_data = self.fpl_api_service.fetch_mini_league(
                 self.mini_league.fpl_league_id
             )
 
-            if not league_data or (
-                require_complete and not league_data.get("is_complete", True)
-            ):
+            if not league_data:
+                self.last_error = "League standings unavailable"
+                return False
+            if require_complete and not league_data.get("is_complete", True):
+                self.last_error = (
+                    league_data.get("incomplete_reason")
+                    or "Incomplete league standings"
+                )
                 return False
 
             current_season = self.fpl_api_service.fetch_current_season()
             if require_complete and not current_season:
+                self.last_error = "Current FPL season unavailable"
                 return False
             with transaction.atomic():
                 league_info = league_data["league_info"]
@@ -54,6 +62,7 @@ class MiniLeagueSyncService:
             return True
 
         except Exception as e:
+            self.last_error = str(e)
             logger.error(f"Mini League Sync Error: {e}", exc_info=True)
             return False
 

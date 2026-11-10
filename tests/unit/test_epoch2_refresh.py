@@ -470,7 +470,9 @@ def test_restart_does_not_duplicate_a_locked_dispatcher():
 
 
 @pytest.mark.django_db
-def test_incomplete_league_import_retains_standings_and_last_success(stored_context):
+def test_incomplete_league_import_retains_standings_and_last_success(
+    stored_context, caplog
+):
     from rivals.models import MiniLeagueTeam
 
     league = MiniLeague.objects.create(fpl_league_id="88", name="Saved league")
@@ -485,17 +487,46 @@ def test_incomplete_league_import_retains_standings_and_last_success(stored_cont
     enqueue_refresh("league", league.pk)
     state = SyncState.objects.get(key=f"league:{league.pk}")
     with patch("rivals.tasks.FplApiService") as factory:
-        factory.return_value.fetch_mini_league.return_value = {
-            "league_info": {"name": "Incomplete"},
-            "standings": [],
-            "is_complete": False,
-        }
+        factory.return_value.fetch_mini_league_page.return_value = None
         refresh_resource.now(state.key, state.generation)
     league.refresh_from_db()
     assert league.name == "Saved league"
     assert league.last_synced_at is None
     assert league.mini_league_teams.get().total_points == 500
     assert SyncState.objects.get(pk=state.pk).status == "error"
+    assert "FPL league 88" in caplog.text
+    assert "Standings page 1 unavailable" in caplog.text
+
+
+@pytest.mark.parametrize("failure", ["limit", "unavailable", "complete"])
+def test_league_pagination_reports_why_standings_are_incomplete(failure):
+    first = {
+        "league": {"name": "League"},
+        "standings": {
+            "results": [{"entry": 1}],
+            "has_next": True,
+        },
+    }
+    second = {"standings": {"results": [{"entry": 2}], "has_next": False}}
+    api = FplApiService()
+    with patch.object(
+        api,
+        "make_request",
+        side_effect=[first, None if failure == "unavailable" else second],
+    ) as request:
+        data = api.fetch_mini_league("88", max_pages=1 if failure == "limit" else 2)
+    assert data["is_complete"] == (failure == "complete")
+    assert request.call_count == (1 if failure == "limit" else 2)
+    if failure == "limit":
+        assert (
+            data["incomplete_reason"]
+            == "Standings exceed the 1-page import limit (1 entries fetched)"
+        )
+    elif failure == "unavailable":
+        assert data["incomplete_reason"] == "Standings page 2 unavailable"
+    else:
+        assert data["incomplete_reason"] is None
+        assert data["standings"] == [{"entry": 1}, {"entry": 2}]
 
 
 @pytest.mark.django_db

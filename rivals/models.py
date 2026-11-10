@@ -634,3 +634,28 @@ class TeamPlanningInput(models.Model):
                 name="unique_manager_planning_input",
             )
         ]
+
+
+class LeagueImport(models.Model):
+    """Unpublished standings, checkpointed independently of refresh attempts."""
+
+    league = models.OneToOneField(MiniLeague, on_delete=models.CASCADE)
+    stamp = models.CharField(max_length=40)
+    next_page = models.PositiveIntegerField(default=1)
+    league_info = models.JSONField(default=dict)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class LeagueImportPage(models.Model):
+    import_run = models.ForeignKey(
+        LeagueImport, on_delete=models.CASCADE, related_name="pages"
+    )
+    number = models.PositiveIntegerField()
+    standings = models.JSONField(default=list)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["import_run", "number"], name="unique_league_import_page"
+            )
+        ]
