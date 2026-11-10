@@ -1,5 +1,6 @@
 import logging
 
+from django.db import transaction
 from django.utils import timezone
 
 from rivals.models import (
@@ -20,6 +21,7 @@ class TeamSyncService:
         self.team = team
         self.fpl_api_service = FplApiService()
         self._history_data: dict | None = None
+        self._picks_cache = {}
         self._player_names_cache: dict[int, str | None] = {}
 
     def sync_full_data(self) -> bool:
@@ -27,10 +29,13 @@ class TeamSyncService:
             # Detect a season change before syncing any data
             self.detect_and_handle_season_transition()
 
-            self.sync_basic_info()
+            if not self.sync_basic_info():
+                return False
             history_data = self.sync_history()
-            self.sync_transfers()
-            self.sync_squad_histories(history_data=history_data)
+            if history_data is None or not self.sync_transfers():
+                return False
+            if not self.sync_squad_histories(history_data=history_data):
+                return False
             self.team.last_synced_at = timezone.now()
             self.team.save(update_fields=["last_synced_at"])
             return True
@@ -306,16 +311,21 @@ class TeamSyncService:
         return True
 
     def sync_gameweek_picks(self, gameweek: int) -> None:
-        picks = self.fpl_api_service.fetch_team_picks(self.team.fpl_team_id, gameweek)
-        if not picks or "picks" not in picks:
-            return
-
         gw_data = GameweekData.objects.filter(
-            team=self.team,
-            gameweek=gameweek,
-            season=self.team.current_season,
+            team=self.team, gameweek=gameweek, season=self.team.current_season
         ).first()
         if not gw_data:
+            return
+        if (
+            gw_data.captain_name
+            and self.team.squad_histories.filter(
+                season=self.team.current_season, gameweek=gameweek
+            ).count()
+            == 15
+        ):
+            return
+        picks = self.get_gameweek_picks(gameweek)
+        if not picks or "picks" not in picks:
             return
 
         captain = next((p for p in picks["picks"] if p["is_captain"]), None)
@@ -338,65 +348,89 @@ class TeamSyncService:
             ]
         )
 
-    def sync_squad_histories(self, history_data: dict | None = None) -> None:
-        data = history_data or self._history_data
-        if not data:
+    def get_gameweek_picks(self, gameweek):
+        if gameweek not in self._picks_cache:
+            self._picks_cache[gameweek] = self.fpl_api_service.fetch_team_picks(
+                self.team.fpl_team_id, gameweek
+            )
+        return self._picks_cache[gameweek]
+
+    def sync_squad_histories(self, history_data=None) -> bool:
+        data = history_data if history_data is not None else self._history_data
+        if data is None:
             data = self.fpl_api_service.fetch_team_history(self.team.fpl_team_id)
             self._history_data = data
         if not data or "current" not in data:
-            return
+            return False
+        success = True
+        for gw in data["current"]:
+            if not self.sync_squad_for_gameweek(gw["event"]):
+                success = False
+        return success
 
-        gameweeks = [gw["event"] for gw in data["current"]]
-        for gw in gameweeks:
-            self.sync_squad_for_gameweek(gw)
-
-    def sync_squad_for_gameweek(self, gameweek: int) -> None:
-        if SquadHistory.objects.filter(
-            team=self.team,
-            gameweek=gameweek,
-            season=self.team.current_season,
-        ).exists():
-            return
-
-        picks = self.fpl_api_service.fetch_team_picks(self.team.fpl_team_id, gameweek)
-        if not picks or "picks" not in picks:
-            return
-
-        elements = [p["element"] for p in picks["picks"]]
-        players_by_fpl_id = {
-            p.fpl_id: p for p in Player.objects.filter(fpl_id__in=elements)
-        }
-
-        squad_records = []
-        for pick in picks["picks"]:
-            player = players_by_fpl_id.get(pick["element"])
-            if not player:
-                logger.warning(f"Player not found for FPL ID {pick['element']}")
-                continue
-
-            squad_records.append(
+    def sync_squad_for_gameweek(
+        self,
+        gameweek,
+        *,
+        picks=None,
+        elements=None,
+        points=None,
+        points_final=False,
+        refresh=False,
+        season=None,
+    ) -> bool:
+        season = season or self.team.current_season
+        squad = SquadHistory.objects.filter(
+            team=self.team, gameweek=gameweek, season=season
+        )
+        if not refresh and squad.count() == 15:
+            return True
+        picks = picks if picks is not None else self.get_gameweek_picks(gameweek)
+        if not picks or len(picks.get("picks", [])) != 15:
+            return False
+        rows = picks["picks"]
+        if {p["position"] for p in rows} != set(range(1, 16)) or len(
+            {p["element"] for p in rows}
+        ) != 15:
+            return False
+        if elements is None:
+            elements = {
+                p.fpl_id: vars(p)
+                for p in Player.objects.filter(
+                    fpl_id__in=[pick["element"] for pick in rows]
+                )
+            }
+        records = []
+        for pick in rows:
+            player = elements.get(pick["element"])
+            if not player or player.get("element_type") not in (1, 2, 3, 4):
+                return False
+            records.append(
                 SquadHistory(
                     team=self.team,
                     gameweek=gameweek,
-                    season=self.team.current_season,
+                    season=season,
                     player_fpl_id=pick["element"],
                     position=pick["position"],
                     multiplier=pick["multiplier"],
                     is_captain=pick["is_captain"],
                     is_vice_captain=pick["is_vice_captain"],
-                    element_type=pick["element_type"],
-                    player_name=player.web_name,
-                    player_cost=player.now_cost,
-                    form=player.form,
-                    expected_goals=player.expected_goals,
-                    expected_assists=player.expected_assists,
-                    selected_by_percent=player.selected_by_percent,
-                    total_points_at_time=player.total_points,
+                    element_type=player["element_type"],
+                    player_name=player["web_name"],
+                    player_cost=player.get("now_cost") or 0,
+                    form=player.get("form"),
+                    expected_goals=player.get("expected_goals"),
+                    expected_assists=player.get("expected_assists"),
+                    selected_by_percent=player.get("selected_by_percent"),
+                    total_points_at_time=player.get("total_points"),
+                    gameweek_points=(points or {}).get(pick["element"]),
+                    points_final=points_final,
                 )
             )
-
-        if squad_records:
-            SquadHistory.objects.bulk_create(squad_records, ignore_conflicts=True)
+        with transaction.atomic():
+            squad.delete()
+            SquadHistory.objects.bulk_create(records)
+        return True
 
     def get_player_name(self, fpl_id: int) -> str | None:
         if fpl_id not in self._player_names_cache:

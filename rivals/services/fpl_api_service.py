@@ -82,6 +82,16 @@ class FplApiService:
             f"{self.BASE_URL}/entry/{team_id}/event/{gameweek}/picks/"
         )
 
+    def fetch_gameweek_live(self, gameweek, season):
+        key = f"fpl_live_{season}_{gameweek}"
+        cached = cache.get(key)
+        if cached is not None:
+            return cached
+        data = self.make_request(f"{self.BASE_URL}/event/{gameweek}/live/")
+        if data is not None:
+            cache.set(key, data, 120)
+        return data
+
     def fetch_current_gameweek(self) -> int | None:
         response = self.fetch_bootstrap_static()
         if not response or not response.get("events"):

@@ -1,5 +1,5 @@
 <c-layouts.base title="{{ team.team_name }} - Team">
-  {% load humanize %}
+  {% load humanize static %}
   {% load math_filters %}
 
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
@@ -55,20 +55,13 @@
         <!-- Action Controls -->
         <div class="flex flex-wrap items-center gap-2 shrink-0">
           {% if user.team_id == team.id %}
-          <button
-            hx-get="{% url 'rivals:teams.analysis' team.id %}{% if tactical_analysis %}?refresh=1{% endif %}"
-            hx-target="#analysis-container"
-            hx-indicator="#analysis-loading"
-            hx-swap="innerHTML"
-            class="px-4 py-2 bg-pitch text-white tabular-nums text-xs font-bold uppercase tracking-wide hover:bg-pitch/90 transition-colors cursor-pointer"
-          >
-            {% if tactical_analysis %}Refresh Tactical Analysis{% else %}Run Tactical Analysis{% endif %}
-          </button>
+          <a href="#squad-briefing" class="px-4 py-2 bg-pitch text-white text-xs font-bold uppercase">Squad briefing</a>
           {% elif user.team %}
           <button
             hx-get="{% url 'rivals:teams.compare.quick' team.id %}"
             hx-target="#rival-comparison-container"
-            hx-indicator="#comparison-loading"
+            hx-request='{"timeout":22000}'
+            hx-sync="#comparison-panel:replace"
             hx-swap="innerHTML"
             class="px-3.5 py-2 bg-pitch text-white tabular-nums text-xs font-bold uppercase tracking-wide hover:bg-pitch/90 transition-colors cursor-pointer"
           >
@@ -204,26 +197,35 @@
       </div>
     </div>
 
-    <!-- HTMX Interactive Tactical Dock -->
-    <div id="analysis-loading" class="hidden my-6 p-8 border border-gray-200 bg-white shadow-sm text-center tabular-nums">
-      <div class="inline-block w-6 h-6 border-2 border-pitch border-t-transparent rounded-full animate-spin mb-2"></div>
-      <p class="text-xs font-bold uppercase tracking-wider text-text-main">Running Tactical Analysis...</p>
-      <p class="text-[11px] text-gray-500 mt-0.5">Evaluating optimal transfer picks and fixture difficulty indices</p>
-    </div>
-
     {% if user.team_id == team.id %}
-    <div id="analysis-container" class="mb-8 empty:hidden">
-      {% if tactical_analysis %}
-      {% include "partials/analysis.html" with analysis=tactical_analysis team=team %}
-      {% endif %}
-    </div>
+    <section id="squad-briefing" class="mb-8" data-remote-panel
+             data-loading-message="Preparing your briefing…" data-error-message="We couldn't prepare your briefing. Please try again.">
+      <form method="POST" action="{% url 'rivals:teams.analysis' team.id %}"
+            hx-post="{% url 'rivals:teams.analysis' team.id %}" hx-target="#analysis-container"
+            hx-request='{"timeout":18000}' hx-disabled-elt="find button"
+            hx-sync="closest [data-remote-panel]:replace"
+            class="app-panel border border-gray-200 bg-white p-5 mb-3 flex flex-wrap items-end gap-3 text-xs">
+        {% csrf_token %}
+        <input type="hidden" name="season" value="{{ planning_season|default_if_none:'' }}">
+        <input type="hidden" name="gameweek" value="{{ planning_gameweek|default_if_none:'' }}">
+        <label>{{ planning_form.free_transfers.label }}{% if planning_gameweek %} for GW{{ planning_gameweek }}{% endif %}
+          {{ planning_form.free_transfers }}
+        </label>
+        <button type="submit" class="px-4 py-2 bg-pitch text-white font-bold">Prepare briefing</button>
+        <p class="w-full text-gray-500">Use the free-transfer count shown in your FPL team. Leave blank if you're unsure.</p>
+      </form>
+      <p data-panel-status role="status" hidden class="mb-3 text-xs text-gray-600"></p>
+      <div id="analysis-container" {% if not tactical_analysis %}hx-get="{% url 'rivals:teams.analysis' team.id %}" hx-trigger="load"{% endif %}
+           hx-request='{"timeout":18000}' hx-sync="closest [data-remote-panel]:replace">
+        {% if tactical_analysis %}{% include "partials/analysis.html" with analysis=tactical_analysis team=team %}{% endif %}
+      </div>
+    </section>
     {% elif user.team %}
-    <div id="comparison-loading" class="hidden my-6 p-8 border border-gray-200 bg-white shadow-sm text-center tabular-nums">
-      <div class="inline-block w-6 h-6 border-2 border-pitch border-t-transparent rounded-full animate-spin mb-2"></div>
-      <p class="text-xs font-bold uppercase tracking-wider text-text-main">Computing Head-to-Head Comparison...</p>
-      <p class="text-[11px] text-gray-500 mt-0.5">Analyzing squad differentials, form, and fixture trajectories</p>
-    </div>
-    <div id="rival-comparison-container" class="mb-8 empty:hidden"></div>
+    <section id="comparison-panel" class="mb-8" data-remote-panel
+             data-loading-message="Preparing comparison…" data-error-message="We couldn't prepare this comparison. Please try again.">
+      <p data-panel-status role="status" hidden class="mb-3 text-xs text-gray-600"></p>
+      <div id="rival-comparison-container"></div>
+    </section>
     {% endif %}
 
     <!-- Mini-League Standings Table -->
@@ -385,7 +387,7 @@
 
     <!-- Squad History Carousel -->
     <div class="mb-8">
-      <c-components.squad_history_carousel :team="{{ team }}"></c-components.squad_history_carousel>
+      {% include "cotton/components/squad_history_carousel/index.html" %}
     </div>
 
     <!-- Dual-Column Intel Grid (Transfers & Player News) -->
@@ -515,4 +517,5 @@
     </div>
 
   </div>
+  <script src="{% static 'js/team-panels.js' %}"></script>
 </c-layouts.base>

@@ -58,14 +58,17 @@ class Team(models.Model):
             return self.value_in_millions - self.bank_in_millions
         return None
 
-    def get_squad_for_gameweek(self, gameweek):
+    def get_squad_for_gameweek(self, gameweek, season=None):
         """Get squad for a specific gameweek"""
-        return self.squad_histories.filter(gameweek=gameweek).order_by("position")
+        return self.squad_histories.filter(
+            gameweek=gameweek, season=season or self.current_season
+        ).order_by("position")
 
-    def get_available_gameweeks(self):
+    def get_available_gameweeks(self, season=None):
         """Get list of available gameweeks"""
         available_gameweeks = (
-            self.squad_histories.values_list("gameweek", flat=True)
+            self.squad_histories.filter(season=season or self.current_season)
+            .values_list("gameweek", flat=True)
             .distinct()
             .order_by("gameweek")
         )
@@ -460,6 +463,8 @@ class SquadHistory(models.Model):
         max_digits=5, decimal_places=2, null=True, blank=True
     )
     total_points_at_time = models.IntegerField(null=True, blank=True)
+    gameweek_points = models.IntegerField(null=True, blank=True)
+    points_final = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -612,3 +617,20 @@ class SyncState(models.Model):
     failures = models.PositiveIntegerField(default=0)
     error = models.CharField(max_length=255, blank=True)
     payload = models.JSONField(default=dict)
+
+
+class TeamPlanningInput(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    team = models.ForeignKey(Team, on_delete=models.CASCADE)
+    season = models.CharField(max_length=20)
+    gameweek = models.PositiveSmallIntegerField()
+    free_transfers = models.PositiveSmallIntegerField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "team", "season", "gameweek"],
+                name="unique_manager_planning_input",
+            )
+        ]

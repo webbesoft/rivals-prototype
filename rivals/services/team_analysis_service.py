@@ -1,13 +1,19 @@
 # rivals/services/fpl_analysis.py
+import hashlib
 import logging
 from collections import defaultdict
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
 from django.core.cache import cache
+from django.db.models import Max
+from django.utils import timezone
+
+from rivals.models import SyncState
 
 from ..models import Team
 from .fpl_api_service import FplApiService
+from .gameweek_context_service import GameweekContextService
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +34,9 @@ class TeamAnalysisService:
         self.teams: Dict[int, Dict[str, Any]] = {}
         self.events: List[Dict[str, Any]] = []
         self.fixtures: List[Dict[str, Any]] = []
-        self.current_gw: int = 1
+        self.current_gw = None
+        self.decision_gw = None
+        self._fixture_difficulty_cache = {}
 
     # ---------- Data loading / caching ----------
     def refresh_data(self, force_refresh: bool = False) -> bool:
@@ -46,11 +54,15 @@ class TeamAnalysisService:
             self.elements = bootstrap.get("elements", [])
             self.teams = {t["id"]: t for t in bootstrap.get("teams", [])}
             self.events = bootstrap.get("events", [])
-            current_event = next((e for e in self.events if e.get("is_current")), None)
-            self.current_gw = current_event["id"] if current_event else 1
+            event_context = GameweekContextService.derive(self.events)
+            self.current_gw = event_context["scoring_gameweek"]
+            self.decision_gw = event_context["decision_gameweek"]
+            self._fixture_difficulty_cache.clear()
 
             fixtures = self.api.fetch_fixtures_data(force_refresh=force_refresh)
-            self.fixtures = fixtures or []
+            if fixtures is None:
+                return False
+            self.fixtures = fixtures
             logger.info(
                 "FPL data refreshed: %d players, %d fixtures",
                 len(self.elements),
@@ -63,7 +75,7 @@ class TeamAnalysisService:
 
     def ensure_data(self) -> None:
         """Ensure bootstrap & fixtures are loaded (raises RuntimeError on failure)."""
-        if self.bootstrap is None or not self.fixtures:
+        if self.bootstrap is None:
             ok = self.refresh_data()
             if not ok:
                 raise RuntimeError("Unable to load FPL bootstrap/fixtures data")
@@ -83,7 +95,16 @@ class TeamAnalysisService:
         self, team_id: int, next_fixtures: int = 5
     ) -> float:
         """Weighted average fixture difficulty for next N fixtures (home advantage applied)."""
-        fixtures = [f for f in self.fixtures if not f.get("finished")]
+        memo_key = (team_id, next_fixtures)
+        if memo_key in self._fixture_difficulty_cache:
+            return self._fixture_difficulty_cache[memo_key]
+        fixtures = [
+            f
+            for f in self.fixtures
+            if not f.get("finished")
+            and f.get("event") is not None
+            and (self.decision_gw is None or f["event"] >= self.decision_gw)
+        ]
         team_fixtures = []
         for fx in fixtures:
             event = fx.get("event")
@@ -116,7 +137,9 @@ class TeamAnalysisService:
             if f["is_home"]:
                 d = max(1.0, d - 0.2)
             weighted.append(max(1.0, min(5.0, d)))
-        return sum(weighted) / len(weighted)
+        result = sum(weighted) / len(weighted)
+        self._fixture_difficulty_cache[memo_key] = result
+        return result
 
     def calculate_expected_points(
         self, player: Dict[str, Any], fixture_difficulty: float
@@ -136,11 +159,12 @@ class TeamAnalysisService:
         self, position_id: int, exclude_ids: List[int], limit: int = 5
     ) -> List[Dict[str, Any]]:
         """Return a list of candidate players (dicts) for a given position"""
+        excluded = set(exclude_ids)
         players = [
             p
             for p in self.elements
             if p.get("element_type") == position_id
-            and p.get("id") not in set(exclude_ids)
+            and p.get("id") not in excluded
             and (p.get("minutes", 0) > 0)
         ]
         candidates = []
@@ -202,6 +226,9 @@ class TeamAnalysisService:
             )
 
         for position_id, players in position_groups.items():
+            alternatives = self.get_top_alternatives_by_position(
+                position_id, current_player_ids, limit=10
+            )
             for pinfo in players:
                 player = pinfo["player"]
                 fixture_difficulty = self.calculate_fixture_difficulty(
@@ -211,9 +238,6 @@ class TeamAnalysisService:
                     player, fixture_difficulty
                 )
 
-                alternatives = self.get_top_alternatives_by_position(
-                    position_id, current_player_ids, limit=10
-                )
                 # pick alts that beat current by a margin (tunable)
                 significant_alts = [
                     alt
@@ -266,10 +290,19 @@ class TeamAnalysisService:
                 continue
             if self._safe_float(player.get("form", 0)) < 3.0:
                 continue
+            upcoming = [
+                fixture
+                for fixture in self.fixtures
+                if fixture.get("event") == self.decision_gw
+                and player["team"] in (fixture.get("team_h"), fixture.get("team_a"))
+                and not fixture.get("finished")
+            ]
+            if not self.decision_gw or not upcoming:
+                continue
             fd = self.calculate_fixture_difficulty(player["team"], next_fixtures=1)
-            expected = (
-                self.calculate_expected_points(player, fd) / 5.0
-            )  # single gw proxy
+            expected = (self.calculate_expected_points(player, fd) / 5.0) * len(
+                upcoming
+            )
             candidates.append(
                 {
                     "id": player["id"],
@@ -376,7 +409,11 @@ class TeamAnalysisService:
             "overall_rank": team_info.get("summary_overall_rank", 0),
             "squad_value": float(team_picks.get("entry_history", {}).get("value", 0))
             / 10.0,
-            "bank": float(team_picks.get("entry_history", {}).get("bank", 0)) / 10.0,
+            "bank": (
+                float(team_picks["entry_history"]["bank"]) / 10.0
+                if team_picks.get("entry_history", {}).get("bank") is not None
+                else None
+            ),
             "total_transfers": team_info.get("summary_total_transfers", 0),
             "average_player_points": squad_analysis.get("avg_player_points"),
             "top_performer": top_performer,
@@ -570,117 +607,178 @@ class TeamAnalysisService:
 
         return advantages, insights
 
-    @staticmethod
-    def get_cache_key(fpl_team_id: int, gw: Optional[int] = None) -> str:
-        if gw:
-            return f"tactical_analysis_{fpl_team_id}_gw{gw}"
-        return f"tactical_analysis_{fpl_team_id}_latest"
+    def analysis_cache_key(self, team, context, free_transfers=None):
+        keys = ["context", "players"] + [
+            f"{kind}:{team.id}" for kind in ("profile", "history", "transfers")
+        ]
+        versions = list(
+            SyncState.objects.filter(key__in=keys)
+            .order_by("key")
+            .values_list("key", "last_success_at")
+        )
+        squad_version = team.squad_histories.filter(
+            season=context["season"], gameweek=context["scoring_gameweek"]
+        ).aggregate(latest=Max("updated_at"))["latest"]
+        stamp = (
+            context["season"],
+            context["scoring_gameweek"],
+            context["decision_gameweek"],
+            versions,
+            squad_version,
+            team.bank,
+            team.current_total_points,
+            free_transfers,
+        )
+        digest = hashlib.sha256(repr(stamp).encode()).hexdigest()[:24]
+        return f"tactical_v3_{team.fpl_team_id}_{digest}"
 
-    def get_cached_analysis(self, fpl_team_id: int) -> Optional[Dict[str, Any]]:
-        """Retrieve cached analysis if available."""
-        gw = self.current_gw or self.api.fetch_current_gameweek()
-        cached = cache.get(self.get_cache_key(fpl_team_id, gw))
-        if cached and not cached.get("error"):
-            return cached
-        cached_latest = cache.get(self.get_cache_key(fpl_team_id))
-        if cached_latest and not cached_latest.get("error"):
-            return cached_latest
-        return None
+    def get_cached_analysis(
+        self, fpl_team_id, include_team_obj=None, free_transfers=None
+    ):
+        context = GameweekContextService.cached()
+        team = (
+            include_team_obj
+            or Team.objects.filter(fpl_team_id=str(fpl_team_id)).first()
+        )
+        if (
+            not team
+            or context["stale"]
+            or not context["scoring_gameweek"]
+            or not context["decision_gameweek"]
+        ):
+            return None
+        return cache.get(self.analysis_cache_key(team, context, free_transfers))
 
-    # ---------- Public endpoints ----------
     def analyze_team(
         self,
-        fpl_team_id: int,
-        include_team_obj: Optional[Team] = None,
-        force_refresh: bool = False,
-    ) -> Dict[str, Any]:
-        """
-        Main entry to analyze a team. Returns a serializable dict with:
-          - team_summary, transfer_recommendations, captain_suggestions, budget_insights, analysis_timestamp
-        Results are cached to avoid redundant computation across page refreshes.
-        """
-        self.ensure_data()
-        gw = self.current_gw or self.api.fetch_current_gameweek()
-        cache_key_gw = self.get_cache_key(fpl_team_id, gw)
-        cache_key_latest = self.get_cache_key(fpl_team_id)
-
+        fpl_team_id,
+        include_team_obj=None,
+        force_refresh=False,
+        free_transfers=None,
+    ):
+        context = GameweekContextService.cached()
+        team = (
+            include_team_obj
+            or Team.objects.filter(fpl_team_id=str(fpl_team_id)).first()
+        )
+        if context["stale"] or not team or team.current_season != context["season"]:
+            return {
+                "error": "Your briefing is temporarily unavailable. Please try again shortly."
+            }
+        if not context["scoring_gameweek"]:
+            return {
+                "error": "Your briefing will be available after your first gameweek deadline."
+            }
+        if not context["decision_gameweek"]:
+            return {"error": "There is no upcoming gameweek to prepare for yet."}
+        key = self.analysis_cache_key(team, context, free_transfers)
         if not force_refresh:
-            cached = cache.get(cache_key_gw) or cache.get(cache_key_latest)
-            if cached and not cached.get("error"):
+            cached = cache.get(key)
+            if cached:
                 return cached
-
         try:
-            team_picks = self.api.fetch_team_picks(fpl_team_id, gw)
-            if not team_picks:
-                return {"error": "Team picks not found"}
-
-            current_squad = team_picks.get("picks", [])
-            transfer_recs = self.analyze_transfer_priorities(current_squad)
-            captain_suggestions = self.get_captain_suggestions(current_squad)
-            squad_analysis = self.analyze_squad_metrics(current_squad)
-            team_info = self.api.fetch_team_basic_info(int(fpl_team_id)) or {}
-
-            team_summary = self.create_team_summary(
-                team_info, team_picks, squad_analysis
-            )
-
-            if include_team_obj:
-                team_summary["django_team"] = {
-                    "id": include_team_obj.id,
-                    "manager_name": include_team_obj.manager_name,
-                    "last_synced": (
-                        include_team_obj.last_synced_at.isoformat()
-                        if include_team_obj.last_synced_at
-                        else None
-                    ),
-                    "bank": include_team_obj.bank_in_millions,
+            self.api.TIMEOUT = 4
+            self.ensure_data()
+            actual = GameweekContextService.derive(self.events)
+            if (
+                actual["season"],
+                actual["scoring_gameweek"],
+                actual["decision_gameweek"],
+            ) != (
+                context["season"],
+                context["scoring_gameweek"],
+                context["decision_gameweek"],
+            ):
+                return {
+                    "error": "The next gameweek details are updating. Please try again shortly."
                 }
-
-            budget = float(team_summary.get("bank", 0))
-            free_transfers = team_info.get("entry_history", {}).get(
-                "event_transfers_cost", 1
+            gw = context["scoring_gameweek"]
+            squad_rows = list(
+                team.squad_histories.filter(
+                    season=context["season"], gameweek=gw
+                ).order_by("position")
             )
-            budget_insights = []
-            if budget >= 5:
-                budget_insights.append(
-                    f"Strong budget position (£{budget:.1f}M) allows premium upgrades"
+            if len(squad_rows) == 15:
+                team_picks = {
+                    "picks": [
+                        {
+                            "element": row.player_fpl_id,
+                            "position": row.position,
+                            "multiplier": row.multiplier,
+                            "is_captain": row.is_captain,
+                            "is_vice_captain": row.is_vice_captain,
+                        }
+                        for row in squad_rows
+                    ],
+                    "entry_history": {
+                        "bank": (
+                            team.bank
+                            if team.gameweek_data.filter(
+                                season=context["season"], gameweek=gw
+                            ).exists()
+                            else None
+                        ),
+                        "value": team.value,
+                    },
+                }
+            else:
+                team_picks = self.api.fetch_team_picks(fpl_team_id, gw)
+            if not team_picks or len(team_picks.get("picks", [])) != 15:
+                return {
+                    "error": "Your full squad is currently unavailable. Please try again."
+                }
+            current_squad = team_picks["picks"]
+            if not {pick["element"] for pick in current_squad}.issubset(
+                {p["id"] for p in self.elements}
+            ):
+                return {
+                    "error": "Some player details are updating. Please try again shortly."
+                }
+            team_info = {
+                "id": fpl_team_id,
+                "name": team.team_name,
+                "summary_overall_points": team.current_total_points,
+                "summary_event_points": team.current_event_points,
+                "summary_overall_rank": team.current_overall_rank,
+                "summary_total_transfers": team.total_transfers,
+            }
+            summary = self.create_team_summary(
+                team_info, team_picks, self.analyze_squad_metrics(current_squad)
+            )
+            budget_insights = [
+                (
+                    f"£{summary['bank']:.1f}m last reported bank. Check your current balance before making a move."
+                    if summary["bank"] is not None
+                    else "Check your current FPL balance before making a move."
                 )
-            elif budget >= 2:
+            ]
+            if free_transfers is None:
                 budget_insights.append(
-                    f"Decent budget (£{budget:.1f}M) for mid-range improvements"
+                    "Enter your available free transfers to help review your next move."
                 )
             else:
                 budget_insights.append(
-                    f"Tight budget (£{budget:.1f}M) - consider generating funds first"
+                    f"You entered {free_transfers} free transfers for GW{context['decision_gameweek']}."
                 )
-
-            if free_transfers >= 2:
-                budget_insights.append(
-                    f"Multiple free transfers ({free_transfers}) available"
-                )
-            elif free_transfers == 1:
-                budget_insights.append("One free transfer - choose wisely")
-            else:
-                budget_insights.append("No free transfers - changes will cost points")
-
             result = {
                 "team_id": fpl_team_id,
-                "team_summary": team_summary,
+                "team_summary": summary,
+                "season": context["season"],
                 "current_gameweek": gw,
-                "transfer_recommendations": transfer_recs,
-                "captain_suggestions": captain_suggestions,
+                "decision_gameweek": context["decision_gameweek"],
+                "free_transfers": free_transfers,
+                "transfer_recommendations": self.analyze_transfer_priorities(
+                    current_squad
+                ),
+                "captain_suggestions": self.get_captain_suggestions(current_squad),
                 "budget_insights": budget_insights,
-                "analysis_timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "analysis_timestamp": timezone.now().strftime("%Y-%m-%d %H:%M %Z"),
             }
-
-            # Cache analysis for 12 hours (43200 seconds)
-            cache.set(cache_key_gw, result, 43200)
-            cache.set(cache_key_latest, result, 43200)
-
+            cache.set(key, result, 120)
             return result
-        except Exception as e:
-            logger.exception("Analyze team failed: %s", e)
-            return {"error": str(e)}
+        except Exception:
+            logger.exception("Analyze team failed for %s", fpl_team_id)
+            return {"error": "We couldn't prepare your briefing. Please try again."}
 
     def get_captain_projection(
         self, squad_picks: List[Dict[str, Any]]
@@ -700,9 +798,11 @@ class TeamAnalysisService:
 
     def calculate_momentum(self, team_model: Team, last_n: int = 5) -> Dict[str, Any]:
         """Calculate momentum from last N gameweeks."""
-        recent_gws = team_model.gameweek_data.order_by("-gameweek")[
-            :last_n
-        ].values_list("points", flat=True)
+        recent_gws = (
+            team_model.gameweek_data.filter(season=team_model.current_season)
+            .order_by("-gameweek")[:last_n]
+            .values_list("points", flat=True)
+        )
         points_list = list(recent_gws)
         if not points_list:
             return {"average": 0.0, "trend": "neutral", "points": []}
@@ -802,7 +902,11 @@ class TeamAnalysisService:
         self, team_id: int, next_fixtures: int = 5
     ) -> List[Dict[str, Any]]:
         """Get upcoming fixture schedule with difficulty ratings."""
-        fixtures = [f for f in self.fixtures if not f.get("finished")]
+        fixtures = [
+            f
+            for f in self.fixtures
+            if not f.get("finished") and f.get("event") is not None
+        ]
         team_fixtures = []
         for fx in fixtures:
             event = fx.get("event")
@@ -839,9 +943,12 @@ class TeamAnalysisService:
         rival_team_model: Optional[Team] = None,
     ) -> Dict[str, Any]:
         """Lightweight comparison for quick panel display."""
-        self.ensure_data()
         try:
-            gw = self.current_gw or self.api.fetch_current_gameweek()
+            self.api.TIMEOUT = 4
+            self.ensure_data()
+            gw = self.current_gw
+            if not gw:
+                return {"error": "Lineups are not available for comparison yet."}
             my_picks = self.api.fetch_team_picks(my_fpl_team_id, gw)
             rival_picks = self.api.fetch_team_picks(rival_fpl_team_id, gw)
 
@@ -898,15 +1005,9 @@ class TeamAnalysisService:
             )
             momentum_diff = my_momentum["average"] - rival_momentum["average"]
 
-            # Transfer pressure (simplified - check free transfers)
-            my_info = self.api.fetch_team_basic_info(my_fpl_team_id) or {}
-            rival_info = self.api.fetch_team_basic_info(rival_fpl_team_id) or {}
-            my_free_transfers = my_info.get("entry_history", {}).get(
-                "event_transfers_cost", 0
-            )
-            rival_free_transfers = rival_info.get("entry_history", {}).get(
-                "event_transfers_cost", 0
-            )
+            # Available free transfers are private team information.
+            my_free_transfers = None
+            rival_free_transfers = None
 
             return {
                 "expected_points": {
@@ -938,7 +1039,9 @@ class TeamAnalysisService:
             }
         except Exception as e:
             logger.exception("Quick compare failed: %s", e)
-            return {"error": str(e)}
+            return {
+                "error": "This comparison is temporarily unavailable. Please try again."
+            }
 
     def compare_teams(
         self,
@@ -949,9 +1052,12 @@ class TeamAnalysisService:
         """
         Compare two teams and produce comprehensive comparison dict.
         """
-        self.ensure_data()
         try:
-            gw = self.current_gw or self.api.fetch_current_gameweek()
+            self.api.TIMEOUT = 4
+            self.ensure_data()
+            gw = self.current_gw
+            if not gw:
+                return {"error": "Lineups are not available for comparison yet."}
             my_picks = self.api.fetch_team_picks(my_fpl_team_id, gw)
             rival_picks = self.api.fetch_team_picks(rival_fpl_team_id, gw)
 
@@ -1076,4 +1182,6 @@ class TeamAnalysisService:
             }
         except Exception as e:
             logger.exception("Compare teams failed: %s", e)
-            return {"error": str(e)}
+            return {
+                "error": "This comparison is temporarily unavailable. Please try again."
+            }

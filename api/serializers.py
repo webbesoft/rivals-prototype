@@ -207,6 +207,7 @@ class SquadHistorySerializer(serializers.ModelSerializer):
             "expected_assists",
             "selected_by_percent",
             "total_points_at_time",
+            "gameweek_points",
         ]
 
 

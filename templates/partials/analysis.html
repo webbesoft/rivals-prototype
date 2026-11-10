@@ -1,8 +1,9 @@
 <div class="app-panel bg-white border border-gray-200 shadow-sm p-6 sm:p-8">
   {% if analysis.error %}
   <div class="border-l-4 border-danger bg-danger/5 p-4 text-xs tabular-nums text-danger">
-    <span class="font-bold uppercase tracking-wider block mb-1">Analysis Failed</span>
+    <span class="font-bold uppercase tracking-wider block mb-1">Briefing unavailable</span>
     <span>{{ analysis.error }}</span>
+    <a href="{% url 'rivals:teams.show' team.id %}" class="block mt-3 underline">Reload squad</a>
   </div>
   {% else %}
   <div class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-200 pb-5">
@@ -12,7 +13,7 @@
         <h3 class="app-section-title text-lg font-black text-text-main uppercase tracking-tight font-sans">The squad briefing</h3>
       </div>
       <p class="text-[11px] tabular-nums font-bold text-muted uppercase tracking-widest">
-        Gameweek {{ analysis.current_gameweek }} Squad briefing
+        Preparing for GW{{ analysis.decision_gameweek }}
       </p>
     </div>
     <div class="text-right tabular-nums text-xs">
@@ -20,19 +21,20 @@
       <div class="text-text-main mt-0.5">
         <span class="font-bold text-pitch">{{ analysis.team_summary.total_points }} pts</span>
         <span class="text-gray-300 mx-1.5">|</span>
-        <span class="font-bold">£{{ analysis.team_summary.bank }}m</span> Bank
+        {% if analysis.team_summary.bank != None %}<span class="font-bold">£{{ analysis.team_summary.bank }}m</span> Last known bank{% else %}Bank not confirmed{% endif %}
       </div>
     </div>
   </div>
 
+  <p class="mb-5 text-xs text-gray-600">Based on your GW{{ analysis.current_gameweek }} squad. Review any changes you've made since then. Check selling prices, points hits and team limits before making a move.</p>
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
     <!-- Recommendations -->
     <div>
       <div class="flex items-center justify-between mb-4 pb-2 border-b border-gray-100">
         <h4 class="tabular-nums font-bold text-text-main uppercase tracking-wider text-xs flex items-center gap-2">
-          <span class="text-pitch font-black">#</span> Recommended Transfer Targets
+          <span class="text-pitch font-black">#</span> Transfer ideas
         </h4>
-        <span class="text-[10px] tabular-nums text-gray-400">High priority moves</span>
+        <span class="text-[10px] tabular-nums text-gray-400">Review before deciding</span>
       </div>
 
       {% if analysis.transfer_recommendations %}
@@ -67,7 +69,7 @@
       </ul>
       {% else %}
       <div class="p-6 bg-gray-50 border border-gray-200 text-center tabular-nums text-xs text-gray-500">
-        No immediate transfer actions recommended. Your squad is set for the upcoming fixtures.
+        No transfer ideas found from the available information.
       </div>
       {% endif %}
     </div>
@@ -78,7 +80,7 @@
       <div>
         <div class="flex items-center justify-between mb-4 pb-2 border-b border-gray-100">
           <h4 class="tabular-nums font-bold text-text-main uppercase tracking-wider text-xs flex items-center gap-2">
-            <span class="text-pitch font-black">©</span> Optimal Captaincy Options
+            <span class="text-pitch font-black">©</span> Captaincy options
           </h4>
           <span class="text-[10px] tabular-nums text-gray-400">Model projections</span>
         </div>

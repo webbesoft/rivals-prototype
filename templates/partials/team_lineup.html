@@ -1,0 +1,35 @@
+<form method="GET" action="{% url 'rivals:teams.lineup' team.id %}"
+      hx-get="{% url 'rivals:teams.lineup' team.id %}" hx-trigger="submit, change, every 120s"
+      hx-target="#squad-history-panel" hx-swap="innerHTML" hx-request='{"timeout":18000}'
+      hx-sync="closest [data-remote-panel]:replace" class="flex flex-wrap items-end gap-3 mb-5 text-xs">
+  <label>Season
+    <select name="season" class="border border-gray-300 p-2" onchange="this.form.elements.gameweek.value = '';">
+      {% for season in squad_selection.seasons %}<option value="{{ season }}" {% if season == squad_selection.season %}selected{% endif %}>{{ season }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>Gameweek
+    <select name="gameweek" class="border border-gray-300 p-2">
+      <option value="">Latest</option>
+      {% for gw in squad_selection.available_gameweeks %}<option value="{{ gw }}" {% if gw == squad_selection.gameweek %}selected{% endif %}>GW{{ gw }}</option>{% endfor %}
+    </select>
+  </label>
+  <button type="submit" class="border border-gray-300 px-3 py-2 text-pitch">View lineup</button>
+</form>
+{% if lineup_error %}<p role="status" class="mb-4 text-xs text-gray-600">{{ lineup_error }}</p>{% endif %}
+{% if squad %}
+<div class="mb-3 text-sm font-bold">{{ squad_selection.season }} · GW{{ squad_selection.gameweek }} · Formation {{ formation }}
+  {% if squad_points != None %}<span class="ml-3">Squad points: {{ squad_points }}</span>{% endif %}
+</div>
+<p class="mb-4 text-xs text-gray-500">Player points are for this gameweek. Multipliers show which returns count towards your score.</p>
+<h4 class="mb-3 text-sm font-bold">Starting XI</h4>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+{% for player in squad %}
+  {% if player.position == 12 %}<h4 class="col-span-full mt-4 text-sm font-bold">Bench</h4>{% endif %}
+  <div class="app-player-card p-3 border border-gray-200 {% if player.position > 11 %}bg-gray-50{% else %}bg-white{% endif %}">
+    <span class="text-xs text-gray-500">{{ player.position_type }}{% if player.is_captain %} · Captain{% elif player.is_vice_captain %} · Vice captain{% endif %}</span>
+    <p class="font-bold text-sm">{{ player.player_name }}</p>
+    <p class="text-xs tabular-nums">{{ player.gameweek_points|default_if_none:"—" }} pts · ×{{ player.multiplier }}</p>
+  </div>
+{% endfor %}
+</div>
+{% elif not lineup_error %}<p class="text-xs text-gray-500">Choose a gameweek to view the lineup. Lineups become available after the deadline.</p>{% endif %}

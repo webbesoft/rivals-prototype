@@ -68,11 +68,15 @@ class ProjectionsView(views.APIView):
         plan_id = request.query_params.get("plan_id")
 
         service = TeamAnalysisService()
-        service.ensure_data()
-
         # Get base squad
         try:
+            service.ensure_data()
             gw = service.current_gw
+            if gw is None:
+                return Response(
+                    {"error": "Your lineup is not available yet."},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
             team_picks = service.api.fetch_team_picks(team_id, gw)
             if not team_picks:
                 return Response(

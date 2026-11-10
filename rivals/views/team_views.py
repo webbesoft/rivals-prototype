@@ -6,10 +6,13 @@ from django.utils import timezone
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_http_methods, require_POST
 
-from rivals.models import Player, Team
+from rivals.forms import PlanningInputForm
+from rivals.models import Player, Team, TeamPlanningInput
+from rivals.services.gameweek_context_service import GameweekContextService
 from rivals.services.projection_service import ProjectionService
 from rivals.services.refresh_service import enqueue_team, refresh_status
 from rivals.services.score_summary_service import ScoreSummaryService
+from rivals.services.squad_history_service import SquadHistoryService
 from rivals.services.team_analysis_service import TeamAnalysisService
 from rivals.services.team_sync_service import TeamSyncService
 
@@ -44,10 +47,12 @@ def team_show(request, team_id):
     season_histories = team.season_histories.all()
     projection = ProjectionService().project_team_finish(team)
 
+    selection = SquadHistoryService(team).selection()
+    planning_form, free_transfers = planning_input(request, team)
     tactical_analysis = None
     if request.user.team_id == team.id:
         tactical_analysis = TeamAnalysisService().get_cached_analysis(
-            int(team.fpl_team_id)
+            int(team.fpl_team_id), include_team_obj=team, free_transfers=free_transfers
         )
 
     return render(
@@ -63,6 +68,10 @@ def team_show(request, team_id):
             "season_histories": season_histories,
             "projection": projection,
             "tactical_analysis": tactical_analysis,
+            "squad_selection": selection,
+            "planning_form": planning_form,
+            "planning_gameweek": GameweekContextService.cached()["decision_gameweek"],
+            "planning_season": GameweekContextService.cached()["season"],
             "score_summary": ScoreSummaryService(team).cached(),
         },
     )
@@ -185,11 +194,43 @@ def get_recent_player_news(transfers):
     )
 
 
+def planning_input(request, team):
+    context = GameweekContextService.cached()
+    saved = TeamPlanningInput.objects.filter(
+        user=request.user,
+        team=team,
+        season=context["season"],
+        gameweek=context["decision_gameweek"],
+    ).first()
+    value = saved.free_transfers if saved else None
+    form = PlanningInputForm(
+        request.POST if request.method == "POST" else None,
+        initial={"free_transfers": value},
+    )
+    return form, value
+
+
 @login_required
+@require_http_methods(["GET"])
+@never_cache
 def get_squad_history(request, team_id, gameweek):
     team = get_object_or_404(Team, id=team_id)
-    squad = team.squad_histories.filter(gameweek=gameweek).order_by("position")
+    service = SquadHistoryService(team)
+    try:
+        selected = service.selection(request.GET.get("season"), gameweek)
+    except ValueError as error:
+        return JsonResponse({"error": str(error)}, status=400)
+    try:
+        rows, error = service.load(selected["season"], selected["gameweek"])
+    except Exception:
+        import logging
 
+        logging.getLogger(__name__).exception("Squad unavailable for team %s", team.pk)
+        return JsonResponse(
+            {"error": "We couldn't load this lineup. Please try again."}, status=503
+        )
+    if not rows and error:
+        return JsonResponse({"error": error}, status=503)
     data = [
         {
             "player_fpl_id": p.player_fpl_id,
@@ -203,25 +244,130 @@ def get_squad_history(request, team_id, gameweek):
             "expected_goals": p.expected_goals,
             "expected_assists": p.expected_assists,
             "selected_by_percent": p.selected_by_percent,
+            "gameweek_points": p.gameweek_points,
             "total_points_at_time": p.total_points_at_time,
             "multiplier": p.multiplier,
         }
-        for p in squad
+        for p in rows
     ]
-
     return JsonResponse(data, safe=False)
 
 
-@require_http_methods(["GET"])
 @login_required
-def team_analysis(request, team_id):
+@require_http_methods(["GET"])
+@never_cache
+def team_lineup(request, team_id):
     team = get_object_or_404(Team, id=team_id)
-    force_refresh = request.GET.get("refresh") == "1"
-    analysis_service = TeamAnalysisService()
-    result = analysis_service.analyze_team(
-        int(team.fpl_team_id), include_team_obj=team, force_refresh=force_refresh
+    service = SquadHistoryService(team)
+    try:
+        selected = service.selection(
+            request.GET.get("season"), request.GET.get("gameweek")
+        )
+    except ValueError as error:
+        selected = service.selection()
+        return render(
+            request,
+            "partials/team_lineup.html",
+            {"team": team, "squad_selection": selected, "lineup_error": str(error)},
+        )
+    try:
+        rows, error = service.load(selected["season"], selected["gameweek"])
+    except Exception:
+        import logging
+
+        logging.getLogger(__name__).exception("Lineup unavailable for team %s", team.pk)
+        rows, error = [], "We couldn't load this lineup. Please try again."
+    total = (
+        sum(p.gameweek_points * p.multiplier for p in rows)
+        if len(rows) == 15 and all(p.gameweek_points is not None for p in rows)
+        else None
+    )
+    return render(
+        request,
+        "partials/team_lineup.html",
+        {
+            "team": team,
+            "squad_selection": selected,
+            "squad": rows,
+            "lineup_error": error,
+            "squad_points": total,
+            "formation": (
+                "-".join(
+                    str(
+                        sum(
+                            p.position <= 11 and p.element_type == position
+                            for p in rows
+                        )
+                    )
+                    for position in (2, 3, 4)
+                )
+                if rows
+                else None
+            ),
+        },
     )
 
+
+@require_http_methods(["GET", "POST"])
+@login_required
+@never_cache
+def team_analysis(request, team_id):
+    team = get_object_or_404(Team, id=team_id)
+    if request.user.team_id != team.id:
+        return JsonResponse(
+            {"error": "Open your own squad to prepare a briefing."}, status=403
+        )
+    form, free_transfers = planning_input(request, team)
+    context = GameweekContextService.cached()
+    if request.method == "POST":
+        if not form.is_valid():
+            return render(
+                request,
+                "partials/analysis.html",
+                {
+                    "team": team,
+                    "analysis": {
+                        "error": "Enter a free-transfer count between 0 and 5, or leave it blank."
+                    },
+                },
+            )
+        if not context["season"] or not context["decision_gameweek"]:
+            return render(
+                request,
+                "partials/analysis.html",
+                {
+                    "team": team,
+                    "analysis": {
+                        "error": "The next gameweek is currently unavailable."
+                    },
+                },
+            )
+        if request.POST.get("season") != context["season"] or request.POST.get(
+            "gameweek"
+        ) != str(context["decision_gameweek"]):
+            return render(
+                request,
+                "partials/analysis.html",
+                {
+                    "team": team,
+                    "analysis": {
+                        "error": "The next gameweek has changed. Reload your squad before preparing a new briefing."
+                    },
+                },
+            )
+        free_transfers = form.cleaned_data["free_transfers"]
+        TeamPlanningInput.objects.update_or_create(
+            user=request.user,
+            team=team,
+            season=context["season"],
+            gameweek=context["decision_gameweek"],
+            defaults={"free_transfers": free_transfers},
+        )
+    result = TeamAnalysisService().analyze_team(
+        int(team.fpl_team_id),
+        include_team_obj=team,
+        free_transfers=free_transfers,
+    )
     return render(request, "partials/analysis.html", {"analysis": result, "team": team})
 
 

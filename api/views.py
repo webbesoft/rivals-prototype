@@ -327,33 +327,24 @@ class TeamSquadView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        gameweek = request.query_params.get("gameweek")
+        from rivals.services.squad_history_service import SquadHistoryService
 
-        if gameweek:
-            squad = team.squad_histories.filter(gameweek=int(gameweek)).order_by(
-                "position"
+        service = SquadHistoryService(team)
+        try:
+            selected = service.selection(
+                request.query_params.get("season"), request.query_params.get("gameweek")
             )
-        else:
-            # Get the latest gameweek
-            latest_gw = (
-                team.squad_histories.values_list("gameweek", flat=True)
-                .distinct()
-                .order_by("-gameweek")
-                .first()
-            )
-            if latest_gw:
-                squad = team.squad_histories.filter(gameweek=latest_gw).order_by(
-                    "position"
-                )
-            else:
-                squad = []
-
-        serializer = SquadHistorySerializer(squad, many=True)
+        except ValueError as error:
+            return Response({"error": str(error)}, status=status.HTTP_400_BAD_REQUEST)
+        squad = team.squad_histories.filter(
+            season=selected["season"], gameweek=selected["gameweek"]
+        ).order_by("position")
         return Response(
             {
-                "gameweek": gameweek or latest_gw,
-                "available_gameweeks": team.get_available_gameweeks(),
-                "squad": serializer.data,
+                "season": selected["season"],
+                "gameweek": selected["gameweek"],
+                "available_gameweeks": selected["available_gameweeks"],
+                "squad": SquadHistorySerializer(squad, many=True).data,
             }
         )
 

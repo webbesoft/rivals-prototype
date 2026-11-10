@@ -24,7 +24,7 @@ uv run python manage.py fpl_worker
 
 The worker intentionally consumes tasks serially, with a fifteen-minute abandoned-lock timeout, for this shared SQLite deployment. SQLite write transactions use IMMEDIATE mode and a twenty-second busy timeout to avoid read-to-write lock upgrades. Neither the refresh scheduler nor freshness displays depend on a shared in-memory cache. Score snapshots still benefit from a shared cache when using multiple web processes.
 
-The first dispatcher run queues event context. Once context is available, later runs (every minute) schedule players and active users' teams, tracked rivals, and subscribed active leagues. Opening a dashboard can also queue due resources immediately. Routine ingestion imports gameweek results without fetching every historical squad. The squad carousel and tactical-analysis flow are separate work in Epoch 3.
+The first dispatcher run queues event context. Once context is available, later runs (every minute) schedule players and active users' teams, tracked rivals, and subscribed active leagues. Opening a dashboard can also queue due resources immediately. Routine ingestion imports gameweek results without fetching every historical squad. Squad lineups now load one gameweek on demand; tactical briefings use a separate, short-lived cache. See Epoch 3 in the [delivery roadmap](epochs.md) for their behaviour and validation.
 
 ## Refresh policy and failure behaviour
 

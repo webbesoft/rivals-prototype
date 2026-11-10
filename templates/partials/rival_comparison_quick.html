@@ -155,14 +155,14 @@
         <div>
           <div class="text-xs text-muted">You</div>
           <div class="text-lg font-black {% if comparison.transfers.mine_free >= 2 %}text-accent{% else %}text-text-main{% endif %}">
-            {{ comparison.transfers.mine_free }}
+            {{ comparison.transfers.mine_free|default_if_none:"Not confirmed" }}
           </div>
         </div>
         <div class="text-gray-400">vs</div>
         <div class="text-right">
           <div class="text-xs text-muted">Rival</div>
           <div class="text-lg font-black {% if comparison.transfers.rival_free >= 2 %}text-danger{% else %}text-text-main{% endif %}">
-            {{ comparison.transfers.rival_free }}
+            {{ comparison.transfers.rival_free|default_if_none:"Unknown" }}
           </div>
         </div>
       </div>

@@ -20,16 +20,21 @@ Limits: caches default to process-local memory without REDIS_URL. A shared produ
 
 Validation: automated tests cover deadline rollover, preseason/outages, duplicate jobs and locked dispatcher restarts, expired lease recovery, retry backoff, season-safe imports, transfer batches, pagination/filter preservation, and access controls. A local synthetic dashboard request measured 82.6 ms with zero upstream requests; squad, league, status, and intel requests also assert zero upstream requests. This is a local fixture measurement, not a production latency claim. Previously, dashboard rendering could fetch the live season and synchronously sync rivals, while projections could make further FPL requests.
 
-See [background refresh operations](background-refresh.md) for local startup, deployment checks, and recovery. Squad carousel loading and tactical cache correctness remain Epoch 3 work.
+See [background refresh operations](background-refresh.md) for local startup, deployment checks, and recovery. Epoch 3 below addresses squad history and tactical briefings.
 
-## Epoch 3 — Fast, dependable squad and tactical views
+## Epoch 3 — Fast, dependable squad and tactical views (implemented)
 
-- Fix squad-history rendering and verify actual FPL picks payload fields. The current importer expects element_type in picks instead of deriving it from player metadata.
-- Fetch missing history on demand, reuse picks between import steps, and avoid re-fetching every completed week on routine syncs.
-- Scope history to a season; add bounded loading, empty, error, and retry states to the carousel and tactical panels.
-- Key tactical caches by season/gameweek/input freshness; do not return an older “latest” result as current advice.
-- Remove invented free-transfer counts: the current analysis reads a transfer-cost field as free transfers. Ask users for unavailable private information and label assumptions explicitly.
-- Measure first render, cold/warm analysis, and history navigation before and after.
+- Replaced the script-driven carousel with a season/gameweek picker and independently loaded lineup. Only the selected week is requested; the initial squad page still makes no FPL requests. Lineups use player metadata for position rather than assuming element_type exists in picks.
+- Player points now come from the event live endpoint, with a separate nullable gameweek_points field. Season totals are never shown as gameweek returns. Totals respect captain, bench-boost, and zero multipliers. Missing historical scores remain unknown rather than being invented.
+- Incomplete squad imports are repaired atomically; failed imports retain existing records. Full imports reuse each week's picks and skip complete records. On-demand current-season views refresh provisional scores until FPL marks the event finished and checked, then reuse final history. Archived seasons never query the current-season API.
+- Lineup and own-team briefing requests have eighteen-second client timeouts, visible loading/failure states, and retry controls. Superseded requests cannot overwrite the latest loading status. Inline comparisons have a twenty-two-second client timeout. Interactive FPL requests use four-second HTTP timeouts per request; a client timeout is not a global server execution deadline.
+- Tactical caches are checked before loading external data, expire after two minutes, and include season, scoring week, next decision week, successful input-refresh timestamps, squad version, and confirmed free transfers. Legacy “latest” cache entries are never used. Repeated fixture calculations and alternative rankings are reused within an analysis.
+- Free transfers are no longer inferred from transfer costs, including in rival comparisons. Managers can enter an optional count on their own squad. It is stored per manager, team, season, and upcoming gameweek; zero and unknown remain distinct. The form uses the currently documented [zero-to-five free-transfer range](https://www.premierleague.com/en/news/2174907). The next gameweek requires a new confirmation; a form left open across a deadline cannot silently apply the old count to the new week.
+- Briefings identify the upcoming decision week and the older squad they are based on. Unknown bank balances stay unknown, and the page prompts managers to check current balance, selling prices, point hits, and team limits. Captain options exclude players without a fixture in the decision week. Full transfer feasibility and multi-week optimisation remain Epoch 4.
+
+Validation: all 113 tests passed at this checkpoint. Regression coverage includes real-shaped picks without position metadata, partial imports, equal gameweeks across seasons, zero/negative points and multipliers, finalising provisional scores, outages, cache invalidation, input privacy/CSRF, and unknown/rolled-over gameweeks. Local fixture measurements: initial squad render 72.7 ms with zero upstream calls; warm lineup read 1.0 ms with zero calls; cold briefing computation 2.0 ms with three mocked upstream calls, warm briefing 0.5 ms with zero calls. An 800-player fixture produced a cold briefing in 3.1 ms with three mocked upstream calls. These numbers measure local code with fixtures, not real FPL response times. Previously, a cached briefing still loaded bootstrap/fixtures first, and the carousel had no request timeout and could receive an empty gameweek list.
+
+Apply the two new migrations when deploying. The existing worker continues routine ingestion; lineup requests fill historical squads on demand. New JavaScript is included by the existing static-assets collection step. No production deployment or live browser test was performed in this epoch; template integration tests and JavaScript loading/failure/supersession checks passed.
 
 ## Epoch 4 — A decision engine for mini-league advantage
 
