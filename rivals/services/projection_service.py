@@ -266,7 +266,14 @@ class ProjectionService:
         """
         context = GameweekContextService.cached()
         live_gw = current_gw or context["scoring_gameweek"]
-        cache_key = f"ml_projection_{mini_league.id}_{context['season']}_{live_gw}_{mini_league.last_synced_at}"
+        synced_at = (
+            mini_league.last_synced_at.isoformat()
+            if mini_league.last_synced_at
+            else "never"
+        )
+        cache_key = (
+            f"ml_projection_{mini_league.id}_{context['season']}_{live_gw}_{synced_at}"
+        )
         cached = cache.get(cache_key)
         if cached:
             return cached
