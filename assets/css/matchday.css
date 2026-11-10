@@ -321,6 +321,35 @@
   font-weight: 650;
 }
 .matchday-app .app-primary-button:hover { background: #286247; }
+.matchday-app :is(.app-primary-button, .app-secondary-button) {
+  max-width: 100%;
+  line-height: 1.35;
+  text-align: center;
+  text-decoration: none;
+}
+.matchday-app .app-secondary-button {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 650;
+}
+.matchday-app .app-secondary-button:hover {
+  border-color: var(--accent);
+  background: #e9efdf;
+}
+.matchday-app .app-secondary-button.app-button-danger { color: var(--danger); }
+.matchday-app .app-secondary-button.app-button-danger:hover {
+  border-color: var(--danger);
+  background: #f8ece6;
+}
 .app-auth-switch { border-top: 1px solid var(--rule); padding-top: 22px; margin-top: 24px; font-size: 12px; color: var(--soft-ink); }
 .app-auth-switch a { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; font-weight: 650; }
 .app-field-error { font-size: 12px; color: var(--danger); margin-top: 7px; }
@@ -403,3 +432,177 @@
 .matchday-app .app-content .tabular-nums { font-variant-numeric: tabular-nums; }
 .matchday-app .app-content .font-semibold { font-weight: 650; }
 .matchday-app .app-content > div > .border.bg-white { border-radius: 8px; }
+
+/* Squad history: a matchday team sheet on the pitch. */
+.lineup-controls label { display: grid; gap: 5px; color: var(--soft-ink); }
+.lineup-controls :is(select, button) { min-height: 44px; border-radius: 4px; background: var(--surface); }
+.lineup-summary { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; }
+.lineup-eyebrow { font-size: 11px; color: var(--soft-ink); letter-spacing: .06em; }
+.lineup-formation { display: flex; align-items: center; gap: 12px; margin-top: 4px; font-size: 18px; font-weight: 800; }
+.lineup-formation span { padding: 3px 8px; border: 1px solid var(--rule); border-radius: 3px; font-size: 12px; font-weight: 600; letter-spacing: .08em; }
+.lineup-total { padding: 8px 12px; background: var(--yellow); border-radius: 4px; font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.lineup-board { max-width: 760px; margin-inline: auto; overflow: hidden; border: 1px solid var(--rule); border-radius: 6px; }
+.lineup-pitch { position: relative; display: grid; gap: 18px; padding: 28px 12px; background: repeating-linear-gradient(180deg, #29583e 0%, #29583e 12.5%, #305f44 12.5%, #305f44 25%); }
+.lineup-markings { position: absolute; inset: 0; width: 100%; height: 100%; color: #e8eddb; opacity: .25; pointer-events: none; }
+.lineup-row { position: relative; display: flex; justify-content: center; gap: 8px; min-width: 0; }
+.lineup-player { position: relative; flex: 0 1 112px; min-width: 0; text-align: center; align-self: start; }
+.lineup-kit { position: relative; width: 48px; margin: 0 auto 5px; }
+.lineup-kit svg { display: block; width: 100%; height: auto; filter: drop-shadow(0 2px 1px #102b2466); }
+.lineup-shirt { fill: #fffbed; stroke: #d2d7be; stroke-width: 1.2; stroke-linejoin: round; }
+.lineup-shirt-trim { fill: none; stroke: #356b43; stroke-width: 3; }
+.lineup-shirt-crest { fill: #356b43; }
+.lineup-player--keeper .lineup-shirt { fill: #f0d66a; stroke: #d5b749; }
+.lineup-armband { position: absolute; top: 0; right: -8px; display: grid; place-items: center; width: 20px; height: 20px; border: 1px solid var(--ink); border-radius: 50%; background: var(--yellow); color: var(--ink); font-size: 11px; font-weight: 900; }
+.lineup-armband--vice { background: var(--surface); }
+.lineup-player-name { display: flex; justify-content: center; align-items: center; min-height: 34px; padding: 4px; background: var(--surface); color: var(--ink); border-radius: 3px 3px 0 0; font-size: 12px; line-height: 1.15; font-weight: 800; overflow-wrap: anywhere; }
+.lineup-player-points { padding: 4px 1px; background: #e4ead9; color: var(--ink); border-radius: 0 0 3px 3px; font-size: 11px; line-height: 1.3; font-weight: 600; font-variant-numeric: tabular-nums; }
+.lineup-bench { padding: 16px 12px 20px; background: #eeeee3; border-top: 3px solid var(--yellow); }
+.lineup-bench-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 12px; color: var(--soft-ink); font-size: 11px; }
+.lineup-bench-heading h4 { color: var(--ink); font-weight: 800; text-transform: uppercase; letter-spacing: .1em; }
+.lineup-bench-position { display: block; margin-bottom: 6px; color: var(--soft-ink); font-size: 10px; font-weight: 600; }
+.lineup-note { max-width: 760px; margin: 12px auto 0; color: var(--soft-ink); font-size: 11px; line-height: 1.6; }
+@media (max-width: 480px) {
+  #squad-history-panel { padding: 12px; }
+  .lineup-controls { gap: 8px; }
+  .lineup-pitch { gap: 18px; padding: 22px 6px; }
+  .lineup-row { gap: 4px; }
+  .lineup-kit { width: 36px; }
+  .lineup-player-name { min-height: 32px; padding: 4px 2px; font-size: 10px; }
+  .lineup-player-points { font-size: 10px; }
+  .lineup-bench { padding-inline: 6px; }
+  .lineup-armband { right: -5px; width: 17px; height: 17px; font-size: 10px; }
+}
+
+/* Reserve feedback space so changing gameweeks does not move the panel. */
+.lineup-status { min-height: 18px; }
+.lineup-status[hidden] { display: block; visibility: hidden; }
+.lineup-board { position: relative; }
+.lineup-player-name { height: 36px; overflow: hidden; }
+.lineup-player-points { line-height: 14px; white-space: nowrap; }
+.lineup-player-club { padding: 0 2px 4px; background: var(--surface); color: var(--soft-ink); font-size: 9px; line-height: 12px; font-weight: 700; letter-spacing: .08em; }
+.lineup-loading { position: absolute; inset: 0; z-index: 2; display: none; align-items: center; justify-content: center; gap: 10px; background: #f5f3ebed; color: var(--ink); font-size: 14px; font-weight: 800; }
+.lineup-panel[aria-busy="true"] .lineup-loading { display: flex; }
+.lineup-spinner { width: 20px; height: 20px; border: 2px solid var(--rule); border-top-color: var(--ink); border-radius: 50%; animation: lineup-spin .8s linear infinite; }
+@keyframes lineup-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .lineup-spinner { animation: none; }
+}
+@media (max-width: 480px) {
+  .lineup-player-points { font-size: clamp(8px, 2.4vw, 10px); }
+}
+
+/* The planner uses the same pitch, with local gameweek switching. */
+.planner-week-switcher { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.planner-week-toggle { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.planner-week-label { order: 0; display: grid; place-items: center; min-height: 44px; min-width: 56px; padding: 8px 12px; border: 1px solid var(--rule); border-radius: 4px; color: var(--ink); font-size: 12px; font-weight: 800; cursor: pointer; }
+.planner-week-toggle:checked + .planner-week-label { background: var(--ink); border-color: var(--ink); color: var(--surface); }
+.planner-week-toggle:focus-visible + .planner-week-label { outline: 3px solid #a4762d; outline-offset: 3px; }
+.planner-week-panel { display: none; order: 1; flex-basis: 100%; min-width: 0; margin-top: 8px; }
+.planner-week-toggle:checked + .planner-week-label + .planner-week-panel { display: block; }
+.planner-panel .lineup-summary { max-width: 760px; margin-inline: auto; }
+.planner-fixture { padding: 5px 2px; border-radius: 0 0 3px 3px; background: #e4ead9; color: var(--ink); font-size: 11px; line-height: 1.4; overflow-wrap: anywhere; }
+.planner-fixture--blank { background: #e7e5dc; color: var(--soft-ink); }
+.planner-estimate { margin-top: 2px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.planner-estimate span { font-weight: 500; }
+.planner-risk { margin-top: 4px; padding: 3px 1px; border-radius: 3px; background: var(--yellow); color: var(--ink); font-size: 10px; line-height: 1.3; font-weight: 800; }
+.planner-schedule-details { margin-top: 20px; border-top: 1px solid var(--rule); padding-top: 16px; font-size: 12px; }
+.planner-schedule-details > summary { cursor: pointer; font-weight: 700; min-height: 28px; }
+.planner-schedule-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 12px; margin-top: 16px; }
+.planner-schedule-card { min-width: 0; padding: 12px; border: 1px solid var(--rule); border-radius: 4px; }
+.planner-schedule-card h3 { font-weight: 800; margin-bottom: 8px; }
+.planner-schedule-card h3 span { display: block; color: var(--soft-ink); font-size: 10px; font-weight: 500; }
+.planner-schedule-card li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; padding-block: 6px; border-top: 1px solid var(--rule); }
+.planner-schedule-card > p { margin-bottom: 8px; }
+.planner-schedule-risk { color: var(--danger); }
+[data-remote-panel][aria-busy="true"] .planner-panel .lineup-loading { display: flex; }
+@media (max-width: 480px) {
+  .planner-panel { padding: 12px; }
+  .planner-fixture { font-size: 9px; }
+  .planner-risk { font-size: 9px; }
+  .planner-week-label { flex: 1 0 44px; min-width: 44px; padding-inline: 6px; }
+}
+
+/* Decision journal: saved moves and their fixed-lineup results. */
+.journal-page-heading, .journal-card-heading { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px; }
+.journal-planner-link { display: inline-flex; align-items: center; justify-content: center; gap: 16px; min-height: 44px; padding: 10px 16px; border: 1px solid var(--ink); border-radius: 4px; background: var(--ink); color: var(--surface); font-size: 12px; font-weight: 800; text-decoration: none; }
+.journal-overview { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 28px; }
+.journal-overview > div { padding: 16px; border-top: 2px solid var(--ink); background: #eeeee3; }
+.journal-overview dt { font-size: 11px; color: var(--soft-ink); }
+.journal-overview dd { margin-top: 6px; font-size: 30px; line-height: 1; font-weight: 800; font-variant-numeric: tabular-nums; }
+.journal-card { margin-bottom: 24px; overflow: hidden; }
+.journal-card-heading { padding: 18px 20px; border-bottom: 1px solid var(--rule); background: #eeeee3; }
+.journal-card-heading h2 { margin-top: 5px; font-size: 20px; font-weight: 800; }
+.journal-card-heading h2 span { font-size: 13px; font-weight: 500; }
+.journal-status { padding: 6px 10px; border: 1px solid var(--rule); border-radius: 20px; background: var(--surface); font-size: 11px; font-weight: 700; }
+.journal-status--acted { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.journal-status--held { background: var(--yellow); border-color: var(--yellow); }
+.journal-card-body { padding: 20px; }
+.journal-moves { display: grid; gap: 12px; margin-bottom: 22px; }
+.journal-transfer { display: grid; grid-template-columns: minmax(0, 1fr) 40px minmax(0, 1fr); align-items: center; }
+.journal-transfer > div { display: grid; gap: 5px; padding: 14px; border: 1px solid var(--rule); border-radius: 4px; min-width: 0; }
+.journal-transfer-in { background: #e9efdf; }
+.journal-transfer > div > span { text-transform: uppercase; letter-spacing: .12em; font-size: 10px; font-weight: 800; }
+.journal-transfer-out > span { color: var(--danger); }
+.journal-transfer strong { font-size: 17px; overflow-wrap: anywhere; }
+.journal-transfer small { color: var(--soft-ink); font-size: 10px; }
+.journal-transfer-arrow { text-align: center; font-size: 26px; color: var(--soft-ink); }
+.journal-hold { display: flex; align-items: center; gap: 16px; padding: 18px; border: 1px solid var(--rule); border-radius: 4px; background: #e9efdf; }
+.journal-hold-symbol { font-size: 38px; line-height: 1; }
+.journal-hold h3 { font-size: 18px; font-weight: 800; }
+.journal-hold p { margin-top: 4px; font-size: 12px; color: var(--soft-ink); }
+.journal-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding-block: 18px; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+.journal-metrics > div { min-width: 0; }
+.journal-metrics dt { color: var(--soft-ink); font-size: 11px; }
+.journal-metrics dd { margin-top: 8px; font-size: 30px; font-weight: 800; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.journal-metrics dd small { font-size: 11px; font-weight: 500; }
+.journal-metrics .journal-metric-detail { margin-top: 6px; font-size: 10px; font-weight: 400; color: var(--soft-ink); line-height: 1.5; }
+.journal-metrics .journal-metric-text { display: block; font-size: 16px; line-height: 1.4; }
+.journal-result { padding-left: 12px; border-left: 3px solid var(--yellow); }
+.journal-review { margin-top: 22px; }
+.journal-review-heading { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px; }
+.journal-review-heading h3 { font-size: 13px; font-weight: 800; }
+.journal-review-heading > span { color: var(--soft-ink); font-size: 10px; }
+.journal-timeline { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
+.journal-timeline li { display: flex; flex: 1 0 60px; justify-content: center; align-items: center; gap: 6px; padding: 10px 6px; border: 1px dashed var(--rule); border-radius: 3px; font-size: 11px; color: var(--soft-ink); }
+.journal-timeline li.is-reviewed { border: 1px solid var(--accent); background: #e9efdf; color: var(--ink); font-weight: 700; }
+.journal-chart-caption { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; margin-top: 20px; color: var(--soft-ink); font-size: 10px; }
+.journal-chart { margin-top: 10px; }
+.journal-chart-row { display: grid; grid-template-columns: 42px minmax(0, 1fr) 36px; gap: 10px; align-items: start; padding-block: 8px; }
+.journal-chart-week, .journal-chart-gain { font-size: 11px; line-height: 18px; font-variant-numeric: tabular-nums; }
+.journal-chart-gain { text-align: right; }
+.journal-delta-track { position: relative; height: 18px; border-radius: 3px; background: #eeeee3; }
+.journal-delta-track::after { content: ''; position: absolute; top: -2px; bottom: -2px; left: 50%; width: 1px; background: #8b998b; }
+.journal-delta-bar { position: absolute; top: 3px; bottom: 3px; left: 50%; background: var(--accent); border-radius: 2px; }
+.journal-delta-bar.is-negative { left: auto; right: 50%; background: #a45845; }
+.journal-delta-bar.is-zero { min-width: 4px; transform: translateX(-2px); background: var(--yellow); z-index: 1; }
+.journal-chart-scores { margin-top: 4px; color: var(--soft-ink); font-size: 10px; }
+.journal-awaiting { margin-top: 12px; padding: 16px; border: 1px dashed var(--rule); border-radius: 4px; color: var(--soft-ink); font-size: 12px; text-align: center; }
+.journal-review .lineup-note { max-width: none; }
+.journal-assumptions { margin-top: 18px; border-top: 1px solid var(--rule); padding-top: 14px; font-size: 11px; color: var(--soft-ink); }
+.journal-assumptions summary { min-height: 28px; cursor: pointer; font-weight: 700; }
+.journal-assumptions p { margin-top: 8px; line-height: 1.6; }
+.journal-choice { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 14px; }
+.journal-choice label { font-size: 11px; font-weight: 700; margin-right: 4px; }
+.journal-choice :is(select, button) { min-height: 44px; border: 1px solid var(--rule); border-radius: 4px; padding: 8px 10px; background: var(--surface); color: var(--ink); font-size: 11px; }
+.journal-choice button { font-weight: 800; }
+.journal-sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.journal-empty { padding: 40px 24px; text-align: center; }
+.journal-empty > span { display: inline-grid; place-items: center; width: 64px; height: 64px; margin-bottom: 16px; border-radius: 50%; background: var(--yellow); font-size: 32px; }
+.journal-empty h2 { font-size: 22px; font-weight: 800; }
+.journal-empty p { max-width: 380px; margin: 12px auto 20px; font-size: 13px; color: var(--soft-ink); }
+@media (max-width: 560px) {
+  .journal-overview { gap: 6px; }
+  .journal-overview > div { padding: 12px 8px; }
+  .journal-overview dt { min-height: 28px; font-size: 10px; }
+  .journal-card-heading, .journal-card-body { padding: 14px; }
+  .journal-transfer { grid-template-columns: minmax(0, 1fr) 26px minmax(0, 1fr); }
+  .journal-transfer > div { padding: 10px; }
+  .journal-transfer strong { font-size: 14px; }
+  .journal-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 10px; }
+  .journal-metrics > div:last-child { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
+  .journal-metrics > div:last-child dd { margin-top: 0; font-size: 18px; }
+  .journal-metrics > div:last-child .journal-metric-detail { margin-top: 0; font-size: 10px; font-weight: 400; }
+  .journal-metrics dd { font-size: 26px; }
+  .journal-choice label { flex-basis: 100%; }
+  .journal-choice select { flex: 1; min-width: 0; }
+}

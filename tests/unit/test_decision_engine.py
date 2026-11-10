@@ -10,6 +10,7 @@ from django.contrib.auth import get_user_model
 from django.core import signing
 from django.core.cache import cache
 from django.test import Client
+from django.template.loader import render_to_string
 from django.urls import reverse
 
 from rivals.forms import DecisionInputForm
@@ -30,6 +31,7 @@ from rivals.models import (
 from rivals.services.decision_engine import DecisionEngine, digest
 from rivals.services.decision_review_service import calibration, review_decisions
 from rivals.services.fpl_api_service import FplApiService
+from rivals.views.decision_views import planner_pitch_weeks
 
 NOW = datetime(2026, 11, 10, 12, tzinfo=dt_timezone.utc)
 
@@ -181,6 +183,65 @@ def test_horizon_counts_blanks_and_doubles_instead_of_next_five_matches(manager,
     api.fetch_fixtures_data.return_value.append(double)
     engine.load().prepare(confirmed(engine))
     assert engine.projections[1][12] == pytest.approx(2 * engine.projections[1][13])
+
+
+@pytest.mark.django_db
+def test_planner_pitch_matches_weekly_forecast_and_keeps_all_squad_details(
+    manager, api
+):
+    elements = api.fetch_bootstrap_static.return_value["elements"]
+    elements[0].update(
+        web_name='<script>alert("name")</script>',
+        chance_of_playing_next_round=50,
+        news='<img src=x onerror="alert(1)">',
+    )
+    elements[3]["minutes"] = 10
+    api.fetch_fixtures_data.return_value[:] = [
+        f
+        for f in api.fetch_fixtures_data.return_value
+        if not (f["event"] == 11 and f["team_h"] == 1)
+    ]
+    api.fetch_fixtures_data.return_value.append(
+        {
+            "event": 12,
+            "team_h": 1,
+            "team_a": 3,
+            "team_h_difficulty": 3,
+            "finished": False,
+        }
+    )
+    engine = DecisionEngine(manager, api).load()
+    report = engine.report(confirmed(engine))
+    weeks = planner_pitch_weeks(report)
+    assert len(weeks) == 3
+    for week, forecast in zip(weeks, report["baseline"]["lineups"]):
+        starters = [p for row in week["rows"] for p in row["players"]]
+        squad = starters + week["bench"]
+        assert {p["id"] for p in starters} == set(forecast["xi"])
+        assert len(squad) == len({p["id"] for p in squad}) == 15
+        assert len(week["bench"]) == 4 and week["bench"][0]["element_type"] == 1
+        assert all(p["fixture"]["gameweek"] == week["gameweek"] for p in squad)
+        assert next(p["id"] for p in starters if p["is_captain"]) == forecast["captain"]
+    first_squad = [p for row in weeks[0]["rows"] for p in row["players"]] + weeks[0][
+        "bench"
+    ]
+    blank = next(p for p in first_squad if p["id"] == 1)
+    assert blank["fixture"]["opponents"] == [] and blank["fixture"]["points"] == 0
+    second_squad = [p for row in weeks[1]["rows"] for p in row["players"]] + weeks[1][
+        "bench"
+    ]
+    assert (
+        len(next(p for p in second_squad if p["id"] == 1)["fixture"]["opponents"]) == 2
+    )
+    html = render_to_string(
+        "partials/planner_pitch.html", {"report": report, "planner_weeks": weeks}
+    )
+    assert html.count('class="planner-week-toggle"') == 3
+    assert html.count('class="lineup-player-name"') == 45
+    assert "Check news" in html and "Minutes risk" in html and "Blank" in html
+    assert "&lt;script&gt;" in html and "<script>" not in html
+    assert "&lt;img" in html and "<img src=x" not in html
+    assert "Full fixture schedule and player news" in html
 
 
 @pytest.mark.django_db
@@ -420,6 +481,101 @@ def test_workspace_renders_and_saves_confirmed_inputs_without_executing_transfer
     assert saved.free_transfers_recorded_at == NOW
     assert saved.selling_prices == {}  # Unchanged estimates are not manual overrides.
     assert not DecisionRecord.objects.exists()
+
+
+@pytest.mark.django_db
+def test_journal_visual_review_shows_signed_gains_pending_weeks_and_escaped_moves(
+    manager,
+):
+    record = DecisionRecord.objects.create(
+        user=manager,
+        team=manager.team,
+        season="2026/27",
+        gameweek=11,
+        fingerprint="visual-review",
+        status="acted",
+        snapshot={
+            "report": {
+                "weeks": [11, 12, 13, 14],
+                "horizon": 4,
+                "baseline": {"points": 100},
+            },
+            "chosen": {
+                "moves": [
+                    {
+                        "out_name": "<script>bad</script>",
+                        "in_name": "New player",
+                        "buy_price": 5.5,
+                        "selling_price": 5,
+                    }
+                ],
+                "points": 108,
+                "net_gain": 4,
+                "gain_low": -1,
+                "gain_high": 9,
+                "hits": 4,
+            },
+        },
+        outcomes={
+            "weeks": {
+                "11": {"plan": 36, "hold": 30},
+                "12": {"plan": 27, "hold": 30},
+                "13": {"plan": 0, "hold": 0},
+            },
+            "net_gain": -1,
+            "complete": False,
+        },
+    )
+    client = Client()
+    client.force_login(manager)
+    response = client.get(reverse("rivals:decisions.journal"))
+    assert response.status_code == 200
+    entry = response.context["decisions"][0]
+    assert entry.pk == record.pk and entry.reviewed_count == 3
+    assert [w["gain"] for w in entry.review_weeks] == [6, -3, 0, None]
+    assert [w["bar_width"] for w in entry.review_weeks] == [50, 25, 0, 0]
+    assert response.context["journal_stats"] == {
+        "total": 1,
+        "followed": 1,
+        "complete": 0,
+    }
+    html = response.content.decode()
+    assert "3 of 4 gameweeks reviewed" in html and "In progress" in html
+    assert "Plan 0 · Hold 0" in html and "Awaiting final scores" in html
+    assert "is-negative" in html and "is-zero" in html
+    assert "&lt;script&gt;" in html and "<script>bad</script>" not in html
+
+
+@pytest.mark.django_db
+def test_journal_handles_empty_and_unconfirmed_costs_without_showing_zero(manager):
+    client = Client()
+    client.force_login(manager)
+    assert (
+        "Your first move starts here"
+        in client.get(reverse("rivals:decisions.journal")).content.decode()
+    )
+    DecisionRecord.objects.create(
+        user=manager,
+        team=manager.team,
+        season="2026/27",
+        gameweek=11,
+        fingerprint="unconfirmed-review",
+        snapshot={
+            "report": {"weeks": [11], "horizon": 1},
+            "chosen": {"moves": [], "net_gain": None, "hits": None},
+        },
+        outcomes={
+            "weeks": {"11": {"hold": 0, "plan": 0}},
+            "net_gain": None,
+            "complete": True,
+        },
+    )
+    response = client.get(reverse("rivals:decisions.journal"))
+    assert response.status_code == 200
+    html = response.content.decode()
+    assert "Keep your squad" in html and "Cost unconfirmed" in html
+    assert "Full window reviewed" in html
+    assert response.context["journal_stats"]["complete"] == 1
 
 
 @pytest.mark.django_db

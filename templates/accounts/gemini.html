@@ -13,7 +13,7 @@
       <p class="text-sm text-gray-600 mb-4">Requests use your Google API quota and may incur charges. Google's data use depends on your account and region; unpaid services may use prompts to improve their products. Review <a class="underline" href="https://ai.google.dev/gemini-api/terms" rel="noopener noreferrer" target="_blank">Google's terms</a> and your billing limits before connecting.</p>
       <p class="text-sm text-gray-600 mb-4">Your key is encrypted and never displayed again. You can remove it at any time. Regular transfer advice works without AI briefings.</p>
       {% if not user.is_verified %}
-        <p class="text-sm mb-4">Verify your email to enable AI briefings.</p><a class="underline" href="{% url 'accounts:verification_pending' %}">Email verification</a>
+        <p class="text-sm mb-4">Verify your email to enable AI briefings.</p><a class="app-secondary-button" href="{% url 'accounts:verification_pending' %}">Email verification</a>
       {% elif not gemini_configured %}
         <p role="status" class="text-sm">AI briefings are temporarily unavailable. Your regular transfer advice is ready to use.</p>
       {% else %}
@@ -22,12 +22,12 @@
           <label class="block text-sm font-bold" for="{{ connection_form.api_key.id_for_label }}">{% if gemini_connected %}Replacement Gemini API key{% else %}Gemini API key{% endif %}</label>
           {{ connection_form.api_key }}{{ connection_form.api_key.errors }}
           <p class="text-xs text-gray-600">By connecting, you agree to send the planning summary above to Google when you request a briefing. Up to six briefings per day, with ten minutes between new requests.</p>
-          <button type="submit" class="bg-pitch text-white px-5 py-3 font-bold">{% if gemini_connected %}Replace key{% else %}Enable AI briefings{% endif %}</button>
+          <button type="submit" class="app-primary-button">{% if gemini_connected %}Replace key{% else %}Enable AI briefings{% endif %}</button>
           <a class="underline text-sm ml-3" href="https://aistudio.google.com/api-keys" target="_blank" rel="noopener noreferrer">Get a Gemini key</a>
         </form>
       {% endif %}
-      {% if gemini_connected %}<form method="POST" class="mt-5">{% csrf_token %}<input type="hidden" name="action" value="remove"><button type="submit" class="underline text-danger text-sm">Remove key and briefings</button></form>{% endif %}
+      {% if gemini_connected %}<form method="POST" class="mt-5">{% csrf_token %}<input type="hidden" name="action" value="remove"><button type="submit" class="app-secondary-button app-button-danger">Remove key and briefings</button></form>{% endif %}
     </section>
-    <a class="underline text-sm" href="{% url 'rivals:decisions' %}">Back to your transfer plan</a>
+    <a class="app-secondary-button" href="{% url 'rivals:decisions' %}">Back to your transfer plan</a>
   </div>
 </c-layouts.base>

@@ -495,6 +495,8 @@ class SquadHistory(models.Model):
     is_vice_captain = models.BooleanField(default=False)
     element_type = models.IntegerField()
     player_name = models.CharField(max_length=255)
+    club_name = models.CharField(max_length=100, blank=True, default="")
+    club_short_name = models.CharField(max_length=10, blank=True, default="")
     player_cost = models.IntegerField()
     form = models.DecimalField(max_digits=3, decimal_places=1, null=True, blank=True)
     expected_goals = models.DecimalField(

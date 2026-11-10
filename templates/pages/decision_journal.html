@@ -1,18 +1,66 @@
 <c-layouts.base title="Decision journal - RivalSpy">
+{% load l10n %}
 <div class="max-w-5xl mx-auto px-4 py-8">
-  <h1 class="app-page-title text-3xl font-black mb-3">Decision journal</h1>
-  <a class="text-pitch underline" href="{% url 'rivals:decisions' %}">Back to transfer planner</a>
+  <div class="journal-page-heading">
+    <div><p class="lineup-eyebrow">Your season, move by move</p><h1 class="app-page-title text-3xl font-black mt-2">Decision journal</h1></div>
+    <a class="journal-planner-link" href="{% url 'rivals:decisions' %}">Plan your next move <span aria-hidden="true">↗</span></a>
+  </div>
   {% for message in messages %}<p role="status" class="my-4">{{ message }}</p>{% endfor %}
-  <p class="text-sm text-gray-600 my-5">Keep the reasons behind each move. Reviews compare the saved plan with holding, using the lineups predicted when you saved it. Results don't prove that a decision was good or bad.</p>
+  <p class="text-sm text-gray-600 my-5">Follow each saved plan from forecast to final scores. Reviews use the lineups predicted when you saved it; results don't prove that a decision was good or bad.</p>
+  <dl class="journal-overview">
+    <div><dt>Saved plans</dt><dd>{{ journal_stats.total }}</dd></div>
+    <div><dt>Marked as followed</dt><dd>{{ journal_stats.followed }}</dd></div>
+    <div><dt>Completed reviews</dt><dd>{{ journal_stats.complete }}</dd></div>
+  </dl>
   {% for decision in decisions %}
-  <article class="app-panel bg-white border border-gray-200 p-5 mb-4">
-    <h2 class="font-bold">{{ decision.season }} · GW{{ decision.gameweek }} · {{ decision.created_at|date:"j M Y" }}</h2>
-    <p class="my-3">{% for move in decision.snapshot.chosen.moves %}{{ move.out_name }} → {{ move.in_name }}{% if not forloop.last %}; {% endif %}{% empty %}Hold squad{% endfor %}</p>
-    <p class="text-sm">Estimated gain after hits: {{ decision.snapshot.chosen.net_gain|default_if_none:"Unconfirmed" }} · Gain sensitivity: {{ decision.snapshot.chosen.gain_low }} to {{ decision.snapshot.chosen.gain_high }}</p>
-    <form method="POST" action="{% url 'rivals:decisions.status' decision.pk %}" class="flex gap-3 my-3">{% csrf_token %}<select name="status" class="border border-gray-300 p-2"><option value="planned" {% if decision.status == 'planned' %}selected{% endif %}>Saved plan</option><option value="acted" {% if decision.status == 'acted' %}selected{% endif %}>I followed this plan</option><option value="held" {% if decision.status == 'held' %}selected{% endif %}>I kept my squad</option></select><button class="underline" type="submit">Update choice</button></form>
-    {% if decision.outcomes.weeks %}<p class="text-sm">{{ decision.outcomes.completed }} of {{ decision.snapshot.report.horizon }} gameweeks reviewed. Fixed-lineup gain after hits: {{ decision.outcomes.net_gain|default_if_none:"Cost unconfirmed" }}.</p><p class="text-xs text-gray-500 mt-2">This comparison excludes chips, automatic substitutions, and later changes. It is a review of the saved plan, not your actual team's overall gain.</p>{% else %}<p class="text-sm text-gray-500">The review will appear after gameweek scores are final.</p>{% endif %}
+  <article class="app-panel journal-card bg-white border border-gray-200" aria-labelledby="decision-{{ decision.pk }}">
+    <header class="journal-card-heading">
+      <div><p class="lineup-eyebrow">{{ decision.season }} · Saved {{ decision.created_at|date:"j M Y" }}</p><h2 id="decision-{{ decision.pk }}">GW{{ decision.gameweek }} <span>· {% if decision.snapshot.chosen.moves %}Transfer plan{% else %}Hold / roll{% endif %}</span></h2></div>
+      <span class="journal-status journal-status--{{ decision.status }}">{{ decision.get_status_display }}</span>
+    </header>
+    <div class="journal-card-body">
+      <div class="journal-moves">
+        {% for move in decision.snapshot.chosen.moves %}
+        <div class="journal-transfer">
+          <div class="journal-transfer-out"><span>Out</span><strong>{{ move.out_name }}</strong><small>{% if move.selling_price != None %}£{{ move.selling_price|floatformat:1 }}m selling price{% else %}Selling price unconfirmed{% endif %}</small></div>
+          <span class="journal-transfer-arrow" aria-label="to">→</span>
+          <div class="journal-transfer-in"><span>In</span><strong>{{ move.in_name }}</strong><small>£{{ move.buy_price|floatformat:1 }}m purchase price</small></div>
+        </div>
+        {% empty %}
+        <div class="journal-hold"><span class="journal-hold-symbol" aria-hidden="true">↻</span><div><h3>Keep your squad</h3><p>Hold your players and preserve flexibility for the next deadline.</p></div></div>
+        {% endfor %}
+      </div>
+      <dl class="journal-metrics">
+        <div><dt>Forecast gain after hits</dt><dd>{% if decision.snapshot.chosen.net_gain != None %}{% if decision.snapshot.chosen.net_gain > 0 %}+{% endif %}{{ decision.snapshot.chosen.net_gain }}<small> pts</small>{% else %}<span class="journal-metric-text">Unconfirmed</span>{% endif %}</dd><dd class="journal-metric-detail">Full {{ decision.snapshot.report.horizon }}-gameweek window · sensitivity {{ decision.snapshot.chosen.gain_low }} to {{ decision.snapshot.chosen.gain_high }}</dd></div>
+        <div class="journal-result"><dt>Reviewed gain after hits</dt><dd>{% if decision.outcomes.weeks %}{% if decision.outcomes.net_gain != None %}{% if decision.outcomes.net_gain > 0 %}+{% endif %}{{ decision.outcomes.net_gain }}<small> pts</small>{% else %}<span class="journal-metric-text">Cost unconfirmed</span>{% endif %}{% else %}<span class="journal-metric-text">Awaiting scores</span>{% endif %}</dd><dd class="journal-metric-detail">{% if decision.outcomes.complete %}Full window reviewed{% else %}{{ decision.reviewed_count }} of {{ decision.snapshot.report.horizon }} gameweeks reviewed{% endif %}</dd></div>
+        <div><dt>Transfer points cost</dt><dd>{% if decision.snapshot.chosen.hits != None %}{{ decision.snapshot.chosen.hits }}<small> pts</small>{% else %}<span class="journal-metric-text">Unconfirmed</span>{% endif %}</dd><dd class="journal-metric-detail">Deducted once from the reviewed gain.</dd></div>
+      </dl>
+      <section class="journal-review" aria-labelledby="review-{{ decision.pk }}">
+        <div class="journal-review-heading"><h3 id="review-{{ decision.pk }}">Gameweek review</h3><span>{% if decision.outcomes.complete %}Complete{% elif decision.outcomes.weeks %}In progress{% else %}Waiting for final scores{% endif %}</span></div>
+        <ol class="journal-timeline" aria-label="Review progress">
+          {% for week in decision.review_weeks %}<li class="{% if week.reviewed %}is-reviewed{% endif %}"><span aria-hidden="true">{% if week.reviewed %}✓{% else %}○{% endif %}</span> GW{{ week.gameweek }}<span class="journal-sr-only">: {% if week.reviewed %}reviewed{% else %}awaiting final scores{% endif %}</span></li>{% endfor %}
+        </ol>
+        {% if decision.outcomes.weeks %}
+        <div class="journal-chart-caption"><span>Weekly plan minus hold · before hits</span><span>← Lower <span aria-hidden="true">·</span> Higher →</span></div>
+        <div class="journal-chart">
+          {% for week in decision.review_weeks %}
+          <div class="journal-chart-row">
+            <span class="journal-chart-week">GW{{ week.gameweek }}</span>
+            <div><div class="journal-delta-track" aria-hidden="true">{% if week.reviewed %}<span class="journal-delta-bar {% if week.gain < 0 %}is-negative{% elif week.gain == 0 %}is-zero{% endif %}" style="width: {{ week.bar_width|unlocalize }}%"></span>{% endif %}</div><p class="journal-chart-scores">{% if week.reviewed %}Plan {{ week.plan }} · Hold {{ week.hold }}{% else %}Awaiting final scores{% endif %}</p></div>
+            <strong class="journal-chart-gain">{% if week.reviewed %}{% if week.gain > 0 %}+{% endif %}{{ week.gain }}<span class="journal-sr-only"> points before hits</span>{% else %}—{% endif %}</strong>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}<p class="journal-awaiting">The comparison will appear here once gameweek scores are final.</p>{% endif %}
+        <p class="lineup-note">Compares the saved plan with holding, using fixed lineups. Excludes chips, automatic substitutions and later changes. This is not your actual team's overall gain.</p>
+      </section>
+      <details class="journal-assumptions"><summary>Saved estimates and assumptions</summary><div><p>Forecast squad points: {{ decision.snapshot.chosen.points }} for this plan, versus {{ decision.snapshot.report.baseline.points }} for holding.</p>{% if decision.snapshot.chosen.unknown %}<p>Unconfirmed when saved: {{ decision.snapshot.chosen.unknown|join:", " }}.</p>{% endif %}{% if decision.snapshot.report.model.method %}<p>{{ decision.snapshot.report.model.method }}</p>{% endif %}</div></details>
+      <form method="POST" action="{% url 'rivals:decisions.status' decision.pk %}" class="journal-choice">{% csrf_token %}<label for="choice-{{ decision.pk }}">What did you do?</label><select id="choice-{{ decision.pk }}" name="status"><option value="planned" {% if decision.status == 'planned' %}selected{% endif %}>Saved plan</option><option value="acted" {% if decision.status == 'acted' %}selected{% endif %}>I followed this plan</option><option value="held" {% if decision.status == 'held' %}selected{% endif %}>I kept my squad</option></select><button class="app-secondary-button" type="submit">Update choice</button></form>
+    </div>
   </article>
-  {% empty %}<p class="my-6">Save a transfer route or a roll to start reviewing your decisions.</p>{% endfor %}
+  {% empty %}
+  <div class="app-panel journal-empty"><span aria-hidden="true">↗</span><h2>Your first move starts here</h2><p>Save a transfer route or a roll. Your forecast, gameweek results and review will build up here.</p><a class="journal-planner-link" href="{% url 'rivals:decisions' %}">Explore your options →</a></div>
+  {% endfor %}
   {% include "cotton/components/pagination.html" with page_obj=decisions %}
 </div>
 </c-layouts.base>

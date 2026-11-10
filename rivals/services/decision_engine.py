@@ -708,7 +708,7 @@ class DecisionEngine:
                 manual,
             ]
         )
-        cache_key = f"decision_{self.user.pk}_{self.team.pk}_{fingerprint}"
+        cache_key = f"decision_{self.user.pk}_{self.team.pk}_{fingerprint}_pitch1"
         cached = cache.get(cache_key)
         if cached:
             return cached
@@ -832,6 +832,18 @@ class DecisionEngine:
                     "id": pid,
                     "name": self.name(pid),
                     "position": POSITIONS[self.players[pid]["element_type"]],
+                    "element_type": self.players[pid]["element_type"],
+                    "club": self.club_names.get(self.players[pid]["team"], "—"),
+                    "news": self.players[pid].get("news", ""),
+                    "risk_label": (
+                        "Check news"
+                        if self.players[pid].get("status", "a") not in ("a", "d")
+                        or number(
+                            self.players[pid].get("chance_of_playing_next_round"), 100
+                        )
+                        < 100
+                        else "Minutes risk" if self.risk[pid] > 0.45 else ""
+                    ),
                     "schedule": self.player_fixtures[pid],
                     "minutes_risk": round(self.risk[pid], 2),
                     "price": self.players[pid].get("now_cost", 0) / 10,

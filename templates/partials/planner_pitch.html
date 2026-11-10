@@ -1,0 +1,43 @@
+<section class="app-panel planner-panel border border-gray-200 bg-white p-5 mb-6" aria-labelledby="planner-pitch-heading">
+  <h2 id="planner-pitch-heading" class="text-lg font-bold mb-3">Fixtures and playing-time risks</h2>
+  <p class="text-sm text-gray-600 mb-4">Your current squad, if you hold. Switch gameweeks to see the forecast starting XI, captain and bench. These are estimates; check team news before the deadline.</p>
+  <div class="planner-week-switcher" role="group" aria-label="Choose a forecast gameweek">
+    {% for week in planner_weeks %}
+    <input class="planner-week-toggle" type="radio" name="planner-gameweek" id="planner-gw-{{ week.gameweek }}" {% if forloop.first %}checked{% endif %}>
+    <label class="planner-week-label" for="planner-gw-{{ week.gameweek }}">GW{{ week.gameweek }}</label>
+    <div class="planner-week-panel" role="group" aria-label="Gameweek {{ week.gameweek }} forecast">
+      <div class="lineup-summary">
+        <div><p class="lineup-eyebrow">GW{{ week.gameweek }} · Hold / roll</p><h3 class="lineup-formation">Forecast XI <span>{{ week.formation }}</span></h3></div>
+      </div>
+      <div class="lineup-board">
+        <div class="lineup-loading" aria-hidden="true"><span class="lineup-spinner"></span><span>Updating forecast…</span></div>
+        <div class="lineup-pitch" role="group" aria-label="Forecast starting XI, formation {{ week.formation }}">
+          {% include "partials/lineup_pitch_markings.html" %}
+          {% for row in week.rows %}
+          <div class="lineup-row" role="group" aria-label="{{ row.label }}">
+            {% for player in row.players %}{% include "partials/planner_player.html" %}{% endfor %}
+          </div>
+          {% endfor %}
+        </div>
+        <div class="lineup-bench" role="group" aria-label="Forecast bench in projected points order">
+          <div class="lineup-bench-heading"><h4>Forecast bench</h4><span>Outfield players by estimated points</span></div>
+          <div class="lineup-row">{% for player in week.bench %}{% include "partials/planner_player.html" with on_bench=True %}{% endfor %}</div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  <p class="lineup-note">H = home · A = away · Blank = no scheduled fixture. Double gameweeks show both opponents. C = forecast captain · V = forecast vice captain. Points are individual estimates before captaincy; bench points are excluded from the XI forecast.</p>
+  <details class="planner-schedule-details">
+    <summary>Full fixture schedule and player news</summary>
+    <div class="planner-schedule-grid">
+      {% for player in report.players %}
+      <article class="planner-schedule-card">
+        <h3>{{ player.name }} <span>{{ player.club }} · {{ player.position }}</span></h3>
+        {% if player.risk_label %}<p class="planner-schedule-risk">{{ player.risk_label }}: {{ player.news|default:'Check availability and playing time before the deadline.' }}</p>{% elif player.news %}<p>{{ player.news }}</p>{% endif %}
+        <ul>{% for fixture in player.schedule %}<li><strong>GW{{ fixture.gameweek }}</strong><span>{{ fixture.opponents|join:", "|default:"Blank" }}</span><span>{{ fixture.points }} est. pts</span></li>{% endfor %}</ul>
+      </article>
+      {% endfor %}
+    </div>
+  </details>
+</section>

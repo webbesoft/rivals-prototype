@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core import signing
 from django.core.paginator import Paginator
+from django.db.models import Count, Q
 from django.http import HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -32,9 +33,60 @@ def report_context(report, user):
         )
     return {
         "report": report,
+        "planner_weeks": planner_pitch_weeks(report),
         "decision_deadline": parse_datetime(report["deadline"]),
         "decision_prepared": parse_datetime(report["created_at"]),
     }
+
+
+def planner_pitch_weeks(report):
+    weeks = []
+    for lineup in report["baseline"]["lineups"]:
+        players = []
+        for player in report["players"]:
+            fixture = next(
+                f for f in player["schedule"] if f["gameweek"] == lineup["gameweek"]
+            )
+            players.append(
+                {
+                    **player,
+                    "player_name": player["name"],
+                    "fixture": fixture,
+                    "is_captain": player["id"] == lineup["captain"]
+                    and fixture["points"] > 0,
+                    "is_vice_captain": player["id"] == lineup["vice"]
+                    and fixture["points"] > 0,
+                }
+            )
+        starters = [p for p in players if p["id"] in lineup["xi"]]
+        rows = [
+            {
+                "label": label,
+                "players": [p for p in starters if p["element_type"] == kind],
+            }
+            for kind, label in (
+                (1, "Goalkeeper"),
+                (2, "Defenders"),
+                (3, "Midfielders"),
+                (4, "Forwards"),
+            )
+        ]
+        weeks.append(
+            {
+                "gameweek": lineup["gameweek"],
+                "rows": rows,
+                "formation": "-".join(str(len(row["players"])) for row in rows[1:]),
+                "bench": sorted(
+                    (p for p in players if p["id"] not in lineup["xi"]),
+                    key=lambda p: (
+                        p["element_type"] != 1,
+                        -p["fixture"]["points"],
+                        p["id"],
+                    ),
+                ),
+            }
+        )
+    return weeks
 
 
 def financial_defaults(engine, data):
@@ -211,10 +263,43 @@ def save_decision(request):
 @login_required
 @never_cache
 def journal(request):
-    rows = Paginator(DecisionRecord.objects.filter(user=request.user), 10).get_page(
-        request.GET.get("page")
+    records = DecisionRecord.objects.filter(user=request.user)
+    rows = Paginator(records, 10).get_page(request.GET.get("page"))
+    for record in rows:
+        record.review_weeks = journal_review_weeks(record)
+        record.reviewed_count = sum(w["reviewed"] for w in record.review_weeks)
+    stats = records.aggregate(
+        total=Count("pk"),
+        followed=Count("pk", filter=Q(status="acted")),
+        complete=Count("pk", filter=Q(outcomes__complete=True)),
     )
-    return render(request, "pages/decision_journal.html", {"decisions": rows})
+    return render(
+        request,
+        "pages/decision_journal.html",
+        {"decisions": rows, "journal_stats": stats},
+    )
+
+
+def journal_review_weeks(record):
+    weeks = []
+    results = record.outcomes.get("weeks", {})
+    for gameweek in record.snapshot.get("report", {}).get("weeks", []):
+        scores = results.get(str(gameweek))
+        weeks.append(
+            {
+                "gameweek": gameweek,
+                "reviewed": scores is not None,
+                "hold": scores["hold"] if scores else None,
+                "plan": scores["plan"] if scores else None,
+                "gain": scores["plan"] - scores["hold"] if scores else None,
+            }
+        )
+    scale = max((abs(w["gain"]) for w in weeks if w["reviewed"]), default=0) or 1
+    for week in weeks:
+        week["bar_width"] = (
+            round(abs(week["gain"]) / scale * 50, 2) if week["reviewed"] else 0
+        )
+    return weeks
 
 
 @login_required

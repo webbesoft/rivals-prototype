@@ -225,6 +225,8 @@ def get_squad_history(request, team_id, gameweek):
         {
             "player_fpl_id": p.player_fpl_id,
             "player_name": p.player_name,
+            "club_name": p.club_name,
+            "club_short_name": p.club_short_name,
             "position": p.position,
             "position_type": p.position_type,
             "is_captain": p.is_captain,
@@ -279,6 +281,21 @@ def team_lineup(request, team_id):
             "team": team,
             "squad_selection": selected,
             "squad": rows,
+            "pitch_rows": [
+                {
+                    "label": label,
+                    "players": [
+                        p for p in rows if p.position <= 11 and p.element_type == kind
+                    ],
+                }
+                for kind, label in (
+                    (1, "Goalkeeper"),
+                    (2, "Defenders"),
+                    (3, "Midfielders"),
+                    (4, "Forwards"),
+                )
+            ],
+            "bench": [p for p in rows if p.position > 11],
             "lineup_error": error,
             "squad_points": total,
             "formation": (

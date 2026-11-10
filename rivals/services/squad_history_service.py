@@ -94,6 +94,8 @@ class SquadHistoryService:
         if scores_complete and (
             not candidate_current or all(p.points_final for p in rows) or recent
         ):
+            if current_season and any(not p.club_short_name for p in rows):
+                self.populate_clubs(rows, season)
             return rows, None
         if not candidate_current:
             if complete:
@@ -145,6 +147,7 @@ class SquadHistoryService:
             gameweek,
             picks=picks,
             elements={p["id"]: p for p in bootstrap.get("elements", [])},
+            clubs={club["id"]: club for club in bootstrap.get("teams", [])},
             points=live_points,
             points_final=bool(final),
             refresh=True,
@@ -162,3 +165,23 @@ class SquadHistoryService:
         return rows, (
             None if scores_available else "Player scores are currently unavailable."
         )
+
+    def populate_clubs(self, rows, season):
+        """Enrich legacy current-season rows; never apply live IDs to old seasons."""
+        bootstrap = self.api.fetch_bootstrap_static()
+        if not bootstrap:
+            return
+        if (
+            GameweekContextService.derive(bootstrap.get("events", []))["season"]
+            != season
+        ):
+            return
+        elements = {p["id"]: p for p in bootstrap.get("elements", [])}
+        clubs = {club["id"]: club for club in bootstrap.get("teams", [])}
+        for row in rows:
+            if row.club_short_name:
+                continue
+            club = clubs.get(elements.get(row.player_fpl_id, {}).get("team"), {})
+            row.club_name = club.get("name", "")
+            row.club_short_name = club.get("short_name", "")
+        SquadHistory.objects.bulk_update(rows, ["club_name", "club_short_name"])

@@ -1,0 +1,7 @@
+<div class="lineup-player{% if player.element_type == 1 %} lineup-player--keeper{% endif %}">
+  {% if on_bench %}<span class="lineup-bench-position">{% if player.element_type == 1 %}GKP{% else %}{{ forloop.counter0 }} · {{ player.position_type }}{% endif %}</span>{% endif %}
+  {% include "partials/lineup_kit.html" %}
+  <p class="lineup-player-name" title="{{ player.player_name }}">{{ player.player_name }}</p>
+  <p class="lineup-player-club" title="{{ player.club_name|default:'Club unavailable' }}" aria-label="Club: {{ player.club_name|default:'unavailable' }}">{{ player.club_short_name|default:"—" }}</p>
+  <p class="lineup-player-points">{{ player.gameweek_points|default_if_none:"—" }} pts · ×{{ player.multiplier }}</p>
+</div>

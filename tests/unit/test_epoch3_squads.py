@@ -165,6 +165,7 @@ def import_rows(team, api, season="2026/27", gameweek=10, points=True):
         elements={
             p["id"]: p for p in api.fetch_bootstrap_static.return_value["elements"]
         },
+        clubs={p["id"]: p for p in api.fetch_bootstrap_static.return_value["teams"]},
         points=(
             {
                 p["id"]: p["stats"]["total_points"]
@@ -307,6 +308,60 @@ def test_lineup_fragment_escapes_names_and_calculates_multipliers(manager, api):
     assert "&lt;img" in html and "<img src=x" not in html
     assert "season" in html and "gameweek" in html
     assert "101 pts" not in html
+    assert html.count('aria-label="Club: Club"') == 15
+    assert html.count(">CLB</p>") == 15
+
+
+@pytest.mark.django_db
+def test_existing_current_squad_gains_clubs_without_replacing_scores(manager, api):
+    import_rows(manager.team, api)
+    manager.team.squad_histories.update(club_name="", club_short_name="")
+    rows, error = SquadHistoryService(manager.team, api=api).load("2026/27", 10)
+    assert error is None
+    assert all(row.club_name == "Club" and row.club_short_name == "CLB" for row in rows)
+    assert rows[0].gameweek_points == 0 and rows[0].multiplier == 3
+    assert manager.team.squad_histories.filter(club_short_name="CLB").count() == 15
+    api.fetch_team_picks.assert_not_called()
+    api.fetch_gameweek_live.assert_not_called()
+
+
+@pytest.mark.django_db
+def test_old_squad_does_not_use_live_clubs_when_club_was_not_saved(manager, api):
+    import_rows(manager.team, api, season="2025/26")
+    manager.team.squad_histories.update(club_name="", club_short_name="")
+    rows, error = SquadHistoryService(manager.team, api=api).load("2025/26", 10)
+    assert error is None and all(row.club_short_name == "" for row in rows)
+    assert not api.method_calls
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("formation", [(3, 5, 2), (4, 4, 2), (5, 4, 1)])
+def test_historical_pitch_groups_starters_and_preserves_bench_order(
+    manager, api, formation
+):
+    import_rows(manager.team, api, season="2025/26")
+    types = [1] + [2] * formation[0] + [3] * formation[1] + [4] * formation[2]
+    for position, kind in enumerate(types, 1):
+        manager.team.squad_histories.filter(position=position).update(element_type=kind)
+    client = Client()
+    client.force_login(manager)
+    response = client.get(
+        reverse("rivals:teams.lineup", args=[manager.team_id]),
+        {"season": "2025/26", "gameweek": 10},
+    )
+    assert response.status_code == 200
+    assert [len(row["players"]) for row in response.context["pitch_rows"]] == [
+        1,
+        *formation,
+    ]
+    assert [p.position for p in response.context["bench"]] == [12, 13, 14, 15]
+    html = response.content.decode()
+    assert (
+        f'aria-label="Starting XI, formation {"-".join(map(str, formation))}"' in html
+    )
+    assert html.count('class="lineup-player-name"') == 15
+    assert 'aria-label="Captain"' in html and 'aria-label="Vice captain"' in html
+    assert not api.method_calls
 
 
 @pytest.mark.django_db

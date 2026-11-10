@@ -2,7 +2,7 @@
 <div class="app-panel bg-white border border-gray-200 p-5 mb-6">
   <div class="flex flex-wrap justify-between gap-3 mb-3">
     <h2 class="app-section-title text-lg font-bold">Before the next deadline</h2>
-    <a class="text-pitch underline text-sm" href="{% url 'rivals:decisions' %}">Plan transfers</a>
+    <a class="app-secondary-button" href="{% url 'rivals:decisions' %}">Plan transfers</a>
   </div>
   {% if decision_error %}<p role="status" class="text-sm text-gray-600">{{ decision_error }}</p>
   {% elif report %}

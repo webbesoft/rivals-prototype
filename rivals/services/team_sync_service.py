@@ -388,6 +388,7 @@ class TeamSyncService:
         points_final=False,
         refresh=False,
         season=None,
+        clubs=None,
     ) -> bool:
         season = season or self.team.current_season
         squad = SquadHistory.objects.filter(
@@ -427,6 +428,10 @@ class TeamSyncService:
                     is_vice_captain=pick["is_vice_captain"],
                     element_type=player["element_type"],
                     player_name=player["web_name"],
+                    club_name=(clubs or {}).get(player.get("team"), {}).get("name", ""),
+                    club_short_name=(clubs or {})
+                    .get(player.get("team"), {})
+                    .get("short_name", ""),
                     player_cost=player.get("now_cost") or 0,
                     form=player.get("form"),
                     expected_goals=player.get("expected_goals"),

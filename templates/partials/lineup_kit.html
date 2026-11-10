@@ -1,0 +1,8 @@
+  <div class="lineup-kit">
+    <svg viewBox="0 0 56 56" aria-hidden="true" focusable="false">
+      <path class="lineup-shirt" d="M18 5 7 11 2 25 13 30 16 23 16 51 40 51 40 23 43 30 54 25 49 11 38 5 33 9 23 9Z" />
+      <path class="lineup-shirt-trim" d="m18 5 5 4h10l5-4 M16 44h24 M5 19l10 5 M41 24l10-5" />
+      <path class="lineup-shirt-crest" d="M25 20h6v7l-3 3-3-3Z" />
+    </svg>
+    {% if player.is_captain %}<span class="lineup-armband" aria-label="Captain">C</span>{% elif player.is_vice_captain %}<span class="lineup-armband lineup-armband--vice" aria-label="Vice captain">V</span>{% endif %}
+  </div>

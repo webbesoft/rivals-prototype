@@ -1,0 +1,11 @@
+<div class="lineup-player{% if player.element_type == 1 %} lineup-player--keeper{% endif %}">
+  {% if on_bench %}<span class="lineup-bench-position">{% if player.element_type == 1 %}GKP{% else %}{{ forloop.counter0 }} · {{ player.position }}{% endif %}</span>{% endif %}
+  {% include "partials/lineup_kit.html" %}
+  <p class="lineup-player-name" title="{{ player.name }}">{{ player.name }}</p>
+  <p class="lineup-player-club">{{ player.club }}</p>
+  <div class="planner-fixture{% if not player.fixture.opponents %} planner-fixture--blank{% endif %}">
+    {% for opponent in player.fixture.opponents %}<p>{{ opponent }}</p>{% empty %}<p>Blank</p>{% endfor %}
+    <p class="planner-estimate">{{ player.fixture.points }} <span>est. pts</span></p>
+  </div>
+  {% if player.risk_label %}<p class="planner-risk" title="{{ player.news|default:'Check availability and playing time before the deadline.' }}"><span aria-hidden="true">!</span> {{ player.risk_label }}</p>{% endif %}
+</div>

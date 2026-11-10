@@ -2,7 +2,7 @@
   {% if ai_state == 'queued' or ai_state == 'running' %}hx-get="{% url 'rivals:decisions.ai' %}?fingerprint={{ ai_fingerprint|urlencode }}" hx-trigger="every 4s" hx-target="this" hx-swap="outerHTML" hx-request='{"timeout":10000}'{% endif %}>
   <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
     <h2 class="app-section-title">AI briefings</h2>
-    <a class="text-sm underline" href="{% url 'accounts:gemini' %}">AI briefing settings</a>
+    <a class="app-secondary-button" href="{% url 'accounts:gemini' %}">AI briefing settings</a>
   </div>
   {% if ai_error %}<p role="status" class="text-sm mb-3">{{ ai_error }}</p>{% endif %}
   {% if ai_cards %}
@@ -14,14 +14,14 @@
     <p class="text-sm">AI briefings are temporarily unavailable. Your transfer options are ready below.</p>
   {% elif ai_state == 'disconnected' %}
     <p class="text-sm">Enable AI briefings for a short, personalised briefing on your next moves.</p>
-    <a class="underline text-sm inline-block mt-3" href="{% url 'accounts:gemini' %}">Enable AI briefings</a>
+    <a class="app-secondary-button mt-3" href="{% url 'accounts:gemini' %}">Enable AI briefings</a>
   {% else %}
     {% if ai_state == 'stale' %}<p class="text-sm mb-3">Your plan has changed or this briefing has expired. Prepare an updated briefing.</p>
     {% elif ai_state == 'failed' or ai_state == 'delayed' %}<p class="text-sm mb-3">We couldn't prepare this AI briefing. Check your connection or try again later. Your transfer advice is ready below.</p>
     {% else %}<p class="text-sm mb-3">Get a short list of what matters most before the deadline, using your own API key.</p>{% endif %}
     <form method="POST" action="{% url 'rivals:decisions.ai' %}" hx-post="{% url 'rivals:decisions.ai' %}" hx-target="#gemini-briefing" hx-swap="outerHTML" hx-request='{"timeout":25000}' hx-disabled-elt="find button">
       {% csrf_token %}<input type="hidden" name="fingerprint" value="{{ ai_fingerprint }}">
-      <button class="underline text-pitch text-sm font-bold" type="submit">Prepare AI briefing</button>
+      <button class="app-primary-button" type="submit">Prepare AI briefing</button>
     </form>
   {% endif %}
 </section>

@@ -1,8 +1,8 @@
-<section class="app-panel bg-white border border-gray-200 shadow-sm" data-remote-panel
+<section class="app-panel lineup-panel bg-white border border-gray-200 shadow-sm" data-remote-panel
          data-loading-message="Loading lineup…" data-error-message="We couldn't load this lineup. Please try again.">
   <div class="px-5 py-3 border-b border-gray-200 bg-gray-50/75">
     <h3 class="app-section-title text-xs font-black uppercase tracking-wider text-pitch">Lineup & squad history</h3>
-    <p data-panel-status role="status" hidden class="mt-2 text-xs text-gray-500"></p>
+    <p data-panel-status role="status" aria-live="polite" hidden class="lineup-status mt-2 text-xs text-gray-500"></p>
   </div>
   <div id="squad-history-panel" class="p-5" hx-get="{% url 'rivals:teams.lineup' team.id %}"
        hx-trigger="load" hx-swap="innerHTML" hx-request='{"timeout":18000}'
