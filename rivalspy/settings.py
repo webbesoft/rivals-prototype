@@ -354,3 +354,8 @@ if not DEBUG and not TESTING:
 # new Gemini connections and runs without affecting deterministic transfer advice.
 AI_CREDENTIAL_KEYS = os.getenv("AI_CREDENTIAL_KEYS", "")
 AI_CREDENTIAL_ACTIVE_KEY = os.getenv("AI_CREDENTIAL_ACTIVE_KEY", "v1")
+AI_GENERATION_ENABLED = os.getenv("AI_GENERATION_ENABLED", "True").lower() in (
+    "1",
+    "true",
+    "yes",
+)

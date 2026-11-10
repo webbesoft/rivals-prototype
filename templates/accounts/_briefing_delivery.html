@@ -1,0 +1,51 @@
+<section class="app-panel briefing-settings-card" aria-labelledby="briefing-delivery-heading">
+  <div class="briefing-settings-heading">
+    <div>
+      <h2 id="briefing-delivery-heading" class="app-section-title">Briefing delivery</h2>
+      <p>One briefing before each deadline, timed to the FPL schedule.</p>
+    </div>
+    <span class="briefing-delivery-badge {% if digest_form.enabled.value and not digest_form.paused.value %}is-enabled{% endif %}">{% if not digest_form.enabled.value %}Off{% elif digest_form.paused.value %}Paused{% else %}On{% endif %}</span>
+  </div>
+  {% if not digest_eligible %}<p class="briefing-settings-notice">Verify your email and link an active FPL team to enable delivery.</p>{% endif %}
+  <form method="POST" action="{% url 'accounts:digests' %}" class="briefing-delivery-form">
+    {% csrf_token %}<input type="hidden" name="action" value="save">
+    {% if digest_form.non_field_errors %}<div role="alert" class="briefing-field-errors">{{ digest_form.non_field_errors }}</div>{% endif %}
+    <div class="briefing-toggle-group">
+      <label class="briefing-toggle-row" for="{{ digest_form.enabled.id_for_label }}">
+        <span class="briefing-toggle-copy"><strong>Email me my briefing</strong><span id="briefing-enabled-help">Your forecast lineup and priorities, delivered before the deadline.</span></span>
+        {{ digest_form.enabled }}
+      </label>
+      {% if digest_form.enabled.errors %}<div role="alert" class="briefing-field-errors">{{ digest_form.enabled.errors }}</div>{% endif %}
+      <label class="briefing-toggle-row" for="{{ digest_form.paused.id_for_label }}">
+        <span class="briefing-toggle-copy"><strong>Pause delivery</strong><span id="briefing-paused-help">Take a break while keeping your delivery preferences.</span></span>
+        {{ digest_form.paused }}
+      </label>
+      {% if digest_form.paused.errors %}<div role="alert" class="briefing-field-errors">{{ digest_form.paused.errors }}</div>{% endif %}
+    </div>
+    <div class="briefing-timing">
+      <div><label for="{{ digest_form.lead_hours.id_for_label }}">Send before the deadline</label><p id="briefing-timing-help">Follows the actual deadline, including midweek gameweeks.</p></div>
+      <div class="briefing-timing-control">{{ digest_form.lead_hours }}{% if digest_form.lead_hours.errors %}<div role="alert" class="briefing-field-errors">{{ digest_form.lead_hours.errors }}</div>{% endif %}</div>
+    </div>
+    <details class="briefing-settings-help">
+      <summary>Estimates and AI usage</summary>
+      <p>Briefings use your latest available squad and financial estimates. Recent transfers and team news can change the advice. Previews and emails use your saved Gemini key and share the same usage limits. If Gemini is unavailable, the forecast and structured advice are still included.</p>
+    </details>
+    <div class="briefing-settings-footer"><p>Delivery stays off until you opt in and save.</p><button type="submit" class="app-primary-button">Save preferences</button></div>
+  </form>
+</section>
+
+<section class="app-panel briefing-settings-card" aria-labelledby="briefing-preview-heading">
+  <div class="briefing-settings-heading"><div><h2 id="briefing-preview-heading" class="app-section-title">Preview your briefing</h2><p>Check the next briefing here or send a test to your verified email.</p></div></div>
+  <form method="POST" action="{% url 'accounts:digests' %}" class="briefing-preview-actions">{% csrf_token %}
+    <button type="submit" name="action" value="preview" class="app-secondary-button">Prepare preview</button>
+    <button type="submit" name="action" value="test" class="app-secondary-button">Email me a test</button>
+  </form>
+  <p class="briefing-preview-note">Preparation can take a minute. Neither action enables scheduled delivery.</p>
+</section>
+
+<section class="app-panel briefing-settings-card" aria-labelledby="briefing-history-heading">
+  <div class="briefing-settings-heading"><div><h2 id="briefing-history-heading" class="app-section-title">Recent briefings</h2></div></div>
+  <ul class="briefing-history">{% for digest in digests %}
+    <li><div><a href="{% url 'accounts:digests.detail' digest.id %}">GW{{ digest.gameweek }} <span>↗</span></a><p>{{ digest.season }} · {{ digest.kind|title }}</p>{% if digest.notice %}<p class="briefing-history-notice">{{ digest.notice }}</p>{% endif %}</div><span class="briefing-delivery-badge">{{ digest.status_label }}</span></li>
+    {% empty %}<li class="briefing-history-empty">Your briefings will appear here once you prepare a preview or enable delivery.</li>{% endfor %}</ul>
+</section>

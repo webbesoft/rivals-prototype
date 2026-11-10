@@ -502,11 +502,19 @@ def test_rotation_failure_rolls_back_all_records(settings, user, credential):
     assert credential.key_version == "v1" and decrypt(credential) == KEY
 
 
-def test_provider_endpoint_headers_schema_and_usage_are_bounded(report):
+def test_provider_endpoint_headers_schema_and_usage_are_bounded(
+    user, credential, report
+):
+    from rivals.services.ai_usage_audit import prepare_call
+
+    run = request_briefing(user, report)
+    call = prepare_call(run, TOKEN_RESERVATION)
     with patch(
         "requests.sessions.Session.request", return_value=provider_response(generated())
     ) as request:
-        result = Gemini().prioritise(KEY, evidence_for(report), "protect")
+        result = Gemini(call_id=call.pk).prioritise(
+            KEY, evidence_for(report), "protect"
+        )
     args, kwargs = request.call_args
     assert args == ("POST", URL + ":generateContent")
     assert KEY not in args[1] and kwargs["headers"] == {"x-goog-api-key": KEY}

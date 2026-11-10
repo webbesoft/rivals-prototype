@@ -1,7 +1,7 @@
 <nav class="app-desktop-nav" aria-label="Main navigation">
 {% if user.is_authenticated %}
 <a href="{% url 'rivals:dashboard' %}" {% if request.resolver_match.url_name == 'dashboard' %}aria-current="page"{% endif %}>My gameweek</a>
-{% if user.team %}<a href="{% url 'rivals:teams.show' user.team.id %}" {% if request.resolver_match.url_name == 'teams.show' and request.resolver_match.kwargs.team_id == user.team.id %}aria-current="page"{% endif %}>My squad</a>{% endif %}
+{% if user.team %}<a href="{% url 'rivals:teams.show' user.team.id %}" {% if team_section and request.resolver_match.kwargs.team_id == user.team.id %}aria-current="page"{% endif %}>My squad</a>{% endif %}
 <a href="{% url 'accounts:profile' %}" {% if request.resolver_match.url_name == 'profile' %}aria-current="page"{% endif %}>Profile & settings</a>
 <form action="{% url 'accounts:logout' %}" method="POST">{% csrf_token %}<button type="submit" class="app-signout">Log out</button></form>
 {% else %}
@@ -13,7 +13,7 @@
 <nav id="mobile-nav-menu" class="app-mobile-menu hidden" aria-label="Mobile navigation">
 {% if user.is_authenticated %}
 <a href="{% url 'rivals:dashboard' %}" {% if request.resolver_match.url_name == 'dashboard' %}aria-current="page"{% endif %}>My gameweek</a>
-{% if user.team %}<a href="{% url 'rivals:teams.show' user.team.id %}" {% if request.resolver_match.url_name == 'teams.show' and request.resolver_match.kwargs.team_id == user.team.id %}aria-current="page"{% endif %}>My squad</a>{% endif %}
+{% if user.team %}<a href="{% url 'rivals:teams.show' user.team.id %}" {% if team_section and request.resolver_match.kwargs.team_id == user.team.id %}aria-current="page"{% endif %}>My squad</a>{% endif %}
 <a href="{% url 'accounts:profile' %}" {% if request.resolver_match.url_name == 'profile' %}aria-current="page"{% endif %}>Profile & settings</a>
 <form action="{% url 'accounts:logout' %}" method="POST">{% csrf_token %}<button type="submit" class="app-signout">Log out</button></form>
 {% else %}

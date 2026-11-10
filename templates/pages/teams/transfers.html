@@ -1,0 +1,83 @@
+{% load humanize math_filters %}
+    <!-- Dual-Column Intel Grid (Transfers & Player News) -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-8 items-start">
+      <!-- Transfers Ledger (7 cols) -->
+      <div class="lg:col-span-7 app-panel bg-white border border-gray-200 shadow-sm">
+        <div class="px-5 py-3 border-b border-gray-200 flex items-center justify-between bg-gray-50/50">
+          <div class="flex items-center gap-3">
+            <h2 class="app-section-title text-xs font-black uppercase tracking-wider text-text-main tabular-nums">Transfer Ledger</h2>
+            <span class="text-xs tabular-nums text-gray-500">Recent Moves</span>
+          </div>
+          <span class="text-[11px] tabular-nums text-gray-400">In & Out Activity</span>
+        </div>
+
+        {% if not transfers %}
+        <div class="p-8 text-center tabular-nums text-xs text-gray-400">
+          No transfers recorded yet for this squad.
+        </div>
+        {% else %}
+        <div class="divide-y divide-gray-100 p-2">
+          {% for transfer in transfers %}
+          <div class="p-3 hover:bg-gray-50/75 transition-colors text-xs flex items-center justify-between gap-4">
+            <div class="min-w-0">
+              <div class="flex items-center gap-1.5 tabular-nums text-[11px] flex-wrap mb-1">
+                <span class="text-danger font-medium line-through">{{ transfer.player_out_display_name }}</span>
+                <span class="text-gray-300">→</span>
+                <span class="text-pitch font-bold">{{ transfer.player_in_display_name }}</span>
+                {% if transfer.point_cost %}
+                <span class="text-[10px] tabular-nums font-bold text-danger bg-danger/10 px-1 py-0.2 border border-danger/20">
+                  -{{ transfer.point_cost }}pt
+                </span>
+                {% endif %}
+              </div>
+              <span class="text-[10px] tabular-nums text-gray-400 block">
+                Price diff: {{ transfer.price_difference_display|default:"—" }}
+              </span>
+            </div>
+
+            <div class="text-right shrink-0 tabular-nums text-xs">
+              <span class="font-bold text-text-main block">GW{{ transfer.gameweek }}</span>
+              {% if transfer.transfer_time %}
+              <span class="text-[10px] text-gray-400 block">{{ transfer.transfer_time|timesince }} ago</span>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Player News Bulletin (5 cols) -->
+      <div class="lg:col-span-5 app-panel bg-white border border-gray-200 shadow-sm">
+        <div class="px-5 py-3 border-b border-gray-200 flex items-center justify-between bg-gray-50/50">
+          <div class="flex items-center gap-3">
+            <h2 class="app-section-title text-xs font-black uppercase tracking-wider text-text-main tabular-nums">Squad Intel & News</h2>
+            <span class="text-xs tabular-nums text-gray-500">Status Updates</span>
+          </div>
+          <span class="text-[11px] tabular-nums text-gray-400">Availability</span>
+        </div>
+
+        {% if not recent_news %}
+        <div class="p-8 text-center tabular-nums text-xs text-gray-400">
+          No active news or injury updates for players in recent transfers.
+        </div>
+        {% else %}
+        <div class="divide-y divide-gray-100 p-2">
+          {% for player in recent_news %}
+          <div class="p-3 text-xs">
+            <div class="flex items-baseline justify-between gap-2 mb-1">
+              <span class="font-bold text-text-main font-sans">{{ player.web_name }}</span>
+              <span class="text-[10px] tabular-nums text-gray-400 shrink-0">
+                {% if player.news_added %}{{ player.news_added|timesince }} ago{% endif %}
+              </span>
+            </div>
+            <p class="text-xs text-gray-600 tabular-nums leading-relaxed bg-gray-50 p-2 border-l-2 border-highlight">
+              {{ player.news }}
+            </p>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+

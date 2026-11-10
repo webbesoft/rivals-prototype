@@ -1,0 +1,40 @@
+RivalSpy{% if is_test %} · Test email{% endif %}
+GW{{ report.gameweek }} · Your AI briefing
+Deadline: {{ deadline|date:"D j M Y H:i T" }}
+
+FIXTURES AND PLAYING-TIME RISKS
+Hold / current-squad baseline: if you make no transfers.
+Forecast XI · {{ first_week.formation }}
+{% for row in first_week.rows %}
+{{ row.label }}
+{% for player in row.players %}  {{ player.name }} · {{ player.club }}{% if player.is_captain %} · C Captain{% elif player.is_vice_captain %} · V Vice{% endif %}: {{ player.fixture.opponents|join:", "|default:"Blank" }} · {{ player.fixture.points }} est. pts{% if player.risk_label %} · ! {{ player.risk_label }}{% endif %}
+{% endfor %}{% endfor %}
+Bench (goalkeeper first, then outfield by estimated points)
+{% for player in first_week.bench %}  {{ player.name }} · {{ player.club }}: {{ player.fixture.opponents|join:", "|default:"Blank" }} · {{ player.fixture.points }} est. pts{% if player.risk_label %} · ! {{ player.risk_label }}{% endif %}
+{% endfor %}
+H = home; A = away. Blank = no scheduled fixture; multiple opponents = double.
+Player points are before captaincy. Bench points are excluded from the XI forecast.
+
+PLANNING WINDOW (UNCHANGED SQUAD)
+{% for week in outlook %}GW{{ week.gameweek }}: {{ week.points|floatformat:1 }} XI est. pts including captaincy; {{ week.blanks }} blanks; {{ week.doubles }} doubles; {{ week.risks }} risk flags across all 15 players.
+{% endfor %}
+BEFORE THE DEADLINE
+{% if ai_cards %}AI selected these priorities from your transfer plan. Figures remain estimates.
+{% for card in ai_cards %}{{ forloop.counter }}. {{ card.title }}
+{{ card.detail }}
+{% endfor %}{% else %}{{ ai_notice }}
+{% if report.best.moves %}Suggested route: {% for move in report.best.moves %}{{ move.out_name }} -> {{ move.in_name }}{% if not forloop.last %}; {% endif %}{% endfor %}.
+Estimated gain versus hold: {{ report.best.net_gain }} points over {{ report.horizon }} gameweeks, after {{ report.best.hits }} points in hits. Sensitivity range: {{ report.best.gain_low }} to {{ report.best.gain_high }} points.
+{% else %}Hold / roll: no available route clearly beats holding after estimated transfer costs. Keep your flexibility for later news.
+{% endif %}
+Captain: {{ report.captain|default:"No clear option" }}; vice: {{ report.vice|default:"No clear option" }}.
+Chosen using next gameweek fixture and playing-time estimates. Check late team news.
+{% endif %}
+{% if report.rival %}{% if report.rival.unavailable %}Rival scenarios are unavailable. Check the planner after standings update.{% else %}{{ report.rival.league }} · {{ report.rival.rival }}. Current gap (rival minus you): {{ report.rival.gap }}. Forecast gap if squads stay unchanged: {{ report.rival.hold_gap }}. Rival transfers and captain choices are unknown. Standings snapshot: {{ report.rival.updated_at }}.{% endif %}{% endif %}
+{% if notice %}{{ notice }}{% endif %}
+Open your transfer plan: {{ planner_url }}
+
+Prepared {{ prepared_at|date:"D j M H:i T" }}. Public data, bank and selling prices can lag recent moves. These are heuristic estimates, not guaranteed returns. Availability assumptions stay constant; chips and automatic substitutions are excluded. Review your current FPL team before acting.
+
+Manage or pause: {{ settings_url }}
+Unsubscribe: {{ unsubscribe_url }}

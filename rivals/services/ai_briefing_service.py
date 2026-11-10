@@ -3,15 +3,17 @@
 from background_task import background
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.db.models import F, Q
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.views.decorators.debug import sensitive_variables
 
 from core.ai_privacy import sensitive_ai
-from rivals.models import AIBriefing, AICredential, AIUsage
+from rivals.models import AIBriefing, AICredential, AIUsage, AIProviderCall
 from rivals.services.ai_credentials import AIUnavailable, configured, decrypt
 from rivals.services.decision_engine import DecisionEngine
 from rivals.services.gemini_service import MODEL, TOKEN_RESERVATION, Gemini
+from rivals.services.ai_usage_audit import event, run_event, prepare_call, enabled
 
 
 def evidence_for(report):
@@ -87,9 +89,37 @@ def evidence_for(report):
     return evidence
 
 
-def request_briefing(user, report):
-    if not user.is_verified:
-        raise AIUnavailable("Verify your email before preparing an AI briefing.")
+def request_briefing(user, report, *, enqueue=True, trigger="planner", digest_id=None):
+    event("requested", user_id=user.pk, trigger=trigger, digest_id=digest_id)
+    try:
+        return _request_briefing(
+            user, report, enqueue=enqueue, trigger=trigger, digest_id=digest_id
+        )
+    except AIUnavailable as error:
+        event(
+            "denied",
+            user_id=user.pk,
+            trigger=trigger,
+            digest_id=digest_id,
+            reason=error.code,
+        )
+        raise
+
+
+def _request_briefing(user, report, *, enqueue, trigger, digest_id):
+    if not enabled():
+        raise AIUnavailable(
+            "AI generation is paused. Your structured advice is still available.",
+            code="disabled",
+        )
+    if (
+        not user.is_verified
+        or not user.is_active
+        or (user.team_id and not user.team.active)
+    ):
+        raise AIUnavailable(
+            "Verify your email before preparing an AI briefing.", code="not_eligible"
+        )
     if not configured():
         raise AIUnavailable(
             "AI briefings are temporarily unavailable. Your transfer advice is still available."
@@ -100,11 +130,21 @@ def request_briefing(user, report):
         raise AIUnavailable("Reload your plan to see the next deadline.")
     with transaction.atomic():
         get_user_model().objects.select_for_update().get(pk=user.pk)
+        if AIProviderCall.objects.filter(
+            user=user, usage_exceeds_reservation=True, reviewed_at__isnull=True
+        ).exists():
+            raise AIUnavailable(
+                "AI generation is paused pending a usage review. Your structured advice is still available.",
+                code="usage_bounds",
+            )
         credential = AICredential.objects.filter(
             user=user, verified_at__isnull=False
         ).first()
         if not credential:
-            raise AIUnavailable("Enable AI briefings in your account settings first.")
+            raise AIUnavailable(
+                "Enable AI briefings in your account settings first.",
+                code="no_credential",
+            )
         existing = (
             AIBriefing.objects.filter(
                 user=user,
@@ -119,6 +159,7 @@ def request_briefing(user, report):
             .first()
         )
         if existing:
+            event("reused", run=existing, trigger=trigger, digest_id=digest_id)
             return existing
         recent = AIBriefing.objects.filter(
             user=user, created_at__gt=now - timezone.timedelta(minutes=10)
@@ -131,22 +172,51 @@ def request_briefing(user, report):
             or usage.reserved_tokens + TOKEN_RESERVATION > 100000
         ):
             raise AIUnavailable(
-                "Your AI briefing limit has been reached. Your transfer advice is still available."
+                "Your AI briefing limit has been reached. Your transfer advice is still available.",
+                code="cooldown" if recent else "daily_limit",
             )
-        usage.generations += 1
-        usage.reserved_tokens += TOKEN_RESERVATION
-        usage.save(update_fields=["generations", "reserved_tokens"])
+        reserved = (
+            AIUsage.objects.filter(
+                pk=usage.pk,
+                generations__lt=6,
+                reserved_tokens__lte=100000 - TOKEN_RESERVATION,
+            )
+            .filter(
+                Q(last_generation_at__isnull=True)
+                | Q(last_generation_at__lte=now - timezone.timedelta(minutes=10))
+            )
+            .update(
+                generations=F("generations") + 1,
+                reserved_tokens=F("reserved_tokens") + TOKEN_RESERVATION,
+                last_generation_at=now,
+            )
+        )
+        if not reserved:
+            usage.refresh_from_db()
+            raise AIUnavailable(
+                "Your AI briefing limit has been reached. Your transfer advice is still available.",
+                code=(
+                    "cooldown"
+                    if usage.last_generation_at
+                    and usage.last_generation_at > now - timezone.timedelta(minutes=10)
+                    else "daily_limit"
+                ),
+            )
         run = AIBriefing.objects.create(
             user=user,
             team=user.team,
             credential_revision=credential.revision,
             fingerprint=report["fingerprint"],
             model=MODEL,
+            trigger=trigger,
+            source_digest_id=digest_id,
             evidence=evidence_for(report),
             expires_at=min(deadline, now + timezone.timedelta(minutes=30)),
         )
+        run_event("reserved", run, reserved_tokens=TOKEN_RESERVATION)
         # Only the reference is serialised into the queue, never a key or a prompt.
-        prepare_briefing(str(run.pk))
+        if enqueue:
+            prepare_briefing(str(run.pk))
         return run
 
 
@@ -177,13 +247,25 @@ def current_run(user, fingerprint):
 @sensitive_ai
 @sensitive_variables()
 def prepare_briefing(run_id):
+    complete_briefing(run_id)
+
+
+@sensitive_ai
+@sensitive_variables()
+def complete_briefing(run_id, report=None):
+    """Execute once, optionally using a digest's freshly computed planner snapshot."""
     # Duplicate/retried jobs cannot cause another provider request.
     claimed = AIBriefing.objects.filter(pk=run_id, status="queued").update(
         status="running", started_at=timezone.now()
     )
     if not claimed:
+        run = AIBriefing.objects.filter(pk=run_id).first()
+        if run:
+            run_event("duplicate_skipped", run)
         return
     run = AIBriefing.objects.select_related("user", "team").get(pk=run_id)
+    run_event("claimed", run)
+    call = None
     try:
         credential = AICredential.objects.filter(
             user=run.user, revision=run.credential_revision
@@ -191,6 +273,8 @@ def prepare_briefing(run_id):
         if (
             not credential
             or not run.user.is_verified
+            or not run.user.is_active
+            or not run.team.active
             or run.user.team_id != run.team_id
             or run.expires_at <= timezone.now()
             or run.created_at < timezone.now() - timezone.timedelta(minutes=10)
@@ -198,19 +282,27 @@ def prepare_briefing(run_id):
             AIBriefing.objects.filter(pk=run_id, status="running").update(
                 status="cancelled", evidence=[], priorities=[]
             )
+            run_event(
+                "cancelled",
+                run,
+                reason="expired" if run.expires_at <= timezone.now() else "revoked",
+            )
             return
-        report = DecisionEngine(run.user).report()
+        report = report if report is not None else DecisionEngine(run.user).report()
         if report["fingerprint"] != run.fingerprint:
             AIBriefing.objects.filter(pk=run_id, status="running").update(
                 status="stale", evidence=[], priorities=[]
             )
+            run_event("stale", run, reason="plan_changed")
             return
         # Re-check revocation after potentially slow source reads.
         if not AICredential.objects.filter(
             user=run.user, revision=run.credential_revision
         ).exists():
+            run_event("cancelled", run, reason="revoked")
             return
-        priorities, input_tokens, output_tokens = Gemini().prioritise(
+        call = prepare_call(run, TOKEN_RESERVATION)
+        priorities, input_tokens, output_tokens = Gemini(call_id=call.pk).prioritise(
             decrypt(credential), run.evidence, report["strategy"]
         )
         with transaction.atomic():
@@ -227,8 +319,17 @@ def prepare_briefing(run_id):
                     input_tokens=input_tokens,
                     output_tokens=output_tokens,
                 )
-    except Exception:
+                run_event("result_ready", run, call=call)
+            else:
+                run_event("result_withheld", run, call=call, reason="revoked")
+    except Exception as error:
         # No provider exceptions, prompts, keys or raw output reach worker logs/task errors.
         AIBriefing.objects.filter(pk=run_id, status="running").update(
             status="failed", error_code="unavailable"
+        )
+        run_event(
+            "failed",
+            run,
+            call=call,
+            reason=error.code if isinstance(error, AIUnavailable) else "unavailable",
         )

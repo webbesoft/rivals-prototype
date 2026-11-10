@@ -18,10 +18,10 @@
   {% else %}
     {% if ai_state == 'stale' %}<p class="text-sm mb-3">Your plan has changed or this briefing has expired. Prepare an updated briefing.</p>
     {% elif ai_state == 'failed' or ai_state == 'delayed' %}<p class="text-sm mb-3">We couldn't prepare this AI briefing. Check your connection or try again later. Your transfer advice is ready below.</p>
-    {% else %}<p class="text-sm mb-3">Get a short list of what matters most before the deadline, using your own API key.</p>{% endif %}
+    {% else %}<p class="text-sm mb-3">Preview the priorities for your deadline briefing using your own API key. Manage scheduled email delivery in AI briefing settings.</p>{% endif %}
     <form method="POST" action="{% url 'rivals:decisions.ai' %}" hx-post="{% url 'rivals:decisions.ai' %}" hx-target="#gemini-briefing" hx-swap="outerHTML" hx-request='{"timeout":25000}' hx-disabled-elt="find button">
       {% csrf_token %}<input type="hidden" name="fingerprint" value="{{ ai_fingerprint }}">
-      <button class="app-primary-button" type="submit">Prepare AI briefing</button>
+      <button class="app-primary-button" type="submit">Preview AI briefing</button>
     </form>
   {% endif %}
 </section>

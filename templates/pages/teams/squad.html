@@ -1,0 +1,21 @@
+{% load humanize math_filters %}
+    <!-- Squad History Carousel -->
+    <div class="mb-8">
+      {% include "cotton/components/squad_history_carousel/index.html" %}
+    </div>
+
+    {% if user.team_id == team.id %}
+    <section id="squad-briefing" class="mb-8" data-remote-panel data-loading-message="Preparing your transfer outlook…" data-error-message="We couldn't load your outlook. Open the planner to try again.">
+      <p data-panel-status role="status" hidden class="mb-3 text-sm"></p>
+      <div hx-get="{% url 'rivals:decisions.summary' %}" hx-trigger="load" hx-request='{"timeout":25000}'>
+        <a class="text-pitch underline" href="{% url 'rivals:decisions' %}">Plan transfers</a>
+      </div>
+    </section>
+    {% elif user.team %}
+    <section id="comparison-panel" class="mb-8" data-remote-panel
+             data-loading-message="Preparing comparison…" data-error-message="We couldn't prepare this comparison. Please try again.">
+      <p data-panel-status role="status" hidden class="mb-3 text-xs text-gray-600"></p>
+      <div id="rival-comparison-container"></div>
+    </section>
+    {% endif %}
+

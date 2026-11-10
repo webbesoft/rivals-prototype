@@ -5,6 +5,85 @@ from django.conf import settings
 from django.db import models
 
 
+class DigestSubscription(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    enabled = models.BooleanField(default=False)
+    paused = models.BooleanField(default=False)
+    lead_hours = models.PositiveSmallIntegerField(default=4)
+    consented_at = models.DateTimeField(null=True)
+    # Rotating this token when re-enabling prevents an old email disabling a new consent.
+    unsubscribe_token = models.UUIDField(default=uuid.uuid4, editable=False)
+    updated_at = models.DateTimeField(auto_now=True)
+
+
+class DeadlineDigest(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    team = models.ForeignKey("Team", on_delete=models.CASCADE)
+    season = models.CharField(max_length=7)
+    gameweek = models.PositiveSmallIntegerField()
+    kind = models.CharField(max_length=12, default="scheduled")
+    deadline = models.DateTimeField()
+    scheduled_for = models.DateTimeField()
+    generation_state = models.CharField(max_length=16, default="pending")
+    delivery_state = models.CharField(max_length=16, default="pending")
+    generation = models.PositiveIntegerField(default=0)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    delivery_attempts = models.PositiveSmallIntegerField(default=0)
+    next_attempt_at = models.DateTimeField(null=True)
+    lease_until = models.DateTimeField(null=True)
+    prepared_at = models.DateTimeField(null=True)
+    sent_at = models.DateTimeField(null=True)
+    recipient = models.EmailField(blank=True)
+    report = models.JSONField(default=dict)
+    ai_briefing = models.ForeignKey("AIBriefing", null=True, on_delete=models.SET_NULL)
+    notice = models.CharField(max_length=200, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def status_label(self):
+        from django.utils import timezone
+
+        if self.delivery_state == "sent":
+            return "Sent"
+        if self.delivery_state == "ambiguous":
+            return "Delivery unconfirmed"
+        if self.delivery_state == "skipped":
+            return "Skipped"
+        if self.delivery_state in ("connecting", "sending"):
+            return "Sending"
+        if self.generation_state == "ready":
+            if self.kind == "preview":
+                return "Preview ready"
+            return "Could not send" if self.delivery_attempts >= 3 else "Ready to send"
+        if self.generation_state == "failed":
+            return "Could not prepare" if self.attempts >= 3 else "Waiting to retry"
+        if self.scheduled_for > timezone.now():
+            return "Scheduled"
+        if self.attempts >= 3 and self.generation_state == "pending":
+            return "Could not prepare"
+        return "Preparing"
+
+    @property
+    def is_processing(self):
+        return self.status_label in (
+            "Preparing",
+            "Sending",
+            "Ready to send",
+            "Waiting to retry",
+        )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "season", "gameweek"],
+                condition=models.Q(kind="scheduled"),
+                name="one_deadline_digest_per_event",
+            )
+        ]
+        indexes = [models.Index(fields=["generation_state", "scheduled_for"])]
+
+
 class AICredential(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     ciphertext = models.TextField(editable=False)
@@ -22,6 +101,7 @@ class AIUsage(models.Model):
     generations = models.PositiveSmallIntegerField(default=0)
     reserved_tokens = models.PositiveIntegerField(default=0)
     last_connection_at = models.DateTimeField(null=True)
+    last_generation_at = models.DateTimeField(null=True)
 
     class Meta:
         constraints = [
@@ -45,6 +125,60 @@ class AIBriefing(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField()
     started_at = models.DateTimeField(null=True)
+    trigger = models.CharField(max_length=16, default="planner")
+    source_digest_id = models.UUIDField(null=True)
+
+
+class AIProviderCall(models.Model):
+    """One paid-call claim per briefing, retained when results are revoked."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL
+    )
+    briefing = models.OneToOneField(AIBriefing, null=True, on_delete=models.SET_NULL)
+    briefing_reference = models.UUIDField(unique=True)
+    credential_revision = models.UUIDField()
+    model = models.CharField(max_length=64)
+    trigger = models.CharField(max_length=16)
+    source_digest_id = models.UUIDField(null=True)
+    reserved_tokens = models.PositiveIntegerField()
+    outcome = models.CharField(max_length=16, default="prepared")
+    started_at = models.DateTimeField(null=True)
+    completed_at = models.DateTimeField(null=True)
+    http_status = models.PositiveSmallIntegerField(null=True)
+    duration_ms = models.PositiveIntegerField(null=True)
+    input_bytes = models.PositiveIntegerField(null=True)
+    provider_response_id = models.CharField(max_length=128, blank=True)
+    input_tokens = models.PositiveBigIntegerField(null=True)
+    candidate_tokens = models.PositiveBigIntegerField(null=True)
+    thought_tokens = models.PositiveBigIntegerField(null=True)
+    cached_tokens = models.PositiveBigIntegerField(null=True)
+    total_tokens = models.PositiveBigIntegerField(null=True)
+    usage_complete = models.BooleanField(default=False)
+    usage_exceeds_reservation = models.BooleanField(default=False)
+    reviewed_at = models.DateTimeField(null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class AIUsageEvent(models.Model):
+    """Append-only application audit metadata; no prompts, keys or response text."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL
+    )
+    briefing_id = models.UUIDField(null=True)
+    call_id = models.UUIDField(null=True)
+    source_digest_id = models.UUIDField(null=True)
+    trigger = models.CharField(max_length=16, blank=True)
+    event = models.CharField(max_length=32)
+    reason = models.CharField(max_length=32, blank=True)
+    reserved_tokens = models.PositiveIntegerField(null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["user", "created_at"])]
 
 
 # Create your models here.

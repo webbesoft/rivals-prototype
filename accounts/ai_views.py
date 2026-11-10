@@ -41,6 +41,8 @@ class GeminiConnectionForm(forms.Form):
 @sensitive_ai
 @sensitive_variables()
 def gemini_settings(request):
+    from accounts.digest_views import briefing_settings_context
+
     form = GeminiConnectionForm()
     if request.method == "POST":
         if request.POST.get("action") == "remove":
@@ -66,7 +68,7 @@ def gemini_settings(request):
                 else:
                     messages.success(
                         request,
-                        "AI briefings enabled. You can now prepare a briefing from your transfer plan.",
+                        "Gemini connected. Set when to receive your briefing below.",
                     )
                     return redirect("accounts:gemini")
                 form = GeminiConnectionForm()
@@ -74,6 +76,7 @@ def gemini_settings(request):
         request,
         "accounts/gemini.html",
         {
+            **briefing_settings_context(request.user),
             "connection_form": form,
             "gemini_configured": configured(),
             "gemini_connected": AICredential.objects.filter(user=request.user).exists(),

@@ -139,7 +139,9 @@ def test_zero_scores_render_and_missing_team_is_404(api):
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize("page", ["rivals:dashboard", "rivals:teams.show"])
+@pytest.mark.parametrize(
+    "page", ["rivals:dashboard", "rivals:teams.show", "rivals:teams.performance"]
+)
 def test_pages_show_score_panel_before_forecasts_without_score_network_calls(api, page):
     team = Team.objects.create(fpl_team_id="12345", team_name="Test FC")
     user = User.objects.create_user(
@@ -150,7 +152,7 @@ def test_pages_show_score_panel_before_forecasts_without_score_network_calls(api
     )
     client = Client()
     client.force_login(user)
-    url = reverse(page, args=[team.pk] if page.endswith("show") else [])
+    url = reverse(page, args=[team.pk] if page.startswith("rivals:teams.") else [])
     with (
         patch(
             "rivals.services.projection_service.ProjectionService.project_team_finish",
@@ -172,5 +174,9 @@ def test_pages_show_score_panel_before_forecasts_without_score_network_calls(api
     assert 'hx-trigger="load, every 120s"' in html
     assert reverse("rivals:teams.score", args=[team.pk]) in html
     assert "vs average" not in html
-    assert html.index("Gameweek points") < html.index("Projected")
+    if page == "rivals:teams.show":
+        assert html.index("Gameweek points") < html.index("squad-history-panel")
+        assert "Projected Rank" not in html
+    else:
+        assert html.index("Gameweek points") < html.index("Projected")
     api.fetch_team_basic_info.assert_not_called()

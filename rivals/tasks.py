@@ -179,6 +179,9 @@ def refresh_tick():
     )
     context = GameweekContextService.cached()
     enqueue_refresh("context", context=context)
+    from rivals.services.deadline_digest_service import dispatch_digests
+
+    dispatch_digests()
     if context["stale"]:
         return
     enqueue_refresh("players", context=context)
@@ -208,3 +211,7 @@ def refresh_tick():
 
 # Register reference-only Gemini work with the existing task worker.
 from rivals.services.ai_briefing_service import prepare_briefing  # noqa: E402, F401
+from rivals.services.deadline_digest_service import (
+    generate_digest,
+    deliver_digest,
+)  # noqa: E402, F401

@@ -2,6 +2,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_http_methods, require_POST
@@ -30,24 +31,42 @@ def team_score(request, team_id):
 
 
 @login_required
-def team_show(request, team_id):
+def team_show(request, team_id=None, section="squad"):
+    if team_id is None:
+        if request.user.team_id:
+            return redirect("rivals:teams.show", team_id=request.user.team_id)
+        return redirect("rivals:dashboard")
     team = get_object_or_404(Team, id=team_id)
 
     enqueue_team(team.id)
-    gw_qs = team.gameweek_data
-    if team.current_season:
-        gw_qs = gw_qs.filter(season=team.current_season)
-    gameweek_data = gw_qs.order_by("-gameweek")[:10]
-    transfers = team.transfers.select_related("player_in", "player_out").order_by(
-        "-gameweek"
-    )[:20]
-
-    mini_league_performance = calculate_mini_league_performance(team)
-    recent_news = get_recent_player_news(transfers)
-    season_histories = team.season_histories.all()
-    projection = ProjectionService().project_team_finish(team)
-
-    selection = SquadHistoryService(team).selection()
+    sections = [
+        ("squad", "Squad", "teams.show"),
+        ("performance", "Performance", "teams.performance"),
+        ("transfers", "Transfers & Intel", "teams.transfers"),
+        ("history", "History", "teams.history"),
+    ]
+    section_context = {}
+    if section == "squad":
+        section_context["squad_selection"] = SquadHistoryService(team).selection()
+    elif section == "performance":
+        gw_qs = team.gameweek_data
+        if team.current_season:
+            gw_qs = gw_qs.filter(season=team.current_season)
+        section_context = {
+            "gameweek_data": gw_qs.order_by("-gameweek")[:10],
+            "mini_league_performance": calculate_mini_league_performance(team),
+            "projection": ProjectionService().project_team_finish(team),
+        }
+    elif section == "transfers":
+        transfers = team.transfers.select_related("player_in", "player_out").order_by(
+            "-gameweek"
+        )[:20]
+        section_context = {
+            "transfers": transfers,
+            "recent_news": get_recent_player_news(transfers),
+        }
+    elif section == "history":
+        section_context["season_histories"] = team.season_histories.all()
 
     return render(
         request,
@@ -55,13 +74,20 @@ def team_show(request, team_id):
         {
             **refresh_status(request.user),
             "team": team,
-            "gameweek_data": gameweek_data,
-            "transfers": transfers,
-            "mini_league_performance": mini_league_performance,
-            "recent_news": recent_news,
-            "season_histories": season_histories,
-            "projection": projection,
-            "squad_selection": selection,
+            "team_section": section,
+            "team_section_title": next(
+                label for key, label, _ in sections if key == section
+            ),
+            "team_section_template": f"pages/teams/{section}.html",
+            "team_sections": [
+                {
+                    "label": label,
+                    "url": reverse(f"rivals:{route}", args=[team.id]),
+                    "active": key == section,
+                }
+                for key, label, route in sections
+            ],
+            **section_context,
             "score_summary": ScoreSummaryService(team).cached(),
         },
     )

@@ -393,6 +393,12 @@ class DashboardViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Command FC")
         self.assertContains(response, "Gameweek points")
+        self.assertContains(response, "Lineup & squad history")
+        self.assertNotContains(response, "Mini-League Standings")
+        response = self.client.get(
+            reverse("rivals:teams.performance", kwargs={"team_id": self.team.id})
+        )
+        self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Mini-League Standings")
         self.assertContains(response, "Apex League")
 

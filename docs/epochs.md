@@ -78,15 +78,27 @@ Validation: 47 new security/provider tests pass, including execution through the
 
 The keyring must be configured on both web/job roles before connections are available. See [AI briefings operations and privacy](gemini-briefings.md) for setup, current primary provider references, exact limits, rotation, backup/restore and remaining smoke checks. Apply migration `0015`; no production deployment, real provider key or live Google charge was part of implementation.
 
-## Epoch 6 — Deadline digests
+### AI briefing follow-up — Usage audit and spending controls (implemented)
 
-- Lead with the planner's “Fixtures and playing-time risks” visual, immediately below a short gameweek/deadline header and before written analysis. Show the upcoming forecast XI in formation, captain/vice, all bench players, opponents with H/A, blanks/doubles, individual estimated points and visible availability/minutes flags. Label the hold/current-squad baseline clearly. Follow the next-gameweek lineup with a compact outlook across the planning window; avoid repeating a full pitch for every week.
-- Use the same forecast data and selection rules as the planner. Adapt the visual for email with inline styles and an email-safe layout that reads on mobile. Names, fixtures, estimates and risk labels must remain readable when images are blocked; no scripts, gameweek switches or hover-only explanations. Include a plain-text alternative.
-- Offer an explicit opt-in for verified email accounts, with a configurable lead time (initial default: four hours before the actual next FPL deadline). Use timezone-aware deadlines, not a fixed weekday schedule.
-- Store a per-user, per-season, per-event delivery record. Re-evaluate changed deadlines, use bounded retries, prevent duplicate delivery, and skip missed or expired deadlines rather than send obsolete advice.
-- Refresh inputs before generating the digest. After the visual, give brief transfer-versus-roll advice, captain reasoning, relevant rival scenarios, uncertainty and a link to the plan. The visual carries the squad/fixture/risk detail; do not repeat it as a wall of prose.
-- Allow preview/test delivery, unsubscribe, and pausing. Separate generation and delivery states; handle ambiguous email-send failures deliberately.
-- Never include provider keys in emails. Any Gemini enhancement uses the recipient's own saved key. The visual and structured advice work without Gemini; retain them if the provider fails, and state when fresh advice cannot be generated.
+New generation attempts have a durable provider-call claim before submission and append-only lifecycle events. Origins, reservations, reuse/denials, provider outcomes and allowlisted token metadata remain traceable even when output validation fails or keys are removed. Unknown usage is retained as unknown; it never becomes zero or a refunded allowance. Atomic reservations enforce the existing caps; reported usage overages pause further generation until reviewed. `AI_GENERATION_ENABLED=False` stops new/queued paid requests across web/job roles.
+
+Validation: 21 audit tests and all 99 briefing/delivery tests pass. Django system and application migration checks pass; migration `0018` is applied locally.
+
+Apply migration `0018`. `manage.py ai_usage_report --user-id ID --days 7 --events` supports investigations without exposing keys, prompts, provider bodies or email addresses. Reservations and provider reports are not an invoice. See [usage audit operations](gemini-briefings.md#usage-audit-and-billing-investigations).
+
+## Epoch 6 — AI briefings by deadline email (implemented)
+
+AI briefings are the deadline emails. One account settings page manages the Gemini connection and email delivery; planner actions preview the same briefing. Key connection alone never opts a manager into email.
+
+- The planner and email lead with the same forecast XI/bench and fixtures/playing-time risks, below a short gameweek/deadline header. Email uses inline-styled text/tables, visible captain/vice and risk labels, a compact multi-week outlook and a plain-text alternative. No external images or scripts are needed.
+- Verified managers explicitly opt in, choose 1–24 hours before the actual FPL deadline (four by default), pause or unsubscribe. Previews and test emails do not subscribe the account or replace scheduled delivery.
+- Fresh public player/fixture, financial/history/transfer and published lineup inputs feed the existing decision engine before generation. Gemini prioritises the engine's evidence using the recipient's saved key and the existing shared usage limits. Missing/revoked keys, quota exhaustion and provider failures retain the fresh visual and structured advice with an explicit fallback notice.
+- One scheduled record per manager/season/event tracks generation separately from delivery. Changed deadlines invalidate pending work; versioned claims and leases recover abandoned generation. Three bounded attempts and a thirty-minute delivery window prevent endless retries or obsolete emails. Submitted or ambiguous email sends are never automatically repeated.
+- Settings, signed unsubscribe confirmation, ownership/CSRF controls, current-email/consent rechecks, worker tasks and recovery behavior are covered by automated tests. No keys or raw provider failures reach email or queue arguments.
+
+Validation: 31 new delivery/provider tests pass. The complete workspace suite passes 297 Python tests; both JavaScript checks, Django system checks and application migration consistency checks pass. Migration `0017` is applied locally.
+
+Apply migration `0017` and restart the existing FPL worker. SMTP/SITE_URL and the shared encryption keyring must be configured; users supply their own Gemini key. No production deployment, real Google charge, inbox delivery or cross-client email visual test is claimed. See [deadline briefing delivery and operations](deadline-briefings.md) for exact timing, retries, consent and smoke checks.
 
 ## Product ideas to prioritise through use
 

@@ -1,15 +1,15 @@
 <c-layouts.base title="AI briefing settings - RivalSpy">
-  <div class="max-w-3xl mx-auto px-4 py-10">
+  <div class="app-settings-page px-4 py-10">
     <div class="app-masthead">
       <p class="app-kicker">Your account</p>
       <h1 class="app-page-title">AI briefings</h1>
-      <p class="app-lede">A short list of what matters most before the deadline, based on your transfer plan.</p>
+      <p class="app-lede">Your forecast lineup and priorities, emailed before the FPL deadline. You can also preview the same briefing from your transfer plan.</p>
     </div>
     {% for message in messages %}<p role="status" class="app-panel p-4 mb-4">{{ message }}</p>{% endfor %}
     <section class="app-panel p-6 mb-6">
-      <h2 class="app-section-title mb-3">{% if gemini_connected %}AI briefings enabled · ••••••••{% else %}Enable AI briefings{% endif %}</h2>
+      <h2 class="app-section-title mb-3">{% if gemini_connected %}Gemini connected · ••••••••{% else %}Enable AI briefings{% endif %}</h2>
       <p class="text-sm text-gray-600 mb-4">Supported provider: Google Gemini.</p>
-      <p class="text-sm text-gray-600 mb-4">When you request a briefing, we send Google a small summary of your plan: player names, estimated gains and transfer costs, the estimated remaining bank and free transfers, captain options, squad risks and anonymous rival comparisons. We leave out your email, FPL ID, league names and rival identities. Gemini selects priorities; the facts and recommendations come from your plan.</p>
+      <p class="text-sm text-gray-600 mb-4">When you request a briefing or an opted-in deadline email is due, we send Google a small summary of your plan: player names, estimated gains and transfer costs, the estimated remaining bank and free transfers, captain options, squad risks and anonymous rival comparisons. We leave out your email, FPL ID, league names and rival identities. Gemini selects priorities; the facts and recommendations come from your plan.</p>
       <p class="text-sm text-gray-600 mb-4">Requests use your Google API quota and may incur charges. Google's data use depends on your account and region; unpaid services may use prompts to improve their products. Review <a class="underline" href="https://ai.google.dev/gemini-api/terms" rel="noopener noreferrer" target="_blank">Google's terms</a> and your billing limits before connecting.</p>
       <p class="text-sm text-gray-600 mb-4">Your key is encrypted and never displayed again. You can remove it at any time. Regular transfer advice works without AI briefings.</p>
       {% if not user.is_verified %}
@@ -21,13 +21,14 @@
           {% csrf_token %}<input type="hidden" name="action" value="connect">
           <label class="block text-sm font-bold" for="{{ connection_form.api_key.id_for_label }}">{% if gemini_connected %}Replacement Gemini API key{% else %}Gemini API key{% endif %}</label>
           {{ connection_form.api_key }}{{ connection_form.api_key.errors }}
-          <p class="text-xs text-gray-600">By connecting, you agree to send the planning summary above to Google when you request a briefing. Up to six briefings per day, with ten minutes between new requests.</p>
+          <p class="text-xs text-gray-600">By connecting, you agree to send the planning summary above to Google when you request a briefing or enable scheduled delivery below. Up to six briefings per day, with ten minutes between new requests.</p>
           <button type="submit" class="app-primary-button">{% if gemini_connected %}Replace key{% else %}Enable AI briefings{% endif %}</button>
           <a class="underline text-sm ml-3" href="https://aistudio.google.com/api-keys" target="_blank" rel="noopener noreferrer">Get a Gemini key</a>
         </form>
       {% endif %}
       {% if gemini_connected %}<form method="POST" class="mt-5">{% csrf_token %}<input type="hidden" name="action" value="remove"><button type="submit" class="app-secondary-button app-button-danger">Remove key and briefings</button></form>{% endif %}
     </section>
+    {% include "accounts/_briefing_delivery.html" %}
     <a class="app-secondary-button" href="{% url 'rivals:decisions' %}">Back to your transfer plan</a>
   </div>
 </c-layouts.base>

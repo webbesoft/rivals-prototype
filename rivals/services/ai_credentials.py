@@ -18,6 +18,10 @@ from rivals.models import AIBriefing, AICredential, AIUsage
 class AIUnavailable(Exception):
     """Only fixed, non-sensitive messages may be used as exception arguments."""
 
+    def __init__(self, message, *, code="unavailable"):
+        super().__init__(message)
+        self.code = code
+
 
 @sensitive_variables()
 def keyring():
@@ -92,6 +96,19 @@ def reserve_connection(user):
 @sensitive_ai
 @sensitive_variables()
 def connect(user, api_key):
+    from rivals.services.ai_usage_audit import event
+
+    event("connection_requested", user_id=user.pk)
+    try:
+        _connect(user, api_key)
+    except Exception:
+        event("connection_denied", user_id=user.pk, reason="credential_error")
+        raise
+    event("key_connected", user_id=user.pk)
+
+
+@sensitive_variables()
+def _connect(user, api_key):
     from rivals.services.gemini_service import Gemini
 
     if not user.is_verified:
@@ -136,9 +153,12 @@ def connect(user, api_key):
 
 @sensitive_ai
 def disconnect(user):
+    from rivals.services.ai_usage_audit import event
+
     with transaction.atomic():
         get_user_model().objects.select_for_update().get(pk=user.pk)
         AICredential.objects.filter(user=user).delete()
         AIBriefing.objects.filter(user=user).update(
             status="cancelled", evidence=[], priorities=[]
         )
+        event("key_removed", user_id=user.pk)

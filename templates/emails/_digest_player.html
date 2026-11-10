@@ -1,0 +1,8 @@
+<td align="center" valign="top" style="padding:8px 2px;font-size:12px;line-height:1.45;word-break:break-word;">
+  <strong style="display:block;color:#153f32;">{{ player.name }}</strong>
+  <span style="color:#485a51;">{{ player.club }} · {{ player.position }}</span><br>
+  {% if player.is_captain %}<strong style="color:#153f32;">C · Captain</strong><br>{% elif player.is_vice_captain %}<strong style="color:#153f32;">V · Vice</strong><br>{% endif %}
+  {% for opponent in player.fixture.opponents %}<span>{{ opponent }}</span><br>{% empty %}<strong style="color:#9f341c;">Blank</strong><br>{% endfor %}
+  <strong>{{ player.fixture.points }} est. pts</strong>
+  {% if player.risk_label %}<br><strong style="color:#9f341c;">! {{ player.risk_label }}</strong>{% endif %}
+</td>

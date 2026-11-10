@@ -42,7 +42,8 @@ def digest(value):
 class DecisionEngine:
     VERSION = "decision-v2"
 
-    def __init__(self, user, api=None):
+    def __init__(self, user, api=None, *, fresh_squad=False):
+        self.fresh_squad = fresh_squad
         self.user = user
         self.team = user.team
         self.api = api or FplApiService()
@@ -98,7 +99,7 @@ class DecisionEngine:
                 season=self.context["season"], gameweek=source_week
             ).order_by("position")
         )
-        if len(rows) == 15:
+        if len(rows) == 15 and not self.fresh_squad:
             self.public_ids = [row.player_fpl_id for row in rows]
         else:
             picks = self.api.fetch_team_picks(self.team.fpl_team_id, source_week)

@@ -24,7 +24,7 @@
         <div>
           <h3 class="text-lg font-black uppercase tracking-tight text-amber-700">New FPL Season Detected!</h3>
           <p class="text-sm font-medium mt-1 text-amber-800">
-            A new Fantasy Premier League season has started. If your FPL Team ID changed for the new season, please update it below to refresh your squad and leagues. Old season data is safely stored in your <a href="{% if user.team %}{% url 'rivals:teams.show' user.team.id %}{% else %}#{% endif %}" class="underline font-bold hover:text-accent">History</a> tab.
+            A new Fantasy Premier League season has started. If your FPL Team ID changed for the new season, please update it below to refresh your squad and leagues. Old season data is safely stored in your <a href="{% if user.team %}{% url 'rivals:teams.history' user.team.id %}{% else %}#{% endif %}" class="underline font-bold hover:text-accent">History</a> tab.
           </p>
         </div>
       </div>
@@ -32,7 +32,7 @@
     {% endif %}
 
     <div class="app-panel p-5 mb-6 flex flex-wrap items-center justify-between gap-3">
-      <div><h2 class="app-section-title">AI briefings</h2><p class="text-sm text-gray-600 mt-2">Prioritise the key decisions in your transfer plan with your own API key.</p></div>
+      <div><h2 class="app-section-title">AI briefings</h2><p class="text-sm text-gray-600 mt-2">Your forecast lineup and priorities before the FPL deadline. Manage your Gemini key and email delivery together.</p></div>
       <a class="underline text-sm font-bold" href="{% url 'accounts:gemini' %}">Manage AI briefings</a>
     </div>
     <div class="grid gap-8 md:grid-cols-3">

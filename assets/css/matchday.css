@@ -111,6 +111,55 @@
 
 /* A common hierarchy, with serif headlines and tabular sans-serif statistics. */
 .matchday-app .app-content > .max-w-7xl { max-width: 1336px; padding-inline: 48px; }
+.app-settings-page { width: 100%; max-width: 48rem; margin-inline: auto; }
+.briefing-settings-card { padding: 24px; margin-bottom: 24px; }
+.briefing-settings-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.briefing-settings-heading p { margin-top: 7px; color: var(--soft-ink); font-size: 13px; line-height: 1.65; }
+.briefing-delivery-badge { display: inline-flex; align-items: center; flex-shrink: 0; padding: 4px 9px; border: 1px solid var(--rule); border-radius: 5px; background: #edf0e4; color: var(--soft-ink); font-size: 11px; font-weight: 700; white-space: nowrap; }
+.briefing-delivery-badge.is-enabled { background: #e6f1e6; color: #21543b; border-color: #bdd1bb; }
+.briefing-settings-notice { margin-top: 16px; padding: 12px; border-left: 3px solid var(--accent); background: #f4f3e8; color: var(--soft-ink); font-size: 12px; line-height: 1.6; }
+.briefing-toggle-group { margin-top: 22px; border-block: 1px solid var(--rule); }
+.briefing-toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 18px 0; cursor: pointer; }
+.briefing-toggle-row + .briefing-toggle-row { border-top: 1px solid var(--rule); }
+.briefing-toggle-copy { display: grid; gap: 5px; }
+.briefing-toggle-copy strong, .briefing-timing label { font-size: 13px; }
+.briefing-toggle-copy > span { max-width: 430px; font-size: 12px; font-weight: 400; line-height: 1.65; color: var(--soft-ink); }
+.briefing-toggle-row input[type=checkbox] { appearance: none; position: relative; flex-shrink: 0; width: 40px; height: 24px; margin: 0; border: 1px solid #a9b5a3; border-radius: 20px; background: #dce2d6; cursor: pointer; transition: background .15s ease; }
+.briefing-toggle-row input[type=checkbox]::before { content: ""; position: absolute; width: 16px; height: 16px; top: 3px; left: 3px; border-radius: 50%; background: #fffef9; box-shadow: 0 1px 3px #183f3030; transition: transform .15s ease; }
+.briefing-toggle-row input[type=checkbox]:checked { background: #21543b; border-color: #21543b; }
+.briefing-toggle-row input[type=checkbox]:checked::before { transform: translateX(16px); }
+.briefing-timing { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding-block: 20px; }
+.briefing-timing p { margin-top: 5px; font-size: 12px; line-height: 1.65; color: var(--soft-ink); }
+.briefing-timing-control { flex-shrink: 0; }
+.briefing-timing select { min-width: 132px; padding: 8px 12px; font-size: 13px; }
+.briefing-settings-help { padding-bottom: 20px; font-size: 12px; color: var(--soft-ink); }
+.briefing-settings-help summary { cursor: pointer; font-weight: 600; }
+.briefing-settings-help p { margin-top: 10px; line-height: 1.75; }
+.briefing-settings-footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 20px; border-top: 1px solid var(--rule); }
+.briefing-settings-footer p, .briefing-preview-note { color: var(--soft-ink); font-size: 11px; line-height: 1.65; }
+.briefing-settings-footer button { flex-shrink: 0; }
+.briefing-preview-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+.briefing-preview-note { margin-top: 12px; }
+.briefing-field-errors { font-size: 12px; color: #9f341c; margin-bottom: 12px; line-height: 1.6; }
+.briefing-history { margin-top: 18px; list-style: none; }
+.briefing-history li { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding-block: 14px; border-top: 1px solid var(--rule); }
+.briefing-history a { font-size: 13px; font-weight: 700; }
+.briefing-history a:hover { text-decoration: underline; }
+.briefing-history a span { color: var(--soft-ink); margin-left: 4px; }
+.briefing-history p { margin-top: 4px; font-size: 11px; color: var(--soft-ink); line-height: 1.6; }
+.briefing-history .briefing-history-notice { max-width: 430px; margin-top: 8px; }
+.briefing-history .briefing-history-empty { padding-bottom: 0; font-size: 12px; line-height: 1.7; color: var(--soft-ink); }
+@media (max-width: 540px) {
+  .briefing-settings-card { padding: 20px 16px; }
+  .briefing-timing { align-items: stretch; flex-direction: column; gap: 12px; }
+  .briefing-timing select { width: 100%; }
+  .briefing-settings-footer { align-items: stretch; flex-direction: column; }
+  .briefing-settings-footer button, .briefing-preview-actions button { width: 100%; }
+}
+@media (forced-colors: active) {
+  .briefing-toggle-row input[type=checkbox] { appearance: auto; }
+  .briefing-toggle-row input[type=checkbox]::before { display: none; }
+}
 .matchday-app .app-page-title {
   font-family: Georgia, "Times New Roman", serif;
   font-size: clamp(30px, 3vw, 42px);

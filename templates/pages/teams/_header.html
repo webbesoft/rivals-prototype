@@ -1,0 +1,100 @@
+{% load humanize %}
+    <!-- Team Dossier Header -->
+    <div class="app-panel bg-white border border-gray-200 shadow-sm mb-8">
+      <!-- Meta row -->
+      <div class="px-5 py-2.5 border-b border-gray-200 bg-gray-50/75 flex flex-wrap items-center justify-between text-xs tabular-nums gap-2">
+        <div class="flex items-center gap-2">
+          <span class="font-bold uppercase tracking-wider text-pitch">The team sheet</span>
+          <span class="text-gray-300">/</span>
+          <span class="text-gray-500 tabular-nums">ID: {{ team.fpl_team_id }}</span>
+          {% if team.current_season %}
+          <span class="text-gray-300">/</span>
+          <span class="text-gray-700 font-semibold uppercase">{{ team.current_season }} Season</span>
+          {% endif %}
+        </div>
+        <div class="text-gray-500">
+          Last Synced: <span class="text-text-main font-semibold">{% if team.last_synced_at %}{{ team.last_synced_at|timesince }} ago{% else %}Pending{% endif %}</span>
+        </div>
+      </div>
+
+      <!-- Identity & Tactical Actions -->
+      <div class="p-5 sm:p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+        <div>
+          <h1 class="app-page-title text-2xl sm:text-3xl font-black text-text-main uppercase tracking-tight font-sans">
+            {{ team.team_name }}
+          </h1>
+          <p class="text-xs sm:text-sm text-gray-500 tabular-nums mt-1">
+            Manager: <span class="text-text-main font-bold">{{ team.manager_name }}</span>
+            {% if team.years_active %}
+            <span class="mx-2 text-gray-300">·</span>
+            {{ team.years_active }} Season{{ team.years_active|pluralize }} Active
+            {% endif %}
+          </p>
+        </div>
+
+        <!-- Action Controls -->
+        <div class="flex flex-wrap items-center gap-2 shrink-0">
+          {% if user.team_id == team.id %}
+          <a href="{% url 'rivals:teams.show' team.id %}#squad-briefing" class="px-4 py-2 bg-pitch text-white text-xs font-bold uppercase">Squad briefing</a>
+          {% elif user.team and team_section == 'squad' %}
+          <button
+            hx-get="{% url 'rivals:teams.compare.quick' team.id %}"
+            hx-target="#rival-comparison-container"
+            hx-request='{"timeout":22000}'
+            hx-sync="#comparison-panel:replace"
+            hx-swap="innerHTML"
+            class="px-3.5 py-2 bg-pitch text-white tabular-nums text-xs font-bold uppercase tracking-wide hover:bg-pitch/90 transition-colors cursor-pointer"
+          >
+            Compare Head-to-Head
+          </button>
+          <a
+            href="{% url 'rivals:teams.compare' team.id %}"
+            class="px-3 py-2 text-text-main border border-gray-300 tabular-nums text-xs font-bold uppercase tracking-wide hover:border-gray-500 transition-colors"
+          >
+            Full Comparison →
+          </a>
+          {% endif %}
+
+          {% if user.team_id != team.id %}
+            {% if team in user.tracked_teams.all %}
+            <form action="{% url 'rivals:teams.untrack' team.id %}" method="POST" class="inline-block">
+              {% csrf_token %}
+              <button
+                type="submit"
+                class="px-3.5 py-2 bg-danger/10 text-danger border border-danger/30 tabular-nums text-xs font-bold uppercase tracking-wide hover:bg-danger hover:text-white transition-colors cursor-pointer"
+              >
+                Untrack Rival
+              </button>
+            </form>
+            {% else %}
+            <form
+              action="{% url 'rivals:teams.track' team.id %}"
+              method="POST"
+              class="inline-block"
+              onsubmit="this.querySelector('button').disabled=true; this.querySelector('button').innerText='Tracking...';"
+            >
+              {% csrf_token %}
+              <button
+                type="submit"
+                class="px-3.5 py-2 bg-pitch text-white tabular-nums text-xs font-bold uppercase tracking-wide hover:bg-pitch/90 transition-colors cursor-pointer"
+              >
+                + Track Rival
+              </button>
+            </form>
+            {% endif %}
+          {% endif %}
+
+          <form action="{% url 'rivals:teams.sync' team.id %}" method="POST" class="inline-block">
+            {% csrf_token %}
+            <button
+              type="submit"
+              class="px-3 py-2 text-gray-600 border border-gray-200 tabular-nums text-xs font-bold uppercase tracking-wide hover:border-gray-400 hover:text-text-main transition-colors cursor-pointer"
+              title="Refresh FPL API data"
+            >
+              Sync Data
+            </button>
+          </form>
+        </div>
+      </div>
+
+    </div>

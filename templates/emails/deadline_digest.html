@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Your AI briefing</title></head>
+<body style="margin:0;background:#f3f5f2;color:#182d24;font-family:Arial,Helvetica,sans-serif;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:16px 8px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;background:#ffffff;"><tr><td style="padding:20px 12px;">
+  <p style="margin:0 0 8px;font-size:12px;color:#485a51;">RivalSpy{% if is_test %} · Test email{% endif %}</p>
+  <h1 style="margin:0 0 8px;font-size:24px;">GW{{ report.gameweek }} · Your AI briefing</h1>
+  <p style="margin:0 0 20px;">Deadline {{ deadline|date:"D j M Y H:i T" }}</p>
+  {% if first_week %}
+  <h2 style="font-size:19px;margin:0 0 8px;">Fixtures and playing-time risks</h2>
+  <p style="font-size:13px;line-height:1.5;">Hold / current-squad baseline · Forecast XI · {{ first_week.formation }}. This is the squad if you make no transfers.</p>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eaf3e9;border:1px solid #bfd2bd;">
+    {% for row in first_week.rows %}<tr><td style="border-bottom:1px solid #bfd2bd;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="table-layout:fixed;"><tr>{% for player in row.players %}{% include "emails/_digest_player.html" %}{% endfor %}</tr></table></td></tr>{% endfor %}
+  </table>
+  <h3 style="font-size:14px;margin:14px 0 4px;">Bench · goalkeeper first, then outfield players by estimated points</h3>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="table-layout:fixed;background:#f3f5f2;"><tr>{% for player in first_week.bench %}{% include "emails/_digest_player.html" %}{% endfor %}</tr></table>
+  <p style="font-size:12px;line-height:1.5;">H = home · A = away · Blank = no scheduled fixture. Multiple opponents indicate a double gameweek. Points are individual estimates before captaincy; bench points are excluded. Availability and minutes flags can change with team news.</p>
+  <h3 style="font-size:16px;">Your unchanged squad across the planning window</h3>
+  <table width="100%" cellpadding="6" cellspacing="0" style="border-collapse:collapse;font-size:12px;text-align:left;">
+    <thead><tr><th scope="col">GW</th><th scope="col">XI est. pts*</th><th scope="col">Blanks</th><th scope="col">Doubles</th><th scope="col">Risk flags</th></tr></thead>
+    <tbody>{% for week in outlook %}<tr><td style="border-top:1px solid #dde4db;">{{ week.gameweek }}</td><td style="border-top:1px solid #dde4db;">{{ week.points|floatformat:1 }}</td><td style="border-top:1px solid #dde4db;">{{ week.blanks }}</td><td style="border-top:1px solid #dde4db;">{{ week.doubles }}</td><td style="border-top:1px solid #dde4db;">{{ week.risks }}</td></tr>{% endfor %}</tbody>
+  </table>
+  <p style="font-size:12px;">*Includes captaincy. Blank/double/risk counts cover all 15 players; availability assumptions stay constant across this window.</p>
+  {% endif %}
+  {% if notice %}<p>{{ notice }}</p>{% endif %}
+  <h2 style="font-size:19px;">Before the deadline</h2>
+  {% if ai_cards %}
+  <p style="font-size:12px;">AI selected these priorities from your transfer plan. Figures remain estimates.</p>
+  <ol style="padding-left:20px;line-height:1.5;">{% for card in ai_cards %}<li style="margin-bottom:10px;"><strong>{{ card.title }}</strong><br>{{ card.detail }}</li>{% endfor %}</ol>
+  {% else %}
+  <p style="font-size:13px;">{{ ai_notice }}</p>
+  {% if report.best.moves %}<p style="line-height:1.5;"><strong>Suggested route:</strong> {% for move in report.best.moves %}{{ move.out_name }} → {{ move.in_name }}{% if not forloop.last %}; {% endif %}{% endfor %}. Estimated {{ report.best.net_gain }} more points than holding over {{ report.horizon }} gameweeks, after {{ report.best.hits }} points in hits. Sensitivity range: {{ report.best.gain_low }} to {{ report.best.gain_high }} points.</p>
+  {% else %}<p style="line-height:1.5;"><strong>Hold / roll:</strong> No available route clearly beats holding after estimated transfer costs. Keep your flexibility for later news.</p>{% endif %}
+  <p style="line-height:1.5;"><strong>Captain:</strong> {{ report.captain|default:"No clear option" }} · Vice: {{ report.vice|default:"No clear option" }}. These follow the next gameweek's fixture and playing-time estimates; check late team news.</p>
+  {% endif %}
+  {% if report.rival %}{% if report.rival.unavailable %}<p>Fresh rival scenarios are unavailable. Check the planner after standings update.</p>{% else %}<p style="line-height:1.5;">{{ report.rival.league }} · {{ report.rival.rival }}{% if report.rival.gap != None %} · Current points gap (rival minus you): {{ report.rival.gap }}{% endif %}. Unchanged-squad forecast gap over this window: {{ report.rival.hold_gap }}. Rival transfers and captain choices are unknown.{% if report.rival.updated_at %} Standings snapshot: {{ report.rival.updated_at }}.{% endif %}</p>{% endif %}{% endif %}
+  <p style="line-height:1.5;"><a href="{{ planner_url }}" style="color:#153f32;font-weight:bold;">Open your transfer plan →</a></p>
+  <p style="font-size:12px;line-height:1.5;color:#485a51;">Prepared {{ prepared_at|date:"D j M H:i T" }}. Public squad data, bank and selling prices are estimates and can lag recent moves. Forecasts are heuristic estimates, not guaranteed returns; chips and automatic substitutions are excluded. Review your current FPL team before acting.</p>
+  <p style="font-size:12px;line-height:1.5;"><a href="{{ settings_url }}" style="color:#153f32;">Manage or pause emails</a> · <a href="{{ unsubscribe_url }}" style="color:#153f32;">Unsubscribe</a></p>
+</td></tr></table>
+</td></tr></table>
+</body></html>

@@ -1,0 +1,12 @@
+<c-layouts.base title="Your briefing email - RivalSpy">
+  <div class="max-w-4xl mx-auto px-4 py-8">
+    <h1 class="app-page-title mb-4">GW{{ digest.gameweek }} briefing email</h1>
+    <p class="mb-3">{{ digest.status_label }}</p>
+    {% if digest.notice %}<p role="status" class="mb-4">{{ digest.notice }}</p>{% endif %}
+    {% if digest.is_processing %}
+      <p class="mb-4" hx-get="{% url 'accounts:digests.detail' digest.id %}" hx-trigger="every 5s" hx-select="#main-content" hx-target="#main-content" hx-swap="innerHTML" hx-request='{"timeout":10000}'>Preparing your briefing. This page checks its progress automatically.</p>
+    {% endif %}
+    {% if digest.report and user.team_id == digest.team_id %}<p class="mb-4"><a class="app-primary-button" href="?email=1" target="_blank" rel="noopener">Open email preview</a></p>{% endif %}
+    <a class="underline" href="{% url 'accounts:gemini' %}">Back to AI briefings</a>
+  </div>
+</c-layouts.base>

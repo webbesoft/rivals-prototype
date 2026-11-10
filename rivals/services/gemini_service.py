@@ -8,6 +8,8 @@ from django.views.decorators.debug import sensitive_variables
 
 from core.ai_privacy import sensitive_ai
 from rivals.services.ai_credentials import AIUnavailable
+from rivals.services.ai_usage_audit import begin_call, finish_call, run_event
+from rivals.models import AIProviderCall
 
 MODEL = "gemini-3.5-flash-lite"
 URL = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL}"
@@ -17,10 +19,17 @@ TOKEN_RESERVATION = MAX_INPUT_BYTES + MAX_OUTPUT_TOKENS
 
 
 class Gemini:
+    def __init__(self, *, call_id=None):
+        self.call_id = call_id
+
     @sensitive_ai
     @sensitive_variables()
     def request(self, api_key, body=None):
+        started = None
+        status = None
         try:
+            if body is not None:
+                started = begin_call(self.call_id, len(json.dumps(body).encode()))
             deadline = time.monotonic() + 20
             # Never put the key in a URL; ignore ambient proxy/.netrc credentials.
             with requests.Session() as session:
@@ -34,6 +43,9 @@ class Gemini:
                     timeout=(3, 15),
                     stream=True,
                 ) as response:
+                    status = response.status_code
+                    if started is not None and status != 200:
+                        finish_call(self.call_id, started, "http_error", status=status)
                     if response.status_code in (401, 403):
                         raise AIUnavailable(
                             "Gemini could not use this key. Check its permissions or reconnect."
@@ -51,13 +63,32 @@ class Gemini:
                         data.extend(chunk)
                         if len(data) > 65536 or time.monotonic() > deadline:
                             raise ValueError
-                    return json.loads(data)
+                    result = json.loads(data)
+                    if started is not None:
+                        audit_result = result
+                        if (
+                            isinstance(result, dict)
+                            and isinstance(result.get("responseId"), str)
+                            and api_key in result["responseId"]
+                        ):
+                            audit_result = {**result, "responseId": ""}
+                        finish_call(
+                            self.call_id,
+                            started,
+                            "response",
+                            status=status,
+                            result=audit_result,
+                        )
+                    return result
         except AIUnavailable:
             raise
         except Exception:
+            if started is not None:
+                finish_call(self.call_id, started, "unknown", status=status)
             # Provider bodies, request objects and exception strings may contain secrets.
             raise AIUnavailable(
-                "AI briefings are temporarily unavailable. Your transfer advice is still available."
+                "AI briefings are temporarily unavailable. Your transfer advice is still available.",
+                code="transport",
             ) from None
 
     def verify(self, api_key):
@@ -156,6 +187,18 @@ class Gemini:
                 raise ValueError
             return priorities, input_tokens, output_tokens
         except Exception:
+            if self.call_id:
+                call = AIProviderCall.objects.select_related("briefing").get(
+                    pk=self.call_id
+                )
+                if call.briefing:
+                    run_event(
+                        "output_rejected",
+                        call.briefing,
+                        call=call,
+                        reason="invalid_output",
+                    )
             raise AIUnavailable(
-                "We couldn't prepare a grounded AI briefing. Your transfer advice is still available."
+                "We couldn't prepare a grounded AI briefing. Your transfer advice is still available.",
+                code="invalid_output",
             ) from None
