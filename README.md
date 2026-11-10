@@ -14,3 +14,19 @@ The architecture is based on my Django starter, with a separate `accounts` app f
 - [Django-cotton](https://django-cotton.com/)
 - SQLite
 - TailwindCSS via the standalone binary
+
+
+## Automatic FPL refreshes
+
+After installing dependencies, apply migrations and run both processes:
+
+```sh
+uv run python manage.py migrate --noinput
+uv run python manage.py runserver
+# In a second terminal:
+uv run python manage.py fpl_worker
+```
+
+The worker refreshes players, subscribed leagues, your team, and tracked rivals without manual sync clicks. Check it with `uv run python manage.py check_fpl_worker`.
+
+See [refresh operations](docs/background-refresh.md) and the [delivery epochs](docs/epochs.md). The current implementation is being developed beyond the original prototype described above.

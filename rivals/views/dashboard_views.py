@@ -2,13 +2,18 @@ import logging
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.core.cache import cache
 from django.core.paginator import Paginator
-from django.db import models
 from django.shortcuts import redirect, render
-from django.utils import timezone
+from django.views.decorators.cache import never_cache
+from django.views.decorators.http import require_POST
 
 from rivals.models import GameweekData, Transfer
+from rivals.services.gameweek_context_service import GameweekContextService
+from rivals.services.refresh_service import (
+    enqueue_refresh,
+    enqueue_user,
+    refresh_status,
+)
 from rivals.services.score_summary_service import ScoreSummaryService
 
 logger = logging.getLogger(__name__)
@@ -27,8 +32,9 @@ def dashboard(request):
 
     user_team = request.user.team
 
-    # Auto-sync tracked rivals if a gameweek deadline has passed
-    sync_tracked_rivals_if_deadline_passed(request.user)
+    # Queue only: page rendering must never call FPL.
+    enqueue_user(request.user)
+    gameweek_context = GameweekContextService.cached()
 
     # Fetch user's custom mini leagues, filtering active entries only
     all_user_leagues = list(
@@ -47,19 +53,6 @@ def dashboard(request):
 
     for uml in all_user_leagues:
         ml = uml.mini_league
-        # Check if this league is strictly from a previous season
-        if user_team and user_team.current_season:
-            user_mlt = ml.mini_league_teams.filter(team=user_team).first()
-            if (
-                user_mlt
-                and user_mlt.season
-                and user_mlt.season != user_team.current_season
-            ):
-                # Obsolete league from an older season; mark inactive to prune
-                uml.active = False
-                uml.save(update_fields=["active"])
-                continue
-
         # Deduplicate: if duplicate name or fpl_league_id
         league_key = ml.name.strip().lower()
         if ml.fpl_league_id in seen_fpl_ids or league_key in seen_league_names:
@@ -74,10 +67,12 @@ def dashboard(request):
     mini_leagues = paginator.get_page(page_number)
     recent_leagues = filtered_leagues[:5]
 
-    tracked_teams_qs = request.user.tracked_teams.select_related("team").all()
+    tracked_teams_qs = request.user.tracked_teams.filter(active=True).select_related(
+        "team"
+    )
     tracked_teams_count = tracked_teams_qs.count()
     tracked_teams = tracked_teams_qs[:5]
-    recent_activity = fetch_recent_activity(request.user)
+    recent_activity = fetch_recent_activity(request.user, request.GET, gameweek_context)
 
     user_gameweek_data = None
     new_season_detected = False
@@ -105,29 +100,18 @@ def dashboard(request):
             gw_qs = gw_qs.filter(season=user_team.current_season)
         user_gameweek_data = gw_qs.order_by("gameweek")
 
-        # Check if FPL API reports a newer season than the user team's active season.
-        from rivals.services.fpl_api_service import FplApiService
-
-        _SEASON_MISS_KEY = "dashboard_season_lookup_failed"
-        if not cache.get(_SEASON_MISS_KEY):
-            live_season = FplApiService().fetch_current_season()
-            if live_season is None:
-                # Cache the failure for 60 s to avoid hammering the API
-                cache.set(_SEASON_MISS_KEY, True, 60)
-        else:
-            live_season = None
-        if (
+        live_season = gameweek_context["season"]
+        new_season_detected = bool(
             live_season
-            and user_team
             and user_team.current_season
             and live_season != user_team.current_season
-        ):
-            new_season_detected = True
+        )
 
     return render(
         request,
         "pages/dashboard.html",
         {
+            **refresh_status(request.user),
             "mini_leagues": mini_leagues,
             "user_team": user_team,
             "user_projection": user_projection,
@@ -145,84 +129,81 @@ def dashboard(request):
     )
 
 
-def sync_tracked_rivals_if_deadline_passed(user):
-    """
-    If the latest gameweek deadline has passed, ensure tracked rivals have
-    their transfers updated as soon as data becomes available.
-    """
-    from django.conf import settings
-
-    if getattr(settings, "TESTING", False):
-        return
-
-    tracked_qs = user.tracked_teams.select_related("team").all()
-    if not tracked_qs.exists():
-        return
-
-    from rivals.services.fpl_api_service import FplApiService
-    from rivals.services.team_sync_service import TeamSyncService
-
-    api = FplApiService()
-    latest_gw, deadline_dt = api.get_latest_passed_deadline()
-    if not deadline_dt:
-        return
-
-    for tracked in tracked_qs:
-        team = tracked.team
-        # If team has never been synced or was last synced before the gameweek deadline passed
-        if team.last_synced_at is None or team.last_synced_at < deadline_dt:
-            throttle_key = f"sync_rival_throttle_{team.id}_{latest_gw}"
-            if not cache.get(throttle_key):
-                cache.set(throttle_key, True, 300)  # 5 minute throttle
-                try:
-                    sync_service = TeamSyncService(team)
-                    sync_service.sync_transfers()
-                    team.last_synced_at = timezone.now()
-                    team.save(update_fields=["last_synced_at"])
-                except Exception as e:
-                    logger.warning(f"Auto-sync for tracked rival {team.id} failed: {e}")
-
-
 @login_required
+@require_POST
 def dashboard_sync_rivals(request):
-    """Manual sync action for tracked rivals in Rival Radar."""
-    from rivals.services.team_sync_service import TeamSyncService
-
-    tracked_teams = request.user.tracked_teams.select_related("team").all()
-    count = 0
-    for tracked in tracked_teams:
-        try:
-            sync_service = TeamSyncService(tracked.team)
-            sync_service.sync_transfers()
-            tracked.team.last_synced_at = timezone.now()
-            tracked.team.save(update_fields=["last_synced_at"])
-            count += 1
-        except Exception as e:
-            logger.warning(f"Manual sync for rival {tracked.team_id} failed: {e}")
-
-    if count > 0:
-        messages.success(
-            request,
-            f"Successfully updated transfers & intel for {count} tracked rival(s)!",
-        )
-    else:
-        messages.info(request, "No tracked rivals found to synchronize.")
-
+    for team_id in request.user.tracked_teams.filter(active=True).values_list(
+        "team_id", flat=True
+    ):
+        for kind in ("profile", "history", "transfers"):
+            enqueue_refresh(kind, team_id, force=True)
+    messages.info(
+        request, "Rival refresh queued. Saved intel remains available while it updates."
+    )
     return redirect("rivals:dashboard")
 
 
-def fetch_recent_activity(user):
-    team_ids = user.tracked_teams.values_list("team_id", flat=True)
+@login_required
+@never_cache
+def dashboard_refresh_status(request):
+    return render(request, "partials/refresh_status.html", refresh_status(request.user))
 
+
+@login_required
+@never_cache
+def dashboard_intel(request):
+    return render(
+        request,
+        "partials/rival_intel.html",
+        {
+            "recent_activity": fetch_recent_activity(request.user, request.GET),
+        },
+    )
+
+
+def fetch_recent_activity(user, params=None, context=None):
+    params = params or {}
+    context = context if context is not None else GameweekContextService.cached()
+    team_ids = user.tracked_teams.filter(active=True).values_list("team_id", flat=True)
+    transfers = Transfer.objects.filter(team_id__in=team_ids)
+    scores = GameweekData.objects.filter(team_id__in=team_ids)
+    seasons = sorted(
+        set(transfers.exclude(season__isnull=True).values_list("season", flat=True))
+        | set(scores.exclude(season__isnull=True).values_list("season", flat=True)),
+        reverse=True,
+    )
+    default_season = (
+        context["season"]
+        or (user.team.current_season if user.team else None)
+        or (seasons[0] if seasons else None)
+    )
+    season = params.get("season") or default_season
+    if season != "all":
+        # With unknown context and no labelled data, only show unlabelled rows.
+        transfers = transfers.filter(season=season)
+        scores = scores.filter(season=season)
+    try:
+        gameweek = int(params.get("gameweek", ""))
+        if not 1 <= gameweek <= 38:
+            gameweek = None
+    except (TypeError, ValueError):
+        gameweek = None
+    if gameweek:
+        transfers = transfers.filter(gameweek=gameweek)
+        scores = scores.filter(gameweek=gameweek)
+    if default_season and default_season not in seasons:
+        seasons.insert(0, default_season)
     return {
-        "transfers": Transfer.objects.filter(team_id__in=team_ids)
-        .select_related("team", "player_in", "player_out")
-        .order_by("-transfer_time", "-id")[:10],
-        "gameweek_data": GameweekData.objects.filter(team_id__in=team_ids)
-        .select_related("team")
-        .order_by(
-            models.F("season").desc(nulls_last=True),
-            "-gameweek",
-            "-id",
-        )[:10],
+        "transfers": Paginator(
+            transfers.select_related("team", "player_in", "player_out").order_by(
+                "-season", "-gameweek", "-transfer_time", "-id"
+            ),
+            10,
+        ).get_page(params.get("transfers_page")),
+        "gameweek_data": Paginator(
+            scores.select_related("team").order_by("-season", "-gameweek", "-id"), 10
+        ).get_page(params.get("scores_page")),
+        "seasons": seasons,
+        "selected_season": season,
+        "selected_gameweek": gameweek,
     }

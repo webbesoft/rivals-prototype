@@ -4,10 +4,11 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.cache import never_cache
-from django.views.decorators.http import require_http_methods
+from django.views.decorators.http import require_http_methods, require_POST
 
 from rivals.models import Player, Team
 from rivals.services.projection_service import ProjectionService
+from rivals.services.refresh_service import enqueue_team, refresh_status
 from rivals.services.score_summary_service import ScoreSummaryService
 from rivals.services.team_analysis_service import TeamAnalysisService
 from rivals.services.team_sync_service import TeamSyncService
@@ -29,6 +30,7 @@ def team_score(request, team_id):
 def team_show(request, team_id):
     team = get_object_or_404(Team, id=team_id)
 
+    enqueue_team(team.id)
     gw_qs = team.gameweek_data
     if team.current_season:
         gw_qs = gw_qs.filter(season=team.current_season)
@@ -52,6 +54,7 @@ def team_show(request, team_id):
         request,
         "pages/teams/show.html",
         {
+            **refresh_status(request.user),
             "team": team,
             "gameweek_data": gameweek_data,
             "transfers": transfers,
@@ -77,8 +80,10 @@ def team_track(request, team_id):
 
     request.user.tracked_teams.get_or_create(team=team)
 
-    TeamSyncService(team).sync_full_data()
-    messages.success(request, "Team is now being tracked!")
+    enqueue_team(team.id, force=True)
+    messages.success(
+        request, "Team is now being tracked. Updates are queued automatically."
+    )
 
     return redirect("rivals:teams.show", team_id=team.id)
 
@@ -93,15 +98,21 @@ def team_untrack(request, team_id):
 
 
 @login_required
+@require_POST
 def team_sync(request, team_id):
     team = get_object_or_404(Team, id=team_id)
-
-    success = TeamSyncService(team).sync_full_data()
-    if success:
-        messages.success(request, "Team synced successfully!")
-    else:
-        messages.error(request, "Failed to sync team data. Please try again.")
-
+    if (
+        request.user.team_id != team.id
+        and not request.user.tracked_teams.filter(team=team, active=True).exists()
+    ):
+        return JsonResponse(
+            {"error": "Track this team before requesting a refresh."}, status=403
+        )
+    enqueue_team(team.id, force=True)
+    messages.info(
+        request,
+        "Team refresh queued. Scores update automatically; full squad history is separate.",
+    )
     return redirect("rivals:teams.show", team_id=team.id)
 
 

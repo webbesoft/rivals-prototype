@@ -27,9 +27,11 @@ class PlayerSyncService:
             with transaction.atomic():
                 for player_data in players_data:
                     self._sync_player(player_data)
+                if self.errors:
+                    raise ValueError("Player import contained invalid records")
 
             return {
-                "success": True,
+                "success": not self.errors,
                 "updated": self.new_count + self.updated_count,
                 "new_count": self.new_count,
                 "updated_count": self.updated_count,

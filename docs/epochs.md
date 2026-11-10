@@ -6,15 +6,21 @@ The product should answer: “What should I do before the next deadline to impro
 
 Dashboard and squad pages put gameweek points, the matching FPL average, total points, and overall rank first. A separate small request refreshes scores automatically on opening and every two minutes. Successful snapshots are shared across pages; a failed refresh retains the saved result and labels it stale. Score refresh never runs a full team/history sync or changes the team's full-sync timestamp. Values are FPL's published, provisional scores, rather than a locally calculated live-points estimate.
 
-Limits: caches default to process-local memory without REDIS_URL. A shared production cache should be configured for cross-worker reuse. Scores refresh while the page is open; this epoch does not provide background ingestion. Existing synchronous dashboard projections/rival updates can still delay the initial page. Epoch 2 addresses those requests and the remaining manual-sync burden.
+Limits: caches default to process-local memory without REDIS_URL. A shared production cache should be configured for cross-worker reuse. Scores refresh while the page is open; this epoch does not provide background ingestion. Epoch 2 removes synchronous FPL requests from dashboard, squad, and league page rendering and adds a persistent ingestion worker.
 
-## Epoch 2 — Reliable ingestion and usable intel
+## Epoch 2 — Reliable ingestion and usable intel (implemented)
 
-- Separate “current scoring gameweek”, “next decision gameweek”, season, and next deadline in a common context. Never silently substitute GW1 during upstream failures.
-- Move network-heavy rival/league/player updates out of page requests into the existing task infrastructure; document and verify the deployed worker. Freshness policies should vary for active matches, deadline windows, and quiet periods.
-- Track successful refresh times per data type, with deduplication, retries, failure visibility, and last-known-good data. A transfer-only sync must not mark the whole team as synced.
-- Paginate transfer intel and gameweek results independently, preserving filters and page parameters. Include gameweek/season filters and deterministic ordering.
-- Test deadline rollover, outages, duplicate jobs, and multi-season histories. Measure initial dashboard latency and upstream request counts.
+- A shared, database-backed event context separates the scoring gameweek, next decision gameweek, season, and deadline. It derives rollover from actual deadline timestamps, including when is_current lags; unknown context stays unknown.
+- Dashboard, squad, and league pages queue work and render stored data without calling FPL. The existing background-task queue now has recurring dispatch, per-resource leases/generations, retry backoff, and a persistent worker heartbeat.
+- Profiles, results history, transfers, league standings, players, and global event context have separate successful-refresh timestamps. Transfer refreshes never advance the full-team-sync timestamp. History ingestion avoids fetching every week's picks.
+- Target intervals are two minutes during matches, within six hours of a deadline, and for two hours afterward; otherwise thirty minutes. Player imports run at most every fifteen minutes in busy windows, and event context refreshes every two minutes. A gameweek/season change bypasses the normal freshness interval. These are scheduling targets, subject to queue throughput and FPL's upstream caching.
+- Transfer intel and gameweek scores paginate independently, ten per page, with season/gameweek filters, stable ordering, and preserved query parameters. Open intel panels and freshness status refresh every minute. The default season follows current FPL context; “All seasons” exposes saved history.
+- Import failures retain saved data and report retry status. Empty transfer lists count as successful reads; simultaneous transfer pairs remain distinct. Partial league responses are rejected by the automatic importer, and failed player batches roll back.
+- Kamal now configures a dedicated job role on the same host/shared SQLite volume. The worker waits for post-deploy migrations, processes the existing email queue too, and exposes a health-check command. This configuration has been verified locally; no production deployment or remote worker verification was performed in this epoch.
+
+Validation: automated tests cover deadline rollover, preseason/outages, duplicate jobs and locked dispatcher restarts, expired lease recovery, retry backoff, season-safe imports, transfer batches, pagination/filter preservation, and access controls. A local synthetic dashboard request measured 82.6 ms with zero upstream requests; squad, league, status, and intel requests also assert zero upstream requests. This is a local fixture measurement, not a production latency claim. Previously, dashboard rendering could fetch the live season and synchronously sync rivals, while projections could make further FPL requests.
+
+See [background refresh operations](background-refresh.md) for local startup, deployment checks, and recovery. Squad carousel loading and tactical cache correctness remain Epoch 3 work.
 
 ## Epoch 3 — Fast, dependable squad and tactical views
 

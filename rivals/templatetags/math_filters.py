@@ -30,3 +30,10 @@ def absolute(value):
         return abs(int(value))
     except (ValueError, TypeError):
         return ""
+
+
+@register.simple_tag(takes_context=True)
+def page_query(context, parameter, number):
+    params = context["request"].GET.copy()
+    params[parameter] = number
+    return "?" + params.urlencode()

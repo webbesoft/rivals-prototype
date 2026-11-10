@@ -82,14 +82,13 @@ class FplApiService:
             f"{self.BASE_URL}/entry/{team_id}/event/{gameweek}/picks/"
         )
 
-    def fetch_current_gameweek(self) -> int:
+    def fetch_current_gameweek(self) -> int | None:
         response = self.fetch_bootstrap_static()
         if not response or not response.get("events"):
-            return 1
-        current_event = next(
-            (e for e in response["events"] if e.get("is_current")), None
-        )
-        return current_event["id"] if current_event else 1
+            return None
+        from rivals.services.gameweek_context_service import GameweekContextService
+
+        return GameweekContextService.derive(response["events"])["scoring_gameweek"]
 
     def fetch_current_season(self, force_refresh: bool = False) -> str | None:
         """
@@ -141,32 +140,10 @@ class FplApiService:
         return fixtures
 
     def get_latest_passed_deadline(self):
-        """
-        Returns (latest_gw_id, deadline_datetime) for the most recent gameweek
-        whose deadline has passed.
-        If no deadline has passed yet, returns (1, None).
-        """
         response = self.fetch_bootstrap_static()
-        if not response or not response.get("events"):
-            return 1, None
+        if not response:
+            return None, None
+        from rivals.services.gameweek_context_service import GameweekContextService
 
-        from django.utils import timezone
-        from django.utils.dateparse import parse_datetime
-
-        now = timezone.now()
-        passed_events = []
-        for e in response["events"]:
-            dl_str = e.get("deadline_time")
-            if not dl_str:
-                continue
-            dl_dt = parse_datetime(dl_str)
-            if dl_dt and dl_dt <= now:
-                passed_events.append((e["id"], dl_dt))
-
-        if passed_events:
-            passed_events.sort(key=lambda x: x[1], reverse=True)
-            return passed_events[0]
-
-        first_event = response["events"][0]
-        first_dl = parse_datetime(first_event.get("deadline_time", ""))
-        return first_event.get("id", 1), first_dl
+        context = GameweekContextService.derive(response.get("events", []))
+        return context["scoring_gameweek"], context["latest_deadline"]

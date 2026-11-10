@@ -595,3 +595,20 @@ class PlannedTransfer(models.Model):
         out_name = getattr(self.player_out, "web_name", "Unknown")
         in_name = getattr(self.player_in, "web_name", "Unknown")
         return f"GW{self.gameweek}: {out_name} → {in_name}"
+
+
+class SyncState(models.Model):
+    """Durable refresh status shared by web and task workers."""
+
+    key = models.CharField(max_length=100, unique=True)
+    kind = models.CharField(max_length=20)
+    object_id = models.PositiveIntegerField(null=True, blank=True)
+    status = models.CharField(max_length=12, default="pending")
+    last_success_at = models.DateTimeField(null=True, blank=True)
+    last_attempt_at = models.DateTimeField(null=True, blank=True)
+    next_attempt_at = models.DateTimeField(null=True, blank=True)
+    lease_until = models.DateTimeField(null=True, blank=True)
+    generation = models.PositiveIntegerField(default=0)
+    failures = models.PositiveIntegerField(default=0)
+    error = models.CharField(max_length=255, blank=True)
+    payload = models.JSONField(default=dict)

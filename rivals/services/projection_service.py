@@ -6,6 +6,7 @@ from django.core.cache import cache
 
 from rivals.models import GameweekData, MiniLeague, MiniLeagueTeam, Team
 from rivals.services.fpl_api_service import FplApiService
+from rivals.services.gameweek_context_service import GameweekContextService
 
 logger = logging.getLogger(__name__)
 
@@ -121,8 +122,10 @@ class ProjectionService:
         completed_count = completed_gws_qs.count()
 
         if completed_count == 0:
-            # Fallback to current gameweek from API if gameweek_data not yet synced
-            live_gw = current_gw or self.api.fetch_current_gameweek()
+            # Use stored event context when history has not yet been imported.
+            live_gw = current_gw or GameweekContextService.cached()["scoring_gameweek"]
+            if live_gw is None:
+                return {}
             completed_count = max(0, live_gw - 1)
 
         completed_count = min(TOTAL_GAMEWEEKS, max(0, completed_count))
@@ -261,12 +264,15 @@ class ProjectionService:
         """
         Projects final standings and finishing positions for all teams in a mini-league.
         """
-        cache_key = f"ml_projection_{mini_league.id}"
+        context = GameweekContextService.cached()
+        live_gw = current_gw or context["scoring_gameweek"]
+        cache_key = f"ml_projection_{mini_league.id}_{context['season']}_{live_gw}_{mini_league.last_synced_at}"
         cached = cache.get(cache_key)
         if cached:
             return cached
 
-        live_gw = current_gw or self.api.fetch_current_gameweek()
+        if live_gw is None:
+            return {"league_id": mini_league.id, "standings": [], "total_teams": 0}
         completed_gw = max(0, min(TOTAL_GAMEWEEKS, live_gw - 1))
         remaining_gws = TOTAL_GAMEWEEKS - completed_gw
 
@@ -335,12 +341,12 @@ class ProjectionService:
         return result
 
     def get_team_mini_league_summary(
-        self, team: Team, mini_league: MiniLeague
+        self, team: Team, mini_league: MiniLeague, current_gw: Optional[int] = None
     ) -> Optional[Dict[str, Any]]:
         """
         Gets a single team's projected finish within a specific mini-league.
         """
-        league_proj = self.project_mini_league(mini_league)
+        league_proj = self.project_mini_league(mini_league, current_gw=current_gw)
         for s in league_proj.get("standings", []):
             if s["team_id"] == team.id:
                 return {

@@ -138,6 +138,8 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": BASE_DIR / "dbs/db.sqlite3",
+        # Serialize short write transactions instead of read-to-write lock upgrades.
+        "OPTIONS": {"timeout": 20, "transaction_mode": "IMMEDIATE"},
     }
 }
 

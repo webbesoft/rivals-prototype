@@ -8,14 +8,15 @@ logger = logging.getLogger(__name__)
 
 
 class TransferPlayerAssociationService:
-    def associate_all_transfers(self) -> dict:
+    def associate_all_transfers(self, season=None) -> dict:
         associated_count = 0
         unmatched_count = 0
 
         # Iterate in chunks for memory efficiency
-        queryset = Transfer.objects.select_related("player_in", "player_out").iterator(
-            chunk_size=100
-        )
+        queryset = Transfer.objects.select_related("player_in", "player_out")
+        if season:
+            queryset = queryset.filter(season=season)
+        queryset = queryset.iterator(chunk_size=100)
 
         for transfer in queryset:
             updated = False
@@ -48,6 +49,13 @@ class TransferPlayerAssociationService:
         Match by web_name first, then try first+second name.
         """
         try:
+            if name.startswith("Player #"):
+                try:
+                    return Player.objects.filter(
+                        fpl_id=int(name.removeprefix("Player #"))
+                    ).first()
+                except ValueError:
+                    return None
             # Exact web_name match
             player = Player.objects.filter(web_name=name).first()
             if player:

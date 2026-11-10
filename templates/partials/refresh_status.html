@@ -1,0 +1,20 @@
+<div class="mb-6 border border-gray-200 bg-white px-5 py-3 text-xs font-mono text-gray-600"
+     hx-get="{% url 'rivals:refresh-status' %}" hx-trigger="every 60s" hx-swap="outerHTML">
+  {% if gameweek_context.scoring_gameweek %}<span>Scoring: GW{{ gameweek_context.scoring_gameweek }}</span>{% endif %}
+  {% if gameweek_context.decision_gameweek %}
+    <span class="ml-2">Planning: GW{{ gameweek_context.decision_gameweek }} · Deadline {{ gameweek_context.next_deadline|date:"D j M H:i T" }}</span>
+  {% endif %}
+  {% if gameweek_context.stale %}<p>Gameweek context is unavailable or stale; saved data remains visible.</p>{% endif %}
+  {% if not worker_healthy %}<p role="status">Automatic updates are waiting for the background worker. Saved data remains visible.</p>{% endif %}
+  <details class="mt-2">
+    <summary class="cursor-pointer">Data freshness</summary>
+    <ul class="mt-2 space-y-1">
+      {% for state in refresh_states %}
+      <li>{{ state.label }}: {% if state.last_success_at %}updated {{ state.last_success_at|timesince }} ago{% else %}not refreshed yet{% endif %}
+        {% if state.status == 'queued' or state.status == 'running' %} · {{ state.status }}{% endif %}
+        {% if state.status == 'error' %} · {{ state.error }} Next retry {{ state.next_attempt_at|date:"H:i T" }}{% endif %}
+      </li>
+      {% empty %}<li>Updates will be scheduled automatically.</li>{% endfor %}
+    </ul>
+  </details>
+</div>

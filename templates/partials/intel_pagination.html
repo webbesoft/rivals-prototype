@@ -1,0 +1,8 @@
+{% load math_filters %}
+{% if page_obj.has_other_pages %}
+<nav aria-label="{{ page_param }} pagination" class="mt-3 flex items-center justify-between gap-2 text-xs font-mono">
+  {% if page_obj.has_previous %}<a href="{% url 'rivals:dashboard' %}{% page_query page_param page_obj.previous_page_number %}" class="text-pitch underline">Previous</a>{% endif %}
+  <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+  {% if page_obj.has_next %}<a href="{% url 'rivals:dashboard' %}{% page_query page_param page_obj.next_page_number %}" class="text-pitch underline">Next</a>{% endif %}
+</nav>
+{% endif %}

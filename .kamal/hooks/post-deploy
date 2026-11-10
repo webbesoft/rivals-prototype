@@ -12,16 +12,16 @@ CONTAINER_NAME="rivals-web"
 
 # Run deployment tasks inside the container
 # Using kamal app exec to run commands in the deployed container
-kamal app exec "uv run python manage.py migrate --noinput" || {
+kamal app exec --roles web "uv run python manage.py migrate --noinput" || {
     echo "❌ Migration failed!"
     exit 1
 }
 
 echo "✅ Migrations completed"
 
-kamal app exec "uv run python manage.py sync_players" || {
-    echo "⚠️  Player sync had errors, but continuing..."
-    # Don't fail deployment if player sync has issues
+# Player refreshes are now recurring background work. Verify that the job role started.
+kamal app exec --roles web "uv run python manage.py check_fpl_worker" || {
+    echo "⚠️ FPL worker has not reported a heartbeat yet. Check the job role logs."
 }
 
 echo "✅ Post-deploy tasks completed!"

@@ -42,7 +42,7 @@ class TeamSyncService:
     # Season transition
     # ------------------------------------------------------------------
 
-    def detect_and_handle_season_transition(self) -> bool:
+    def detect_and_handle_season_transition(self, live_season=None) -> bool:
         """
         Compares the live FPL season against the team's recorded season.
         If they differ, the current-season counters are reset so we start fresh.
@@ -50,7 +50,7 @@ class TeamSyncService:
 
         Returns True if a transition was detected, False otherwise.
         """
-        live_season = self.fpl_api_service.fetch_current_season()
+        live_season = live_season or self.fpl_api_service.fetch_current_season()
         if not live_season:
             logger.warning(
                 "Could not fetch current season — skipping transition check."
@@ -127,10 +127,10 @@ class TeamSyncService:
     # Standard sync methods
     # ------------------------------------------------------------------
 
-    def sync_basic_info(self) -> None:
-        data = self.fpl_api_service.fetch_team_basic_info(self.team.fpl_team_id)
+    def sync_basic_info(self, data=None) -> bool:
+        data = data or self.fpl_api_service.fetch_team_basic_info(self.team.fpl_team_id)
         if not data:
-            return
+            return False
         self.team.team_name = data["name"]
         self.team.manager_name = (
             f"{data['player_first_name']} {data['player_last_name']}".strip()
@@ -150,7 +150,9 @@ class TeamSyncService:
             ]
         )
 
-    def sync_history(self) -> dict | None:
+        return True
+
+    def sync_history(self, include_picks=True) -> dict | None:
         if self._history_data is None:
             self._history_data = self.fpl_api_service.fetch_team_history(
                 self.team.fpl_team_id
@@ -176,7 +178,8 @@ class TeamSyncService:
             gw_data.bench_points = gw["points_on_bench"]
             gw_data.save()
 
-            self.sync_gameweek_picks(gw["event"])
+            if include_picks:
+                self.sync_gameweek_picks(gw["event"])
 
         if data["current"]:
             self.team.bank = data["current"][-1]["bank"]
@@ -195,10 +198,11 @@ class TeamSyncService:
             )
         return data
 
-    def sync_transfers(self) -> None:
-        transfers = self.fpl_api_service.fetch_team_transfers(self.team.fpl_team_id)
-        if not transfers:
-            return
+    def sync_transfers(self, transfers=None, sync_missing_players=True) -> bool:
+        if transfers is None:
+            transfers = self.fpl_api_service.fetch_team_transfers(self.team.fpl_team_id)
+        if transfers is None:
+            return False
 
         current_season = (
             self.team.current_season or self.fpl_api_service.fetch_current_season()
@@ -207,15 +211,31 @@ class TeamSyncService:
             self.team.current_season = current_season
             self.team.save(update_fields=["current_season"])
 
-        # Build de-dup set based on (gameweek, iso_timestamp)
+        # A manager can make several transfers at exactly the same timestamp.
+        # Keep each player pair distinct, including imports with missing players.
+        def element_id(player, name):
+            if player:
+                return player.fpl_id
+            if name and name.startswith("Player #"):
+                try:
+                    return int(name.removeprefix("Player #"))
+                except ValueError:
+                    pass
+            return name
+
         existing_signatures = set()
-        for gw, tt in Transfer.objects.filter(team=self.team).values_list(
-            "gameweek", "transfer_time"
-        ):
-            if tt:
-                existing_signatures.add(
-                    (gw, tt.isoformat() if hasattr(tt, "isoformat") else str(tt))
+        for transfer in Transfer.objects.filter(
+            team=self.team, season=current_season
+        ).select_related("player_in", "player_out"):
+            tt = transfer.transfer_time
+            existing_signatures.add(
+                (
+                    transfer.gameweek,
+                    tt.isoformat() if tt else "",
+                    element_id(transfer.player_in, transfer.player_in_name),
+                    element_id(transfer.player_out, transfer.player_out_name),
                 )
+            )
 
         new_transfers_data = []
         needed_elements = set()
@@ -224,7 +244,7 @@ class TeamSyncService:
         for t in transfers:
             t_time = parse_datetime(t["time"]) if t.get("time") else None
             t_iso = t_time.isoformat() if t_time else (t.get("time") or "")
-            sig = (t["event"], t_iso)
+            sig = (t["event"], t_iso, t["element_in"], t["element_out"])
             if sig not in existing_signatures:
                 existing_signatures.add(sig)
                 new_transfers_data.append((t, t_time))
@@ -232,7 +252,7 @@ class TeamSyncService:
                 needed_elements.add(t["element_out"])
 
         if not new_transfers_data:
-            return
+            return True
 
         players_by_fpl_id = {
             p.fpl_id: p for p in Player.objects.filter(fpl_id__in=needed_elements)
@@ -240,7 +260,7 @@ class TeamSyncService:
 
         # If any player elements are missing from DB, trigger quick player sync
         missing_ids = needed_elements - set(players_by_fpl_id.keys())
-        if missing_ids:
+        if missing_ids and sync_missing_players:
             try:
                 from rivals.services.player_sync_service import PlayerSyncService
 
@@ -282,6 +302,8 @@ class TeamSyncService:
 
         if transfers_to_create:
             Transfer.objects.bulk_create(transfers_to_create, ignore_conflicts=True)
+
+        return True
 
     def sync_gameweek_picks(self, gameweek: int) -> None:
         picks = self.fpl_api_service.fetch_team_picks(self.team.fpl_team_id, gameweek)

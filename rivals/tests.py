@@ -301,7 +301,7 @@ class ProjectionServiceTests(TestCase):
         self.assertEqual(standings[1]["projected_rank"], 2)
 
         # Single team summary lookup
-        summary = service.get_team_mini_league_summary(self.team, league)
+        summary = service.get_team_mini_league_summary(self.team, league, current_gw=11)
         self.assertIsNotNone(summary)
         self.assertEqual(summary["projected_rank"], 2)
         self.assertGreater(summary["gap_to_leader"], 0)
@@ -392,7 +392,7 @@ class DashboardViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Command FC")
-        self.assertContains(response, "FPL Squad Dossier")
+        self.assertContains(response, "Gameweek points")
         self.assertContains(response, "Mini-League Standings")
         self.assertContains(response, "Apex League")
 

@@ -15,12 +15,14 @@
     </div>
     {% endif %}
 
+    {% include "partials/refresh_status.html" %}
+
     <!-- New season banner -->
     {% if new_season_detected %}
     <div class="mb-8 border-l-4 border-pitch bg-white border border-gray-200 p-4 shadow-sm flex items-center justify-between gap-4 flex-wrap">
       <div>
         <p class="text-xs font-black uppercase tracking-wider text-pitch mb-0.5">New FPL Campaign Detected</p>
-        <p class="text-xs text-gray-600">The FPL API reports a new active season. Synchronize your team data to start tracking the current campaign.</p>
+        <p class="text-xs text-gray-600">The FPL API reports a new active season. Current-season updates are queued automatically.</p>
       </div>
       <div class="flex items-center gap-2 shrink-0">
         {% if user_team %}
@@ -405,85 +407,8 @@
             </div>
           </div>
 
-          <!-- Section 1: Recent Transfers by Rivals -->
-          <div class="p-4 border-b border-gray-200">
-            <div class="flex items-center justify-between mb-3">
-              <span class="text-[11px] tabular-nums font-bold uppercase tracking-wider text-gray-500">Recent Rival Transfers</span>
-              <span class="text-[10px] tabular-nums text-muted">Latest 10</span>
-            </div>
-
-            {% if not recent_activity.transfers %}
-            <p class="text-xs tabular-nums text-gray-400 py-2">No transfer moves recorded yet for your tracked rivals.</p>
-            {% else %}
-            <div class="divide-y divide-gray-100">
-              {% for t in recent_activity.transfers %}
-              <div class="py-2.5 first:pt-0 last:pb-0 text-xs">
-                <div class="flex items-baseline justify-between gap-2 mb-1">
-                  <a href="{% url 'rivals:teams.show' t.team.id %}" class="font-bold text-text-main hover:text-pitch transition-colors truncate">
-                    {{ t.team.team_name }}
-                  </a>
-                  <span class="text-[10px] tabular-nums text-gray-400 shrink-0">
-                    GW{{ t.gameweek }}
-                    {% if t.transfer_time %}· {{ t.transfer_time|timesince }} ago{% endif %}
-                  </span>
-                </div>
-
-                <!-- Transfer Flow -->
-                <div class="flex items-center gap-1.5 flex-wrap tabular-nums text-[11px]">
-                  <span class="text-danger font-medium line-through">{{ t.player_out_display_name }}</span>
-                  <span class="text-gray-300">→</span>
-                  <span class="text-pitch font-bold">{{ t.player_in_display_name }}</span>
-                  {% if t.point_cost > 0 %}
-                  <span class="ml-auto text-[10px] tabular-nums text-danger font-semibold bg-danger/10 px-1 py-0.2 border border-danger/20">
-                    -{{ t.point_cost }}pt hit
-                  </span>
-                  {% endif %}
-                </div>
-              </div>
-              {% endfor %}
-            </div>
-            {% endif %}
-          </div>
-
-          <!-- Section 2: Recent Gameweek Performance -->
-          <div class="p-4">
-            <div class="flex items-center justify-between mb-3">
-              <span class="text-[11px] tabular-nums font-bold uppercase tracking-wider text-gray-500">Recent Gameweek Scores</span>
-              <span class="text-[10px] tabular-nums text-muted">Tracked Rivals</span>
-            </div>
-
-            {% if not recent_activity.gameweek_data %}
-            <p class="text-xs tabular-nums text-gray-400 py-2">No gameweek results recorded yet.</p>
-            {% else %}
-            <div class="divide-y divide-gray-100">
-              {% for gw in recent_activity.gameweek_data %}
-              <div class="py-2.5 first:pt-0 last:pb-0 flex items-center justify-between text-xs">
-                <div class="min-w-0 pr-2">
-                  <a href="{% url 'rivals:teams.show' gw.team.id %}" class="font-bold text-text-main hover:text-pitch transition-colors block truncate">
-                    {{ gw.team.team_name }}
-                  </a>
-                  <div class="text-[11px] tabular-nums text-gray-500 flex items-center gap-1.5">
-                    <span>GW{{ gw.gameweek }}</span>
-                    {% if gw.captain_name %}
-                    <span class="text-gray-300">·</span>
-                    <span class="text-gray-600">C: {{ gw.captain_name }}</span>
-                    {% endif %}
-                    {% if gw.chip_played and gw.chip_name %}
-                    <span class="text-[10px] uppercase font-bold text-pitch bg-pitch/10 px-1 py-0.2">
-                      {{ gw.chip_name }}
-                    </span>
-                    {% endif %}
-                  </div>
-                </div>
-
-                <div class="text-right tabular-nums shrink-0">
-                  <span class="font-bold text-sm text-text-main">{{ gw.points }}</span>
-                  <span class="text-[10px] text-gray-400 block font-normal">pts</span>
-                </div>
-              </div>
-              {% endfor %}
-            </div>
-            {% endif %}
+          <div hx-get="{% url 'rivals:intel' %}?{{ request.GET.urlencode }}" hx-trigger="every 60s" hx-swap="innerHTML">
+            {% include "partials/rival_intel.html" %}
           </div>
         </div>
 

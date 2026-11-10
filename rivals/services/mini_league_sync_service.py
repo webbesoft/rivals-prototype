@@ -1,5 +1,6 @@
 import logging
 
+from django.db import transaction
 from django.utils import timezone
 
 from rivals.models import MiniLeague, Team
@@ -14,7 +15,7 @@ class MiniLeagueSyncService:
         self.mini_league = mini_league
         self.fpl_api_service = FplApiService()
 
-    def sync(self) -> bool:
+    def sync(self, include_transfers=True, require_complete=False) -> bool:
         """
         Fetch league info + standings from FPL API,
         update the MiniLeague and associated teams.
@@ -24,22 +25,31 @@ class MiniLeagueSyncService:
                 self.mini_league.fpl_league_id
             )
 
-            if not league_data:
+            if not league_data or (
+                require_complete and not league_data.get("is_complete", True)
+            ):
                 return False
 
-            # --- Update league info ---
-            league_info = league_data["league_info"]
-            self.mini_league.name = league_info["name"]
-            self.mini_league.last_synced_at = timezone.now()
-            self.mini_league.save(update_fields=["name", "last_synced_at"])
-
-            # --- Sync teams and standings ---
-            standings = league_data["standings"]
-            is_complete = league_data.get("is_complete", True)
-            self._sync_teams_and_standings(standings, is_complete=is_complete)
+            current_season = self.fpl_api_service.fetch_current_season()
+            if require_complete and not current_season:
+                return False
+            with transaction.atomic():
+                league_info = league_data["league_info"]
+                self.mini_league.name = league_info["name"]
+                self.mini_league.save(update_fields=["name"])
+                resolved = self._sync_teams_and_standings(
+                    league_data["standings"],
+                    is_complete=league_data.get("is_complete", True),
+                    current_season=current_season,
+                )
+                if require_complete and not resolved:
+                    raise ValueError("League contains unresolved teams")
+                self.mini_league.last_synced_at = timezone.now()
+                self.mini_league.save(update_fields=["last_synced_at"])
 
             # --- Sync transfers for any tracked teams in this league ---
-            self._sync_tracked_teams_transfers()
+            if include_transfers:
+                self._sync_tracked_teams_transfers()
 
             return True
 
@@ -48,12 +58,11 @@ class MiniLeagueSyncService:
             return False
 
     def _sync_teams_and_standings(
-        self, standings: list[dict], is_complete: bool = True
-    ) -> None:
+        self, standings: list[dict], is_complete: bool = True, current_season=None
+    ) -> bool:
         """
         Update or create teams in the league and track standings.
         """
-        current_season = self.fpl_api_service.fetch_current_season()
         existing_mlts = {
             mlt.team_id: mlt for mlt in self.mini_league.mini_league_teams.all()
         }
@@ -115,6 +124,8 @@ class MiniLeagueSyncService:
                 team_id__in=synced_team_ids
             ).delete()
 
+        return not has_resolution_failure
+
     def _find_or_create_team(self, standing: dict) -> Team | None:
         """
         Create or update Team records from standings data.
@@ -147,6 +158,7 @@ class MiniLeagueSyncService:
     def _sync_tracked_teams_transfers(self) -> None:
         try:
             from django.conf import settings
+
             if getattr(settings, "TESTING", False):
                 return
 

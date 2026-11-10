@@ -199,7 +199,9 @@ class LeagueDetailView(APIView):
             )
 
         # Check if user has access to this league
-        if not request.user.mini_leagues.filter(id=league_id).exists():
+        if not request.user.customminileagues.filter(
+            mini_league_id=league_id, active=True
+        ).exists():
             return Response(
                 {"error": "You do not have access to this league."},
                 status=status.HTTP_403_FORBIDDEN,
@@ -226,37 +228,25 @@ class LeagueSyncView(APIView):
             )
 
         # Check if user has access to this league
-        if not request.user.mini_leagues.filter(id=league_id).exists():
+        if not request.user.customminileagues.filter(
+            mini_league_id=league_id, active=True
+        ).exists():
             return Response(
                 {"error": "You do not have access to this league."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        # Import sync service
-        from rivals.services.mini_league_sync_service import MiniLeagueSyncService
+        from rivals.services.refresh_service import enqueue_refresh
 
-        try:
-            success = MiniLeagueSyncService(league).sync()
-            if success:
-                # Refresh from DB
-                league.refresh_from_db()
-                return Response(
-                    {
-                        "success": True,
-                        "message": "League synced successfully.",
-                        "league": MiniLeagueDetailSerializer(league).data,
-                    }
-                )
-            else:
-                return Response(
-                    {"success": False, "error": "Failed to sync league data."},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                )
-        except Exception as e:
-            return Response(
-                {"success": False, "error": str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+        enqueue_refresh("league", league.id, force=True)
+        return Response(
+            {
+                "success": True,
+                "message": "League refresh queued.",
+                "league": MiniLeagueDetailSerializer(league).data,
+            },
+            status=status.HTTP_202_ACCEPTED,
+        )
 
 
 class TeamDetailView(APIView):
@@ -398,32 +388,25 @@ class TeamSyncView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        # Import sync service
-        from rivals.services.team_sync_service import TeamSyncService
-
-        try:
-            success = TeamSyncService(team).sync_full_data()
-            if success:
-                # Refresh team from database
-                team.refresh_from_db()
-                return Response(
-                    {
-                        "success": True,
-                        "message": "Team data synced successfully.",
-                        "team": TeamSerializer(team).data,
-                    }
-                )
-            else:
-                return Response(
-                    {"success": False, "error": "Failed to sync team data."},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                )
-        except Exception as e:
-            logger.exception("Error syncing team %s", getattr(team, "id", None))
+        if (
+            request.user.team_id != team.id
+            and not request.user.tracked_teams.filter(team=team, active=True).exists()
+        ):
             return Response(
-                {"success": False, "error": "Internal server error"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                {"error": "Track this team before requesting a refresh."},
+                status=status.HTTP_403_FORBIDDEN,
             )
+        from rivals.services.refresh_service import enqueue_team
+
+        enqueue_team(team.id, force=True)
+        return Response(
+            {
+                "success": True,
+                "message": "Team refresh queued.",
+                "team": TeamSerializer(team).data,
+            },
+            status=status.HTTP_202_ACCEPTED,
+        )
 
 
 class TeamTrackView(APIView):
@@ -452,10 +435,9 @@ class TeamTrackView(APIView):
 
         request.user.tracked_teams.get_or_create(team=team)
 
-        # Sync the team data when tracking
-        from rivals.services.team_sync_service import TeamSyncService
+        from rivals.services.refresh_service import enqueue_team
 
-        TeamSyncService(team).sync_full_data()
+        enqueue_team(team.id, force=True)
 
         return Response(
             {

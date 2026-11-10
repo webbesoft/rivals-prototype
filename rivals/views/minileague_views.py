@@ -1,11 +1,13 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_POST
 
 from rivals.models import MiniLeague
 from rivals.services.fpl_api_service import FplApiService
 from rivals.services.mini_league_sync_service import MiniLeagueSyncService
 from rivals.services.projection_service import ProjectionService
+from rivals.services.refresh_service import enqueue_refresh, refresh_status
 
 
 @login_required
@@ -21,6 +23,7 @@ def mini_league_show(request, mini_league_id):
     if not request.user.customminileagues.filter(mini_league=mini_league).exists():
         return render(request, "404.html", status=404)
 
+    enqueue_refresh("league", mini_league.id)
     standings = mini_league.mini_league_teams.select_related("team").order_by(
         "current_rank"
     )
@@ -58,6 +61,7 @@ def mini_league_show(request, mini_league_id):
         request,
         "pages/mini_leagues/show.html",
         {
+            **refresh_status(request.user),
             "mini_league": mini_league,
             "standings": standings,
             "user_standing": user_standing,
@@ -75,7 +79,7 @@ def mini_league_create(request):
 
 @login_required
 def mini_league_store(request):
-    if not request.user.can_add_mini_league():
+    if not request.user.can_add_mini_league:
         messages.error(
             request, "Free plan allows only 1 mini-league. Upgrade to premium."
         )
@@ -101,7 +105,7 @@ def mini_league_store(request):
         mini_league.name = league_data["league_info"]["name"]
         mini_league.save()
 
-        MiniLeagueSyncService(mini_league).sync()
+        enqueue_refresh("league", mini_league.id)
 
     request.user.customminileagues.get_or_create(mini_league=mini_league)
     messages.success(request, "Mini-league added successfully!")
@@ -110,16 +114,13 @@ def mini_league_store(request):
 
 
 @login_required
+@require_POST
 def mini_league_sync(request, mini_league_id):
     mini_league = get_object_or_404(MiniLeague, id=mini_league_id)
-
-    if not request.user.mini_leagues.filter(id=mini_league.id).exists():
+    if not request.user.customminileagues.filter(
+        mini_league=mini_league, active=True
+    ).exists():
         return render(request, "404.html", status=404)
-
-    success = MiniLeagueSyncService(mini_league).sync()
-    if success:
-        messages.success(request, "League synced successfully!")
-    else:
-        messages.error(request, "Failed to sync league. Please try again.")
-
+    enqueue_refresh("league", mini_league.id, force=True)
+    messages.info(request, "League refresh queued. Saved standings remain available.")
     return redirect("rivals:minileagues.show", mini_league_id=mini_league.id)
