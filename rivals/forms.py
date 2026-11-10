@@ -1,4 +1,5 @@
 from django import forms
+from django.core import signing
 
 
 class PlanningInputForm(forms.Form):
@@ -23,9 +24,8 @@ class DecisionInputForm(PlanningInputForm):
         max_digits=5,
         decimal_places=1,
     )
-    squad_confirmed = forms.BooleanField(
-        label="These are my current 15 players", required=False
-    )
+    squad_confirmed = forms.BooleanField(required=False, widget=forms.HiddenInput)
+    defaults_token = forms.CharField(required=False, widget=forms.HiddenInput)
     horizon = forms.TypedChoiceField(
         label="Plan ahead",
         choices=[(n, f"{n} gameweeks") for n in range(3, 7)],
@@ -53,7 +53,17 @@ class DecisionInputForm(PlanningInputForm):
                     Decimal(data["bank"]) / 10 if data["bank"] is not None else None
                 ),
                 "free_transfers": data["free_transfers"],
-                "squad_confirmed": data["confirmed"],
+                "squad_confirmed": True,
+                "defaults_token": signing.dumps(
+                    {
+                        "user": engine.user.pk,
+                        "team": engine.team.pk,
+                        "free_transfers": data["free_transfers"],
+                        "bank": data["bank"],
+                        "sales": data["sales"],
+                    },
+                    salt="planning-defaults",
+                ),
                 "horizon": data["horizon"],
                 "strategy": data["strategy"],
             }
@@ -117,7 +127,7 @@ class DecisionInputForm(PlanningInputForm):
             )
             self.fields[f"owned_{index}"].widget.attrs[
                 "onchange"
-            ] = f"this.form.elements.sell_{index}.value = ''; this.form.elements.bank.value = ''; this.form.elements.free_transfers.value = ''; this.form.elements.squad_confirmed.checked = false; this.form.elements.out_1.value = ''; this.form.elements.in_1.value = ''; this.form.elements.out_2.value = ''; this.form.elements.in_2.value = '';"
+            ] = f"this.form.elements.sell_{index}.value = ''; this.form.elements.out_1.value = ''; this.form.elements.in_1.value = ''; this.form.elements.out_2.value = ''; this.form.elements.in_2.value = '';"
             self.initial[f"owned_{index}"] = pid
             self.initial[f"sell_{index}"] = (
                 Decimal(data["sales"][str(pid)]) / 10
@@ -169,6 +179,8 @@ class DecisionInputForm(PlanningInputForm):
                 )
 
     def clean(self):
+        from decimal import Decimal
+
         cleaned = super().clean()
         engine = self.engine
         if (
@@ -176,7 +188,7 @@ class DecisionInputForm(PlanningInputForm):
             or cleaned.get("gameweek") != engine.context["decision_gameweek"]
         ):
             raise forms.ValidationError(
-                "The deadline has changed. Reload your plan before confirming these details."
+                "The deadline has changed. Reload your plan to see the latest options."
             )
         ids = [cleaned.get(f"owned_{index}") for index in range(15)]
         if all(pid is not None for pid in ids):
@@ -184,17 +196,55 @@ class DecisionInputForm(PlanningInputForm):
                 engine.validate_squad(ids)
             except ValueError as error:
                 raise forms.ValidationError(str(error))
-        sales = {}
+        defaults = engine.inputs()
+        baseline = defaults
+        if cleaned.get("defaults_token"):
+            try:
+                baseline = signing.loads(
+                    cleaned["defaults_token"], salt="planning-defaults", max_age=86400
+                )
+                if (
+                    baseline["user"] != engine.user.pk
+                    or baseline["team"] != engine.team.pk
+                ):
+                    raise signing.BadSignature("Different manager")
+            except (signing.BadSignature, KeyError):
+                raise forms.ValidationError(
+                    "Reload your plan before changing these estimates."
+                ) from None
+        overrides = {}
+        for field in ("free_transfers", "bank"):
+            value = cleaned.get(field)
+            converted = (
+                int(value * 10) if field == "bank" and value is not None else value
+            )
+            if value is not None and converted != baseline[field]:
+                overrides[field] = value
+            else:
+                cleaned[field] = (
+                    Decimal(defaults[field]) / 10
+                    if field == "bank"
+                    else defaults[field]
+                )
+        cleaned["squad_confirmed"] = True
+        sales, price_overrides = {}, {}
         for index, pid in enumerate(ids):
             price = cleaned.get(f"sell_{index}")
             if price is not None and pid in engine.players:
                 tenths = int(price * 10)
-                if tenths > engine.players[pid].get("now_cost", 0):
-                    self.add_error(
-                        f"sell_{index}",
-                        "Use the selling price shown in FPL; it cannot exceed the current purchase price.",
-                    )
-                sales[str(pid)] = tenths
+                if tenths != baseline["sales"].get(str(pid)):
+                    if tenths > engine.players[pid].get("now_cost", 0):
+                        self.add_error(
+                            f"sell_{index}",
+                            "Use the selling price shown in FPL; it cannot exceed the current purchase price.",
+                        )
+                    price_overrides[str(pid)] = tenths
+            if pid in engine.players:
+                sales[str(pid)] = price_overrides.get(
+                    str(pid), engine.defaults_service.selling_price(pid)
+                )
+        cleaned["financial_overrides"] = overrides
+        cleaned["price_overrides"] = price_overrides
         moves = []
         for index in (1, 2):
             outgoing, incoming = cleaned.get(f"out_{index}"), cleaned.get(f"in_{index}")

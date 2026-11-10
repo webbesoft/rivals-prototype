@@ -220,11 +220,14 @@ def test_worker_history_does_not_fetch_picks(manager, stored_context):
                     "points_on_bench": 4,
                     "bank": 10,
                 }
-            ]
+            ],
+            "chips": [{"event": 10, "name": "freehit"}],
         }
         refresh_resource.now(state.key, state.generation)
         api.fetch_team_picks.assert_not_called()
-    assert GameweekData.objects.get(team=rival, gameweek=10).points == 61
+    history = GameweekData.objects.get(team=rival, gameweek=10)
+    assert history.points == 61 and history.bank == 10
+    assert history.chip_name == "freehit" and history.chip_played
     assert SyncState.objects.get(pk=state.pk).status == "ok"
 
 

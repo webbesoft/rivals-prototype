@@ -144,6 +144,9 @@ class TeamSyncService:
         self.team.current_overall_rank = data["summary_overall_rank"]
         self.team.current_event_points = data["summary_event_points"]
         self.team.total_transfers = data["last_deadline_total_transfers"]
+        self.team.started_event = data.get("started_event", self.team.started_event)
+        if data.get("last_deadline_bank") is not None:
+            self.team.bank = data["last_deadline_bank"]
         self.team.save(
             update_fields=[
                 "team_name",
@@ -152,6 +155,8 @@ class TeamSyncService:
                 "current_overall_rank",
                 "current_event_points",
                 "total_transfers",
+                "started_event",
+                "bank",
             ]
         )
 
@@ -168,12 +173,17 @@ class TeamSyncService:
 
         current_season = self.team.current_season
 
+        chips = {chip["event"]: chip["name"] for chip in data.get("chips", [])}
         for gw in data["current"]:
             gw_data, _ = GameweekData.objects.get_or_create(
                 team=self.team,
                 gameweek=gw["event"],
                 season=current_season,
             )
+            gw_data.bank = gw.get("bank")
+            if "chips" in data:
+                gw_data.chip_name = chips.get(gw["event"])
+                gw_data.chip_played = bool(gw_data.chip_name)
             gw_data.points = gw["points"]
             gw_data.total_points = gw["total_points"]
             gw_data.rank = gw.get("rank")

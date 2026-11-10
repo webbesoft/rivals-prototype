@@ -7,13 +7,12 @@
   {% if decision_error %}<p role="status" class="text-sm text-gray-600">{{ decision_error }}</p>
   {% elif report %}
     <p class="text-sm text-gray-500 mb-3">GW{{ report.gameweek }} · Deadline {{ decision_deadline|date:"D j M H:i T" }} · Next {{ report.horizon }} gameweeks · Prepared {{ decision_prepared|date:"H:i T" }}</p>
+    <p class="text-xs text-gray-500 mb-4">Plan uses {{ report.inputs.free_transfers }} free transfer{{ report.inputs.free_transfers|pluralize }} and £{{ report.bank_display|floatformat:1 }}m in bank.</p>
+    <p class="text-xs text-gray-500 mb-4">Based on the latest available squad and estimates. Recent transfers and final selling prices may differ; adjustments are optional.</p>
     <ol class="list-decimal pl-5 space-y-2 text-sm">
-      {% if not report.inputs.confirmed or report.inputs.bank == None or report.inputs.free_transfers == None %}
-        <li><strong>Confirm your squad, bank and free transfers</strong> in the planner before treating a transfer as affordable.</li>
-      {% endif %}
       {% if report.risks %}<li><strong>Review squad availability:</strong> {% for risk in report.risks %}{{ risk.name }}{% if not forloop.last %}, {% endif %}{% endfor %}.</li>{% endif %}
-      <li>{% if report.best.moves %}<strong>Best confirmed route:</strong> {% for move in report.best.moves %}{{ move.out_name }} → {{ move.in_name }}{% if not forloop.last %}; {% endif %}{% endfor %}. Estimated {{ report.best.net_gain }} more points than holding, after {{ report.best.hits }} points in hits.
-          {% else %}<strong>Keep your squad for now.</strong> {% if report.inputs.confirmed %}No confirmed route clearly beats holding after its points cost.{% else %}Review the transfer comparisons once your details are confirmed.{% endif %}{% endif %}
+      <li>{% if report.best.moves %}<strong>Suggested route:</strong> {% for move in report.best.moves %}{{ move.out_name }} → {{ move.in_name }}{% if not forloop.last %}; {% endif %}{% endfor %}. Estimated {{ report.best.net_gain }} more points than holding, after {{ report.best.hits }} points in hits.
+          {% else %}<strong>Keep your squad for now.</strong> No route clearly beats holding after its estimated points cost.{% endif %}
       </li>
       <li><strong>Captain shortlist:</strong> {{ report.captain|default:"No clear option yet" }}; vice {{ report.vice|default:"not yet clear" }}. These are estimates, so check team news near the deadline.</li>
     </ol>

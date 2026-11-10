@@ -351,7 +351,12 @@ def team_analysis(request, team_id):
             team=team,
             season=context["season"],
             gameweek=context["decision_gameweek"],
-            defaults={"free_transfers": free_transfers},
+            defaults={
+                "free_transfers": free_transfers,
+                "free_transfers_recorded_at": (
+                    timezone.now() if free_transfers is not None else None
+                ),
+            },
         )
     result = TeamAnalysisService().analyze_team(
         int(team.fpl_team_id),

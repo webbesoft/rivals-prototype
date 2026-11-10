@@ -6,6 +6,7 @@ from django.core import signing
 from django.core.paginator import Paginator
 from django.http import HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET, require_POST
@@ -33,6 +34,31 @@ def report_context(report, user):
         "decision_deadline": parse_datetime(report["deadline"]),
         "decision_prepared": parse_datetime(report["created_at"]),
     }
+
+
+def financial_defaults(engine, data):
+    record = engine.saved
+    result = {}
+    for field in ("free_transfers", "bank"):
+        timestamp = f"{field}_recorded_at"
+        if field in data["financial_overrides"]:
+            result[field] = data["financial_overrides"][field]
+            result[timestamp] = timezone.now()
+        elif record and getattr(record, field) is not None:
+            result[field] = getattr(record, field)
+            result[timestamp] = getattr(record, timestamp) or record.updated_at
+    prices = dict(record.selling_prices) if record else {}
+    markets = dict(record.selling_price_markets) if record else {}
+    for pid, price in data["price_overrides"].items():
+        prices[pid] = price
+        markets[pid] = engine.players[int(pid)]["now_cost"]
+    result["selling_prices"] = {
+        pid: price for pid, price in prices.items() if int(pid) in data["ids"]
+    }
+    result["selling_price_markets"] = {
+        pid: value for pid, value in markets.items() if pid in result["selling_prices"]
+    }
+    return result
 
 
 @login_required
@@ -105,9 +131,7 @@ def workspace(request):
                     season=engine.context["season"],
                     gameweek=engine.context["decision_gameweek"],
                     defaults={
-                        "free_transfers": data["free_transfers"],
-                        "bank": data["bank"],
-                        "selling_prices": data["sales"],
+                        **financial_defaults(engine, data),
                         "squad_ids": data["ids"],
                         "squad_confirmed": data["squad_confirmed"],
                         "horizon": data["horizon"],

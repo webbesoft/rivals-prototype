@@ -1,6 +1,7 @@
 from copy import deepcopy
 from datetime import datetime, timedelta
 from datetime import timezone as dt_timezone
+from decimal import Decimal
 from time import perf_counter
 from unittest.mock import Mock, patch
 
@@ -22,6 +23,7 @@ from rivals.models import (
     SquadHistory,
     Team,
     TeamPlanningInput,
+    Transfer,
     TransferPlan,
     UserMiniLeague,
 )
@@ -46,7 +48,7 @@ def isolated():
 @pytest.fixture
 def manager(db):
     team = Team.objects.create(
-        fpl_team_id="101", team_name="My XI", current_season="2026/27"
+        fpl_team_id="101", team_name="My XI", current_season="2026/27", bank=10
     )
     user = get_user_model().objects.create_user(
         username="manager",
@@ -212,22 +214,14 @@ def test_hit_cost_and_zero_free_transfers_are_applied_once(manager, api):
 
 
 @pytest.mark.django_db
-def test_missing_private_data_does_not_invent_affordability_or_free_transfers(
-    manager, api
-):
+def test_defaults_produce_usable_options_without_private_input(manager, api):
     report = DecisionEngine(manager, api).report()
-    assert not report["best"]["moves"]
-    assert all(
-        not option["confirmed"] and option["hits"] is None
-        for option in report["options"]
-        if option["moves"]
-    )
-    assert any(
-        "Confirm selling prices" in option["unknown"]
-        for option in report["options"]
-        if option["moves"]
-    )
-    assert report["baseline"]["hits"] == 0 and report["baseline"]["net_gain"] == 0
+    assert report["inputs"]["free_transfers"] == 1
+    assert report["inputs"]["bank"] == 10
+    assert len(report["inputs"]["sales"]) == 15
+    assert report["best"]["moves"]
+    assert all(option["hits"] is not None for option in report["options"])
+    assert report["baseline"]["net_gain"] == 0
 
 
 @pytest.mark.django_db
@@ -291,11 +285,11 @@ def test_roll_preserves_free_transfer_flexibility_and_cap(manager, api):
 
 
 @pytest.mark.django_db
-def test_unknown_squad_cannot_receive_confirmed_move_even_with_prices(manager, api):
+def test_estimated_squad_does_not_block_a_positive_transfer_route(manager, api):
     engine = DecisionEngine(manager, api).load()
     report = engine.report(confirmed(engine, confirmed=False))
-    assert report["best"]["key"] == "hold"
-    assert not any(choice["confirmed"] for choice in report["options"])
+    assert report["best"]["moves"]
+    assert report["best"]["net_gain"] > 0
 
 
 @pytest.mark.django_db
@@ -363,7 +357,7 @@ def test_rival_scenarios_require_subscription_and_use_current_season_squad(
 
 
 @pytest.mark.django_db
-def test_inputs_are_private_and_private_values_do_not_carry_to_next_week(manager, api):
+def test_editable_financial_estimates_carry_forward_but_stay_private(manager, api):
     TeamPlanningInput.objects.create(
         user=manager,
         team=manager.team,
@@ -380,10 +374,10 @@ def test_inputs_are_private_and_private_values_do_not_carry_to_next_week(manager
     engine = DecisionEngine(manager, api).load()
     data = engine.inputs()
     assert (
-        data["free_transfers"] is None
-        and data["bank"] is None
-        and not data["sales"]
-        and not data["confirmed"]
+        data["free_transfers"] == 5
+        and data["bank"] == 200
+        and len(data["sales"]) == 15
+        and data["confirmed"]
     )
     assert data["horizon"] == 6 and data["strategy"] == "chase"
     other = get_user_model().objects.create_user(
@@ -420,10 +414,11 @@ def test_workspace_renders_and_saves_confirmed_inputs_without_executing_transfer
         engine = DecisionEngine(manager, api).load()
         response = client.post(reverse("rivals:decisions.workspace"), form_data(engine))
     assert response.status_code == 200
-    assert "Affordable with the figures you entered" in response.content.decode()
+    assert "Estimated bank after moves" in response.content.decode()
     saved = TeamPlanningInput.objects.get(user=manager)
-    assert saved.squad_confirmed and saved.bank == 1 and saved.free_transfers == 2
-    assert saved.selling_prices["8"] == 50
+    assert saved.squad_confirmed and saved.bank is None and saved.free_transfers == 2
+    assert saved.free_transfers_recorded_at == NOW
+    assert saved.selling_prices == {}  # Unchanged estimates are not manual overrides.
     assert not DecisionRecord.objects.exists()
 
 
@@ -648,7 +643,7 @@ def test_backtest_waits_for_checked_scores_and_excludes_zero_error_holds(manager
 @pytest.mark.django_db
 def test_partial_results_and_unknown_hits_never_invent_net_outcomes(manager, api):
     engine = DecisionEngine(manager, api).load()
-    report = engine.report()
+    report = engine.report(confirmed(engine, free_transfers=None))
     chosen = next(item for item in report["options"] if item["moves"])
     record = DecisionRecord.objects.create(
         user=manager,
@@ -734,7 +729,7 @@ def test_changing_current_holdings_clears_carried_over_confirmations(manager, ap
     assert form.cleaned_data["ids"][7] == 18
     assert form.cleaned_data["sales"]["18"] == 55
     assert "8" not in form.cleaned_data["sales"]
-    assert "checked = false" in form.fields["owned_7"].widget.attrs["onchange"]
+    assert "sell_7.value = ''" in form.fields["owned_7"].widget.attrs["onchange"]
 
 
 @pytest.mark.django_db
@@ -824,8 +819,279 @@ def test_price_drop_invalidates_a_previously_confirmed_selling_price(manager, ap
     )
     api.fetch_bootstrap_static.return_value["elements"][7]["now_cost"] = 49
     engine = DecisionEngine(manager, api).load()
-    assert "8" not in engine.inputs()["sales"]
+    assert engine.inputs()["sales"]["8"] == 49
     engine.prepare(engine.inputs())
     route = engine.candidate([(8, 18)], engine.evaluate(engine.ids))
-    assert route and not route["confirmed"]
-    assert "Confirm selling prices" in route["unknown"]
+    assert route and route["bank_after"] >= 0
+    assert not route["unknown"]
+
+
+def defaults_for(manager, api, target=11):
+    from rivals.services.planning_defaults_service import PlanningDefaults
+
+    from rivals.services.gameweek_context_service import GameweekContextService
+
+    bootstrap = api.fetch_bootstrap_static()
+    context = {
+        **GameweekContextService.derive(bootstrap["events"]),
+        "decision_gameweek": target,
+        "events": bootstrap["events"],
+    }
+    return PlanningDefaults(
+        manager, context, {p["id"]: p for p in bootstrap["elements"]}
+    )
+
+
+def initial_payload(form):
+    return {
+        key: value if value is not None else "" for key, value in form.initial.items()
+    }
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "count,used,expected", [(2, 0, 3), (2, 1, 2), (2, 2, 1), (2, 4, 1), (5, 0, 5)]
+)
+def test_seeded_free_transfers_roll_forward_and_account_for_each_move(
+    manager, api, count, used, expected
+):
+    timestamp = NOW - timedelta(days=5)
+    TeamPlanningInput.objects.create(
+        user=manager,
+        team=manager.team,
+        season="2026/27",
+        gameweek=10,
+        free_transfers=count,
+        free_transfers_recorded_at=timestamp,
+    )
+    for index in range(used):
+        Transfer.objects.create(
+            team=manager.team,
+            season="2026/27",
+            gameweek=10,
+            transfer_time=timestamp + timedelta(hours=1),
+            player_in_name=f"In {index}",
+            player_out_name=f"Out {index}",
+        )
+    assert defaults_for(manager, api).free_transfers() == expected
+
+
+@pytest.mark.django_db
+def test_midweek_seed_does_not_deduct_moves_already_included_in_the_count(manager, api):
+    timestamp = NOW - timedelta(days=5)
+    TeamPlanningInput.objects.create(
+        user=manager,
+        team=manager.team,
+        season="2026/27",
+        gameweek=10,
+        free_transfers=2,
+        free_transfers_recorded_at=timestamp,
+    )
+    for when in (timestamp - timedelta(hours=1), timestamp + timedelta(hours=1)):
+        Transfer.objects.create(
+            team=manager.team,
+            season="2026/27",
+            gameweek=10,
+            transfer_time=when,
+            player_in_name="In",
+            player_out_name="Out",
+        )
+    GameweekData.objects.create(
+        team=manager.team, season="2026/27", gameweek=10, event_transfers=2
+    )
+    assert defaults_for(manager, api).free_transfers() == 2
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "chip,expected", [("wildcard", 3), ("freehit", 3), ("bboost", 2), ("3xc", 2)]
+)
+def test_chip_weeks_preserve_transfer_stock_or_use_normal_rules(
+    manager, api, chip, expected
+):
+    TeamPlanningInput.objects.create(
+        user=manager,
+        team=manager.team,
+        season="2026/27",
+        gameweek=10,
+        free_transfers=3,
+        free_transfers_recorded_at=NOW - timedelta(days=5),
+    )
+    GameweekData.objects.create(
+        team=manager.team,
+        season="2026/27",
+        gameweek=10,
+        chip_name=chip,
+        event_transfers=2,
+    )
+    for index in range(2):
+        Transfer.objects.create(
+            team=manager.team,
+            season="2026/27",
+            gameweek=10,
+            transfer_time=NOW - timedelta(days=4),
+            player_in_name=f"In {index}",
+            player_out_name="Out",
+        )
+    assert defaults_for(manager, api).free_transfers() == expected
+
+
+@pytest.mark.django_db
+def test_unseeded_allowance_uses_recorded_gameweek_counts_and_not_initial_unlimited_moves(
+    manager, api
+):
+    manager.team.started_event = 9
+    manager.team.save()
+    GameweekData.objects.create(
+        team=manager.team, season="2026/27", gameweek=9, event_transfers=15
+    )
+    GameweekData.objects.create(
+        team=manager.team, season="2026/27", gameweek=10, event_transfers=0
+    )
+    assert defaults_for(manager, api).free_transfers() == 2
+
+
+@pytest.mark.django_db
+def test_history_bank_is_default_and_newer_manual_correction_wins(manager, api):
+    GameweekData.objects.create(
+        team=manager.team, season="2026/27", gameweek=10, bank=25
+    )
+    assert defaults_for(manager, api).bank() == 25
+    TeamPlanningInput.objects.create(
+        user=manager,
+        team=manager.team,
+        season="2026/27",
+        gameweek=11,
+        bank="1.7",
+        bank_recorded_at=NOW,
+    )
+    assert defaults_for(manager, api).bank() == 17
+
+
+@pytest.mark.django_db
+def test_observed_transfers_adjust_bank_without_recounting_earlier_trades(manager, api):
+    timestamp = NOW - timedelta(hours=2)
+    TeamPlanningInput.objects.create(
+        user=manager,
+        team=manager.team,
+        season="2026/27",
+        gameweek=11,
+        bank="2.0",
+        bank_recorded_at=timestamp,
+    )
+    for when in (timestamp - timedelta(hours=1), timestamp + timedelta(hours=1)):
+        Transfer.objects.create(
+            team=manager.team,
+            season="2026/27",
+            gameweek=11,
+            transfer_time=when,
+            player_in_cost=60,
+            player_out_cost=50,
+            player_in_name="In",
+            player_out_name="Out",
+        )
+    assert defaults_for(manager, api).bank() == 10
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("current,expected", [(55, 52), (56, 53), (48, 48)])
+def test_selling_prices_use_acquisition_cost_and_half_of_profit(
+    manager, api, current, expected
+):
+    player = Player.objects.create(fpl_id=8, web_name="Owned", element_type=3)
+    Transfer.objects.create(
+        team=manager.team,
+        season="2026/27",
+        gameweek=8,
+        player_in=player,
+        player_in_cost=50,
+        transfer_time=NOW - timedelta(days=20),
+        player_out_name="Out",
+    )
+    api.fetch_bootstrap_static.return_value["elements"][7]["now_cost"] = current
+    assert defaults_for(manager, api).selling_price(8) == expected
+
+
+@pytest.mark.django_db
+def test_opening_price_change_estimates_sale_when_purchase_history_is_missing(
+    manager, api
+):
+    api.fetch_bootstrap_static.return_value["elements"][7].update(
+        now_cost=55, cost_change_start=5
+    )
+    assert defaults_for(manager, api).selling_price(8) == 52
+
+
+@pytest.mark.django_db
+def test_default_submission_does_not_create_financial_seeds_or_fifteen_price_overrides(
+    manager, api
+):
+    client = Client()
+    client.force_login(manager)
+    with patch("rivals.services.decision_engine.FplApiService", return_value=api):
+        response = client.get(reverse("rivals:decisions.workspace"))
+        form = response.context["form"]
+        payload = initial_payload(form)
+        client.post(reverse("rivals:decisions.workspace"), payload)
+        client.post(reverse("rivals:decisions.workspace"), payload)
+    saved = TeamPlanningInput.objects.get(user=manager)
+    assert saved.free_transfers is None and saved.free_transfers_recorded_at is None
+    assert saved.bank is None and saved.bank_recorded_at is None
+    assert saved.selling_prices == {}
+
+
+@pytest.mark.django_db
+def test_user_correction_becomes_anchor_once_and_preferences_do_not_move_it(
+    manager, api
+):
+    client = Client()
+    client.force_login(manager)
+    with patch("rivals.services.decision_engine.FplApiService", return_value=api):
+        form = client.get(reverse("rivals:decisions.workspace")).context["form"]
+        payload = {**initial_payload(form), "free_transfers": 2, "bank": "2.3"}
+        client.post(reverse("rivals:decisions.workspace"), payload)
+        saved = TeamPlanningInput.objects.get(user=manager)
+        assert saved.free_transfers == 2 and saved.bank == Decimal("2.3")
+        original_time = saved.free_transfers_recorded_at
+        with patch("django.utils.timezone.now", return_value=NOW + timedelta(hours=1)):
+            form = client.get(reverse("rivals:decisions.workspace")).context["form"]
+            client.post(
+                reverse("rivals:decisions.workspace"),
+                {**initial_payload(form), "strategy": "chase"},
+            )
+    saved.refresh_from_db()
+    assert saved.free_transfers_recorded_at == original_time
+
+
+@pytest.mark.django_db
+def test_planner_opens_with_results_and_no_confirmation_tasks(manager, api):
+    client = Client()
+    client.force_login(manager)
+    with patch("rivals.services.decision_engine.FplApiService", return_value=api):
+        response = client.get(reverse("rivals:decisions.workspace"))
+    html = response.content.decode()
+    assert html.index("Before the next deadline") < html.index("Adjust estimates")
+    assert "Needs confirmation" not in html and "Confirm your squad" not in html
+    assert 'type="checkbox"' not in html
+    assert len(response.context["report"]["inputs"]["sales"]) == 15
+
+
+@pytest.mark.django_db
+def test_free_hit_squad_reverts_to_permanent_players_for_next_plan(manager, api):
+    previous = list(manager.team.squad_histories.all())
+    for row in previous:
+        row.pk = None
+        row.gameweek = 9
+    SquadHistory.objects.bulk_create(previous)
+    manager.team.squad_histories.filter(gameweek=10, player_fpl_id=8).update(
+        player_fpl_id=18
+    )
+    GameweekData.objects.create(
+        team=manager.team, season="2026/27", gameweek=10, chip_name="freehit", bank=0
+    )
+    GameweekData.objects.create(
+        team=manager.team, season="2026/27", gameweek=9, bank=10
+    )
+    engine = DecisionEngine(manager, api).load()
+    assert 8 in engine.public_ids and 18 not in engine.public_ids
+    assert engine.inputs()["bank"] == 10

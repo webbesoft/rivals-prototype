@@ -12,6 +12,7 @@ from django.utils import timezone
 from rivals.models import MiniLeagueTeam, TeamPlanningInput
 from rivals.services.fpl_api_service import FplApiService
 from rivals.services.gameweek_context_service import GameweekContextService
+from rivals.services.planning_defaults_service import PlanningDefaults
 
 POSITIONS = {1: "GKP", 2: "DEF", 3: "MID", 4: "FWD"}
 SQUAD_SHAPE = {1: 2, 2: 5, 3: 5, 4: 3}
@@ -39,7 +40,7 @@ def digest(value):
 
 
 class DecisionEngine:
-    VERSION = "decision-v1"
+    VERSION = "decision-v2"
 
     def __init__(self, user, api=None):
         self.user = user
@@ -49,6 +50,7 @@ class DecisionEngine:
         self._evaluations = {}
 
     def load(self):
+        self.__dict__.pop("default_values", None)
         if not self.team:
             raise DecisionUnavailable("Add your FPL team to start planning.")
         self.bootstrap = self.api.fetch_bootstrap_static()
@@ -81,17 +83,26 @@ class DecisionEngine:
             season=self.context["season"],
             gameweek=self.context["decision_gameweek"],
         ).first()
+        self.public_entry_history = {}
+        source_week = self.context["scoring_gameweek"]
+        while self.team.gameweek_data.filter(
+            season=self.context["season"], gameweek=source_week, chip_name="freehit"
+        ).exists():
+            source_week -= 1
+        if source_week < 1:
+            raise DecisionUnavailable(
+                "Your permanent squad is currently unavailable. Please try again."
+            )
         rows = list(
             self.team.squad_histories.filter(
-                season=self.context["season"], gameweek=self.context["scoring_gameweek"]
+                season=self.context["season"], gameweek=source_week
             ).order_by("position")
         )
         if len(rows) == 15:
             self.public_ids = [row.player_fpl_id for row in rows]
         else:
-            picks = self.api.fetch_team_picks(
-                self.team.fpl_team_id, self.context["scoring_gameweek"]
-            )
+            picks = self.api.fetch_team_picks(self.team.fpl_team_id, source_week)
+            self.public_entry_history = (picks or {}).get("entry_history", {})
             self.public_ids = [
                 pick["element"] for pick in (picks or {}).get("picks", [])
             ]
@@ -178,30 +189,21 @@ class DecisionEngine:
             .order_by("-updated_at")
             .first()
         )
+        ids = (
+            list(record.squad_ids)
+            if record and record.squad_ids
+            else list(self.public_ids)
+        )
+        if not hasattr(self, "default_values"):
+            context = {**self.context, "events": self.bootstrap.get("events", [])}
+            self.defaults_service = PlanningDefaults(
+                self.user, context, self.players, self.public_entry_history
+            )
+            self.default_values = self.defaults_service.values(ids)
         return {
-            "ids": (
-                list(record.squad_ids)
-                if record and record.squad_ids
-                else list(self.public_ids)
-            ),
-            "confirmed": bool(record and record.squad_confirmed),
-            "bank": (
-                int(record.bank * 10) if record and record.bank is not None else None
-            ),
-            "free_transfers": record.free_transfers if record else None,
-            "sales": (
-                {
-                    str(pid): int(value)
-                    for pid, value in record.selling_prices.items()
-                    if str(pid).isdigit()
-                    and int(pid) in self.players
-                    and 0
-                    <= number(value, -1)
-                    <= self.players[int(pid)].get("now_cost", 0)
-                }
-                if record
-                else {}
-            ),
+            "ids": ids,
+            "confirmed": True,
+            **self.default_values,
             "manual": list(record.manual_moves) if record else [],
             "horizon": previous.horizon if previous else 5,
             "strategy": previous.strategy if previous else "protect",
@@ -737,7 +739,7 @@ class DecisionEngine:
         qualified = [
             choice
             for choice in choices
-            if choice["confirmed"]
+            if choice["net_gain"] is not None
             and choice["net_gain"] > 0
             and choice["objective"] > 0
         ]
@@ -837,6 +839,7 @@ class DecisionEngine:
                 for pid in self.ids
             ],
             "inputs": data,
+            "bank_display": data["bank"] / 10 if data["bank"] is not None else 0,
             "weeks": self.weeks,
             "model": {
                 "version": self.VERSION,
