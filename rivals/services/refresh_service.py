@@ -16,6 +16,24 @@ def resource_key(kind, object_id=None):
     return f"{kind}:{object_id}" if object_id is not None else kind
 
 
+def _skip_refresh(state, kind, context, now, force):
+    if state.lease_until and state.lease_until > now:
+        return True
+    if state.next_attempt_at and state.next_attempt_at > now and state.failures:
+        return True
+    stamp = f'{context.get("season")}:{context.get("scoring_gameweek")}'
+    rolled_over = bool(context.get("season") and state.payload.get("stamp") != stamp)
+    interval = 120 if kind == "context" else context.get("refresh_seconds", 1800)
+    if kind == "players":
+        interval = max(interval, 900)
+    return bool(
+        not force
+        and not rolled_over
+        and state.last_success_at
+        and (now - state.last_success_at).total_seconds() < interval
+    )
+
+
 def enqueue_refresh(kind, object_id=None, force=False, context=None):
     """Atomically reserve and enqueue; no HTTP and no cache dependency."""
     from rivals.tasks import refresh_resource
@@ -23,26 +41,16 @@ def enqueue_refresh(kind, object_id=None, force=False, context=None):
     context = context if context is not None else GameweekContextService.cached()
     now = timezone.now()
     key = resource_key(kind, object_id)
+    # Most page loads only discover fresh or already-queued work. Avoid taking
+    # SQLite's write lock for those reads. Recheck inside the transaction below.
+    existing = SyncState.objects.filter(key=key).first()
+    if existing and _skip_refresh(existing, kind, context, now, force):
+        return False
     with transaction.atomic():
         state, _ = SyncState.objects.get_or_create(
             key=key, defaults={"kind": kind, "object_id": object_id}
         )
-        # Failures always respect backoff, even under manual refresh clicks.
-        if state.next_attempt_at and state.next_attempt_at > now and state.failures:
-            return False
-        stamp = f'{context.get("season")}:{context.get("scoring_gameweek")}'
-        rolled_over = bool(
-            context.get("season") and state.payload.get("stamp") != stamp
-        )
-        interval = 120 if kind == "context" else context.get("refresh_seconds", 1800)
-        if kind == "players":
-            interval = max(interval, 900)
-        if (
-            not force
-            and not rolled_over
-            and state.last_success_at
-            and (now - state.last_success_at).total_seconds() < interval
-        ):
+        if _skip_refresh(state, kind, context, now, force):
             return False
         claimed = (
             SyncState.objects.filter(pk=state.pk, generation=state.generation)

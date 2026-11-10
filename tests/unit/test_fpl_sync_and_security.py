@@ -91,7 +91,7 @@ class TestFplIdUpdateAndSync:
 
         # Stale league pruned, new league present
         user_leagues = list(
-            auth_user.customminileagues.values_list(
+            auth_user.customminileagues.filter(active=True).values_list(
                 "mini_league__fpl_league_id", flat=True
             )
         )
@@ -145,10 +145,13 @@ class TestFplIdUpdateAndSync:
 @pytest.mark.django_db
 class TestInitUserServiceRobustness:
     @patch("rivals.services.team_sync_service.TeamSyncService.sync_full_data")
-    def test_init_service_succeeds_even_if_sync_full_data_fails(
-        self, mock_team_sync, auth_user
+    @patch(
+        "rivals.services.fpl_api_service.FplApiService.make_request",
+        side_effect=AssertionError("Initialization must only queue HTTP work"),
+    )
+    def test_init_service_queues_network_work_instead_of_fetching_under_a_write_lock(
+        self, mock_request, mock_team_sync, auth_user
     ):
-        mock_team_sync.side_effect = Exception("FPL API timeout")
 
         basic_info = {
             "id": 33333,
@@ -167,6 +170,8 @@ class TestInitUserServiceRobustness:
         auth_user.refresh_from_db()
         assert auth_user.team is not None
         assert auth_user.team.fpl_team_id == "33333"
+        mock_request.assert_not_called()
+        mock_team_sync.assert_not_called()
 
 
 @pytest.mark.django_db

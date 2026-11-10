@@ -570,6 +570,11 @@ class UserMiniLeague(models.Model):
         MiniLeague, on_delete=models.CASCADE, related_name="user_minileagues"
     )
     active = models.BooleanField(default=True)
+    source = models.CharField(
+        max_length=10,
+        choices=[("legacy", "Legacy"), ("fpl", "FPL account"), ("manual", "Manual")],
+        default="legacy",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

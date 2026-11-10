@@ -107,7 +107,9 @@ def mini_league_store(request):
 
         enqueue_refresh("league", mini_league.id)
 
-    request.user.customminileagues.get_or_create(mini_league=mini_league)
+    request.user.customminileagues.update_or_create(
+        mini_league=mini_league, defaults={"source": "manual", "active": True}
+    )
     messages.success(request, "Mini-league added successfully!")
 
     return redirect("rivals:minileagues.show", mini_league_id=mini_league.id)

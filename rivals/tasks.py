@@ -158,6 +158,14 @@ def ingest(state):
                 )
             if not success:
                 raise RuntimeError("Team import failed")
+        if state.kind == "profile" and isinstance(data.get("leagues"), dict):
+            from django.contrib.auth import get_user_model
+            from rivals.services.league_membership_service import reconcile_memberships
+
+            for user in (
+                get_user_model().objects.filter(team=team).select_related("team")
+            ):
+                reconcile_memberships(user, data)
 
     return {}
 
