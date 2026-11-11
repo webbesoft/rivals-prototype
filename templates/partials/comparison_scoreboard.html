@@ -1,0 +1,17 @@
+{% load humanize math_filters %}
+  <section class="rv-matchup" aria-labelledby="matchup-heading">
+    <div class="rv-dark-heading"><h2 id="matchup-heading">{{ my_team.team_name }} <span>vs</span> {{ rival_team.team_name }}</h2><span>{% if comparison.season_totals %}Season points / FPL entry totals{% else %}Season points / Latest stored totals{% endif %}</span></div>
+    <div class="rv-faceoff">
+      <div class="rv-side rv-side-you"><p class="rv-eyebrow">Your side</p><h3>{{ my_team.manager_name|default:my_team.team_name }}</h3><p class="rv-side-score">{{ my_points|default_if_none:"—"|intcomma }} <span>pts</span></p></div>
+      <div class="rv-points-gap"><span>The gap</span>
+        {% if my_points != None and rival_points != None %}
+          {% if my_points > rival_points %}<strong>{{ my_points|subtract:rival_points }}</strong><p>+{{ my_points|subtract:rival_points }} pts ahead</p>
+          {% elif my_points < rival_points %}<strong>{{ rival_points|subtract:my_points }}</strong><p>{{ rival_points|subtract:my_points }} pts behind</p>
+          {% else %}<strong>0</strong><p>Level on points</p>{% endif %}
+        {% else %}<strong>—</strong><p>Totals not available</p>{% endif %}
+      </div>
+      <div class="rv-side rv-side-rival"><p class="rv-eyebrow">The opposition</p><h3>{{ rival_team.manager_name|default:rival_team.team_name }}</h3><p class="rv-side-score">{{ rival_points|default_if_none:"—"|intcomma }} <span>pts</span></p></div>
+    </div>
+    <nav class="rv-section-links" aria-label="Explore this comparison"><a href="#captain-matchup">Captain choices ↓</a><a href="#squad-differences">Squad differences ↓</a><a href="#fixture-matchup">Fixtures ahead ↓</a><a href="#transfer-matchup">Transfer options ↓</a></nav>
+  </section>
+

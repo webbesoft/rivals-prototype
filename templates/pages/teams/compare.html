@@ -1,500 +1,54 @@
 <c-layouts.base title="Head-to-Head: {{ my_team.team_name }} vs {{ rival_team.team_name }} - RivalSpy">
-  {% load humanize %}
-  {% load math_filters %}
+{% load humanize math_filters %}
+<div class="rv-wrap rv-comparison">
+  {% if comparison.error %}
+  <div class="rv-empty" role="status"><h1>Comparison unavailable</h1><p>{{ comparison.error }}</p><a class="app-secondary-button" href="{% url 'rivals:teams.show' rival_team.id %}">Back to rival squad</a></div>
+  {% else %}
+  <header class="rv-page-heading"><div><p class="rv-eyebrow">The matchup / Published squads{% if comparison.current_gameweek %} / GW{{ comparison.current_gameweek }}{% endif %}</p><h1>Read the rivalry.</h1></div><div class="rv-page-actions"><a href="{% url 'rivals:teams.show' rival_team.id %}">Rival squad ↗</a><a href="{% url 'rivals:teams.show' my_team.id %}">My squad ↗</a></div></header>
 
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+  {% if comparison.season_totals %}
+    {% include "partials/comparison_scoreboard.html" with my_points=comparison.season_totals.mine rival_points=comparison.season_totals.rival %}
+  {% else %}
+    {% include "partials/comparison_scoreboard.html" with my_points=my_team.current_total_points rival_points=rival_team.current_total_points %}
+  {% endif %}
 
-    {% if comparison.error %}
-    <!-- Error State -->
-    <div class="border-l-4 border-danger bg-white border border-gray-200 p-6 shadow-sm">
-      <div class="flex items-start justify-between">
-        <div>
-          <p class="text-xs tabular-nums font-bold uppercase tracking-wider text-danger mb-1">Comparison Failed</p>
-          <p class="text-sm text-text-main font-medium">{{ comparison.error }}</p>
-        </div>
-        <a href="{% url 'rivals:teams.show' rival_team.id %}" class="px-3.5 py-1.5 text-xs tabular-nums font-bold uppercase tracking-wide border border-gray-300 text-text-main bg-white hover:border-pitch hover:text-pitch transition-colors">
-          ← Back to Team
-        </a>
-      </div>
+  <section class="rv-forecast" aria-labelledby="forecast-heading">
+    <div><p class="rv-eyebrow">Looking ahead{% if comparison.current_gameweek %} / GW{{ comparison.current_gameweek|add:1 }}{% endif %}</p><h2 id="forecast-heading">Can the gap move?</h2><p>Squad estimates for the next gameweek. These are forecasts, separate from the season scores above.</p></div>
+    <dl class="rv-forecast-values"><div><dt>Your expected points</dt><dd>{{ comparison.projected_gw_outcome.my_expected|floatformat:1|default:"—" }}</dd></div><div><dt>Rival expected points</dt><dd>{{ comparison.projected_gw_outcome.rival_expected|floatformat:1|default:"—" }}</dd></div><div><dt>Projected difference</dt><dd>{% if comparison.projected_gw_outcome %}{% if comparison.projected_gw_outcome.difference > 0 %}+{% endif %}{{ comparison.projected_gw_outcome.difference|floatformat:1 }}{% else %}—{% endif %}</dd></div></dl>
+    <p class="rv-footnote">Based on rolling form, fixture difficulty and player selection rates. Estimates are not a guaranteed points swing or a breakdown of past results.</p>
+  </section>
+
+  <section id="captain-matchup" class="rv-section" aria-labelledby="captain-heading">
+    <header class="rv-section-heading"><div><p class="rv-eyebrow">01 / The armband</p><h2 id="captain-heading">The captain choices.</h2></div><p>From the published squads.<br>Player estimates before the captain multiplier.</p></header>
+    <div class="rv-captain-duel">
+      <article><span class="rv-eyebrow">Your captain</span>{% if comparison.captaincy.mine %}<h3>{{ comparison.captaincy.mine.name }} <span class="rv-armband" aria-label="Captain">C</span></h3><p><strong>{{ comparison.captaincy.mine.expected_points|floatformat:1 }}</strong> estimated player pts</p>{% else %}<h3>Not available</h3><p>No captain available in the published squad.</p>{% endif %}</article>
+      <div class="rv-duel-divider" aria-hidden="true">v</div>
+      <article><span class="rv-eyebrow">Rival captain</span>{% if comparison.captaincy.rival %}<h3>{{ comparison.captaincy.rival.name }} <span class="rv-armband" aria-label="Captain">C</span></h3><p><strong>{{ comparison.captaincy.rival.expected_points|floatformat:1 }}</strong> estimated player pts</p>{% else %}<h3>Not available</h3><p>No captain available in the published squad.</p>{% endif %}</article>
     </div>
-    {% else %}
+  </section>
 
-    <!-- Masthead & Matchup Identity -->
-    <div class="pb-6 mb-8 border-b border-gray-200 flex flex-col md:flex-row md:items-end justify-between gap-4">
-      <div>
-        <div class="flex items-center gap-2 mb-1.5">
-          <span class="text-[11px] tabular-nums uppercase tracking-widest text-muted">The matchup</span>
-          <span class="text-gray-300 tabular-nums text-xs">/</span>
-          <span class="text-[11px] tabular-nums text-pitch font-bold uppercase">Head-to-head</span>
-        </div>
-        <h1 class="app-page-title text-2xl sm:text-3xl font-black text-text-main uppercase tracking-tight font-sans">
-          {{ my_team.team_name }} <span class="text-gray-400 font-normal">vs</span> {{ rival_team.team_name }}
-        </h1>
-        <p class="text-xs text-gray-500 tabular-nums mt-1">
-          <span class="text-pitch font-bold uppercase">You</span> ({{ my_team.manager_name }})
-          <span class="mx-2 text-gray-300">·</span>
-          <span class="text-danger font-bold uppercase">Rival</span> ({{ rival_team.manager_name }})
-          <span class="mx-2 text-gray-300">·</span>
-          GW{{ comparison.current_gameweek }} Data
-        </p>
-      </div>
+  <section id="squad-differences" class="rv-section" aria-labelledby="positions-heading">
+    <header class="rv-section-heading"><div><p class="rv-eyebrow">02 / Across the squad</p><h2 id="positions-heading">Where each side has an edge.</h2></div><p>Projected player points by position.<br>These totals are not isolated differential-player gains.</p></header>
+    <div class="rv-table-scroll"><table class="rv-table"><caption class="rv-sr-only">Squad estimates by position</caption><thead><tr><th scope="col">Position</th><th scope="col">Your squad</th><th scope="col">Rival squad</th><th scope="col">Difference</th></tr></thead><tbody>
+      {% for pos in comparison.position_comparisons %}<tr><th scope="row">{{ pos.position }}</th><td>{{ pos.my_team_expected|floatformat:1 }} xP</td><td>{{ pos.rival_team_expected|floatformat:1 }} xP</td><td class="{% if pos.advantage == 'mine' %}rv-positive{% endif %}">{% if pos.my_team_expected > pos.rival_team_expected %}+{{ pos.my_team_expected|subtract:pos.rival_team_expected|floatformat:1 }}{% elif pos.my_team_expected < pos.rival_team_expected %}−{{ pos.rival_team_expected|subtract:pos.my_team_expected|floatformat:1 }}{% else %}0.0{% endif %}</td></tr>{% empty %}<tr><td colspan="4">Position estimates are unavailable.</td></tr>{% endfor %}
+    </tbody></table></div>
+    <div class="rv-momentum"><div><span class="rv-eyebrow">Your recent form</span><strong>{{ comparison.momentum.mine.average|floatformat:1|default:"—" }} <small>pts/GW</small></strong><p>{{ comparison.momentum.mine.trend|default:"Not available" }} · Last 5 gameweeks</p></div><div><span class="rv-eyebrow">Rival recent form</span><strong>{{ comparison.momentum.rival.average|floatformat:1|default:"—" }} <small>pts/GW</small></strong><p>{{ comparison.momentum.rival.trend|default:"Not available" }} · Last 5 gameweeks</p></div></div>
+  </section>
 
-      <!-- Quick Action Controls -->
-      <div class="flex items-center gap-2 shrink-0">
-        <a href="{% url 'rivals:teams.show' rival_team.id %}" class="px-3.5 py-2 text-xs tabular-nums font-bold uppercase tracking-wide border border-gray-300 text-text-main bg-white hover:border-pitch hover:text-pitch transition-colors">
-          ← Rival Squad
-        </a>
-        <a href="{% url 'rivals:teams.show' my_team.id %}" class="px-3.5 py-2 text-xs tabular-nums font-bold uppercase tracking-wide bg-pitch text-white hover:bg-pitch/90 transition-colors">
-          My Squad
-        </a>
-      </div>
-    </div>
+  <section id="fixture-matchup" class="rv-section" aria-labelledby="fixture-heading">
+    <header class="rv-section-heading"><div><p class="rv-eyebrow">03 / The run ahead</p><h2 id="fixture-heading">Whose fixtures open up?</h2></div><p>Next 6 gameweeks / Average squad FDR<br>1 = easier · 5 = harder</p></header>
+    <div class="rv-fixture-duel"><div><h3>Your squad</h3>{% include "partials/fixture_schedule_bars.html" with schedule=comparison.fixture_schedules.mine %}</div><div><h3>Rival squad</h3>{% include "partials/fixture_schedule_bars.html" with schedule=comparison.fixture_schedules.rival %}</div></div>
+  </section>
 
-    <!-- Top Matchup Summary Ledger -->
-    <div class="mb-8 app-panel bg-white border border-gray-200 shadow-sm">
-      <div class="px-5 py-2.5 border-b border-gray-200 bg-gray-50/75 flex items-center justify-between text-xs tabular-nums">
-        <span class="font-bold uppercase tracking-wider text-text-main">Season Standing Comparison</span>
-        <span class="text-gray-500">Live FPL Benchmarks</span>
-      </div>
+  <section id="transfer-matchup" class="rv-section" aria-labelledby="transfer-heading">
+    <header class="rv-section-heading"><div><p class="rv-eyebrow">04 / Possible moves</p><h2 id="transfer-heading">What could change next?</h2></div><a class="app-secondary-button" href="{% url 'rivals:decisions' %}">Compare a plan with holding ↗</a></header>
+    <p class="rv-section-note">Model suggestions from each published squad. Rival transfers are unknown; these are possibilities, not detected or confirmed moves. Check affordability and transfer costs in the planner.</p>
+    <div class="rv-transfer-duel"><div><h3>Your transfer options</h3>{% include "partials/rivalry_transfer_routes.html" with recommendations=comparison.transfer_recommendations.mine %}</div><div><h3>Possible rival options</h3>{% include "partials/rivalry_transfer_routes.html" with recommendations=comparison.transfer_recommendations.rival %}</div></div>
+  </section>
 
-      <div class="grid grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-gray-200">
-        <!-- 1. Total Points -->
-        <div class="p-4 sm:p-5">
-          <p class="text-[11px] tabular-nums uppercase tracking-wider text-gray-500 mb-1">Total Points</p>
-          <div class="flex items-baseline justify-between">
-            <div>
-              <p class="text-xs tabular-nums text-pitch font-bold">You</p>
-              <p class="text-xl font-black tabular-nums text-text-main">{{ my_team.current_total_points|intcomma }}</p>
-            </div>
-            <div class="text-right">
-              <p class="text-xs tabular-nums text-danger font-bold">Rival</p>
-              <p class="text-xl font-black tabular-nums text-text-main">{{ rival_team.current_total_points|intcomma }}</p>
-            </div>
-          </div>
-          <div class="mt-2 text-[11px] tabular-nums">
-            {% if my_team.current_total_points > rival_team.current_total_points %}
-            <span class="text-success font-bold">+{{ my_team.current_total_points|subtract:rival_team.current_total_points }} pts ahead</span>
-            {% elif my_team.current_total_points < rival_team.current_total_points %}
-            <span class="text-danger font-bold">{{ rival_team.current_total_points|subtract:my_team.current_total_points }} pts behind</span>
-            {% else %}
-            <span class="text-gray-400">Level on points</span>
-            {% endif %}
-          </div>
-        </div>
-
-        <!-- 2. Overall Rank -->
-        <div class="p-4 sm:p-5">
-          <p class="text-[11px] tabular-nums uppercase tracking-wider text-gray-500 mb-1">Overall Rank</p>
-          <div class="flex items-baseline justify-between">
-            <div>
-              <p class="text-xs tabular-nums text-pitch font-bold">You</p>
-              <p class="text-lg font-black tabular-nums text-text-main">
-                {% if my_team.current_overall_rank %}#{{ my_team.current_overall_rank|intcomma }}{% else %}—{% endif %}
-              </p>
-            </div>
-            <div class="text-right">
-              <p class="text-xs tabular-nums text-danger font-bold">Rival</p>
-              <p class="text-lg font-black tabular-nums text-text-main">
-                {% if rival_team.current_overall_rank %}#{{ rival_team.current_overall_rank|intcomma }}{% else %}—{% endif %}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <!-- 3. Squad Value -->
-        <div class="p-4 sm:p-5">
-          <p class="text-[11px] tabular-nums uppercase tracking-wider text-gray-500 mb-1">Squad Value</p>
-          <div class="flex items-baseline justify-between">
-            <div>
-              <p class="text-xs tabular-nums text-pitch font-bold">You</p>
-              <p class="text-lg font-black tabular-nums text-text-main">£{{ my_team.value_in_millions|floatformat:1 }}m</p>
-            </div>
-            <div class="text-right">
-              <p class="text-xs tabular-nums text-danger font-bold">Rival</p>
-              <p class="text-lg font-black tabular-nums text-text-main">£{{ rival_team.value_in_millions|floatformat:1 }}m</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- 4. Available Bank -->
-        <div class="p-4 sm:p-5">
-          <p class="text-[11px] tabular-nums uppercase tracking-wider text-gray-500 mb-1">In The Bank</p>
-          <div class="flex items-baseline justify-between">
-            <div>
-              <p class="text-xs tabular-nums text-pitch font-bold">You</p>
-              <p class="text-lg font-black tabular-nums text-text-main">£{{ my_team.bank_in_millions|floatformat:1 }}m</p>
-            </div>
-            <div class="text-right">
-              <p class="text-xs tabular-nums text-danger font-bold">Rival</p>
-              <p class="text-lg font-black tabular-nums text-text-main">£{{ rival_team.bank_in_millions|floatformat:1 }}m</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Projected GW Outcome & Tactical Advantage Strip -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
-      <!-- Left: Projected Gameweek Outcome Card -->
-      <div class="lg:col-span-6 app-panel bg-white border border-gray-200 shadow-sm flex flex-col justify-between">
-        <div class="px-5 py-3 border-b border-gray-200 bg-gray-50/50 flex items-center justify-between">
-          <h2 class="app-section-title text-xs font-black uppercase tracking-wider text-text-main tabular-nums">
-            Projected Gameweek {{ comparison.current_gameweek|add:1 }} Outcome
-          </h2>
-          <span class="text-[11px] tabular-nums text-gray-500">Expected xP Model</span>
-        </div>
-
-        <div class="p-6">
-          <div class="grid grid-cols-2 gap-4 text-center mb-6">
-            <div class="p-4 bg-gray-50 border border-gray-100">
-              <p class="text-xs tabular-nums uppercase tracking-wider text-pitch font-bold mb-1">Your Expected</p>
-              <p class="text-3xl sm:text-4xl font-black tabular-nums text-text-main">
-                {{ comparison.projected_gw_outcome.my_expected|floatformat:1 }}
-              </p>
-              <p class="text-[11px] tabular-nums text-gray-400 mt-1">projected points</p>
-            </div>
-
-            <div class="p-4 bg-gray-50 border border-gray-100">
-              <p class="text-xs tabular-nums uppercase tracking-wider text-danger font-bold mb-1">Rival Expected</p>
-              <p class="text-3xl sm:text-4xl font-black tabular-nums text-text-main">
-                {{ comparison.projected_gw_outcome.rival_expected|floatformat:1 }}
-              </p>
-              <p class="text-[11px] tabular-nums text-gray-400 mt-1">projected points</p>
-            </div>
-          </div>
-
-          <!-- Differential Banner -->
-          <div class="text-center p-3 border {% if comparison.projected_gw_outcome.difference > 0 %}border-pitch bg-pitch/5 text-pitch{% elif comparison.projected_gw_outcome.difference < 0 %}border-danger bg-danger/5 text-danger{% else %}border-gray-200 bg-gray-50 text-gray-600{% endif %}">
-            <span class="tabular-nums text-xs uppercase tracking-widest font-black">
-              {% if comparison.projected_gw_outcome.difference > 0 %}
-                ▲ +{{ comparison.projected_gw_outcome.difference|floatformat:1 }} Advantage (Gain Forecast)
-              {% elif comparison.projected_gw_outcome.difference < 0 %}
-                ▼ {{ comparison.projected_gw_outcome.difference|floatformat:1 }} Deficit (Behind Forecast)
-              {% else %}
-                = Even Differential Projected
-              {% endif %}
-            </span>
-          </div>
-        </div>
-
-        <div class="px-5 py-2.5 border-t border-gray-100 bg-gray-50/25 text-[11px] tabular-nums text-gray-500">
-          Based on 5-gameweek rolling form, fixture FDR coefficients, and player selection rates.
-        </div>
-      </div>
-
-      <!-- Right: Captains & Momentum Grid -->
-      <div class="lg:col-span-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <!-- Your Captain -->
-        <div class="app-panel bg-white border border-gray-200 shadow-sm p-5 flex flex-col justify-between">
-          <div>
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-[11px] tabular-nums uppercase tracking-wider text-pitch font-bold">Your Captain Pick</span>
-              <span class="text-[10px] tabular-nums bg-pitch/10 text-pitch px-1.5 py-0.5 rounded font-bold uppercase">Active</span>
-            </div>
-            {% if comparison.captaincy.mine %}
-            <p class="text-base font-bold text-text-main truncate">{{ comparison.captaincy.mine.name }}</p>
-            <p class="text-2xl font-black tabular-nums text-pitch mt-1">
-              {{ comparison.captaincy.mine.expected_points|floatformat:1 }}
-              <span class="text-xs font-normal tabular-nums text-gray-500">exp pts</span>
-            </p>
-            {% else %}
-            <p class="text-sm tabular-nums text-gray-400 mt-2">Captain unassigned</p>
-            {% endif %}
-          </div>
-          <p class="text-[11px] tabular-nums text-gray-400 mt-4 border-t border-gray-100 pt-2">Calculated pre-multiplier</p>
-        </div>
-
-        <!-- Rival Captain -->
-        <div class="app-panel bg-white border border-gray-200 shadow-sm p-5 flex flex-col justify-between">
-          <div>
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-[11px] tabular-nums uppercase tracking-wider text-danger font-bold">Rival Captain Pick</span>
-              <span class="text-[10px] tabular-nums bg-danger/10 text-danger px-1.5 py-0.5 rounded font-bold uppercase">Opponent</span>
-            </div>
-            {% if comparison.captaincy.rival %}
-            <p class="text-base font-bold text-text-main truncate">{{ comparison.captaincy.rival.name }}</p>
-            <p class="text-2xl font-black tabular-nums text-text-main mt-1">
-              {{ comparison.captaincy.rival.expected_points|floatformat:1 }}
-              <span class="text-xs font-normal tabular-nums text-gray-500">exp pts</span>
-            </p>
-            {% else %}
-            <p class="text-sm tabular-nums text-gray-400 mt-2">Captain unassigned</p>
-            {% endif %}
-          </div>
-          <p class="text-[11px] tabular-nums text-gray-400 mt-4 border-t border-gray-100 pt-2">Opposing captain forecast</p>
-        </div>
-
-        <!-- Your Momentum -->
-        <div class="app-panel bg-white border border-gray-200 shadow-sm p-5 flex flex-col justify-between">
-          <div>
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-[11px] tabular-nums uppercase tracking-wider text-gray-500">Your Momentum</span>
-              <span class="text-[10px] tabular-nums font-bold uppercase {% if comparison.momentum.mine.trend == 'up' %}text-success{% elif comparison.momentum.mine.trend == 'down' %}text-danger{% else %}text-gray-400{% endif %}">
-                {{ comparison.momentum.mine.trend|default:"steady" }}
-              </span>
-            </div>
-            <p class="text-2xl font-black tabular-nums text-text-main">
-              {{ comparison.momentum.mine.average|floatformat:1 }}
-              <span class="text-xs font-normal tabular-nums text-gray-500">pts/GW</span>
-            </p>
-          </div>
-          <p class="text-[11px] tabular-nums text-gray-400 mt-4 border-t border-gray-100 pt-2">Last 5 GW moving average</p>
-        </div>
-
-        <!-- Rival Momentum -->
-        <div class="app-panel bg-white border border-gray-200 shadow-sm p-5 flex flex-col justify-between">
-          <div>
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-[11px] tabular-nums uppercase tracking-wider text-gray-500">Rival Momentum</span>
-              <span class="text-[10px] tabular-nums font-bold uppercase {% if comparison.momentum.rival.trend == 'up' %}text-success{% elif comparison.momentum.rival.trend == 'down' %}text-danger{% else %}text-gray-400{% endif %}">
-                {{ comparison.momentum.rival.trend|default:"steady" }}
-              </span>
-            </div>
-            <p class="text-2xl font-black tabular-nums text-text-main">
-              {{ comparison.momentum.rival.average|floatformat:1 }}
-              <span class="text-xs font-normal tabular-nums text-gray-500">pts/GW</span>
-            </p>
-          </div>
-          <p class="text-[11px] tabular-nums text-gray-400 mt-4 border-t border-gray-100 pt-2">Last 5 GW moving average</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Squad Breakdown by Position -->
-    <div class="app-panel bg-white border border-gray-200 shadow-sm mb-8">
-      <div class="px-5 py-3 border-b border-gray-200 bg-gray-50/50 flex items-center justify-between">
-        <h2 class="app-section-title text-xs font-black uppercase tracking-wider text-text-main tabular-nums">
-          Squad Differential by Position
-        </h2>
-        <span class="text-[11px] tabular-nums text-gray-500">Projected Expected Points per Position</span>
-      </div>
-
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-gray-200">
-        {% for pos in comparison.position_comparisons %}
-        <div class="p-5 flex flex-col justify-between">
-          <div>
-            <div class="flex items-center justify-between mb-3">
-              <span class="text-xs font-black uppercase tracking-wider tabular-nums text-text-main">{{ pos.position }}</span>
-              {% if pos.advantage == 'mine' %}
-              <span class="text-[10px] tabular-nums font-bold uppercase px-1.5 py-0.5 bg-pitch/10 text-pitch">
-                Advantage You
-              </span>
-              {% elif pos.advantage == 'theirs' %}
-              <span class="text-[10px] tabular-nums font-bold uppercase px-1.5 py-0.5 bg-danger/10 text-danger">
-                Rival Ahead
-              </span>
-              {% else %}
-              <span class="text-[10px] tabular-nums font-bold uppercase px-1.5 py-0.5 bg-gray-100 text-gray-500">
-                Parity
-              </span>
-              {% endif %}
-            </div>
-
-            <div class="space-y-2 tabular-nums">
-              <div class="flex items-center justify-between">
-                <span class="text-xs text-pitch font-bold">You</span>
-                <span class="text-sm font-bold tabular-nums text-text-main">
-                  {{ pos.my_team_expected|floatformat:1 }} <span class="text-[10px] font-normal text-gray-400">xP</span>
-                </span>
-              </div>
-              <div class="flex items-center justify-between">
-                <span class="text-xs text-danger font-bold">Rival</span>
-                <span class="text-sm font-bold tabular-nums text-text-main">
-                  {{ pos.rival_team_expected|floatformat:1 }} <span class="text-[10px] font-normal text-gray-400">xP</span>
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Delta -->
-          <div class="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-xs tabular-nums">
-            <span class="text-gray-400">Net Delta</span>
-            <span class="font-bold {% if pos.advantage == 'mine' %}text-pitch{% elif pos.advantage == 'theirs' %}text-danger{% else %}text-gray-500{% endif %}">
-              {% if pos.my_team_expected > pos.rival_team_expected %}
-                +{{ pos.my_team_expected|subtract:pos.rival_team_expected|floatformat:1 }}
-              {% elif pos.my_team_expected < pos.rival_team_expected %}
-                -{{ pos.rival_team_expected|subtract:pos.my_team_expected|floatformat:1 }}
-              {% else %}
-                0.0
-              {% endif %}
-            </span>
-          </div>
-        </div>
-        {% endfor %}
-      </div>
-    </div>
-
-    <!-- Upcoming Schedule Difficulty (Next 6 GWs) -->
-    <div class="app-panel bg-white border border-gray-200 shadow-sm mb-8">
-      <div class="px-5 py-3 border-b border-gray-200 bg-gray-50/50 flex items-center justify-between">
-        <h2 class="app-section-title text-xs font-black uppercase tracking-wider text-text-main tabular-nums">
-          Upcoming Schedule Difficulty (Next 6 Gameweeks)
-        </h2>
-        <span class="text-[11px] tabular-nums text-gray-500">FDR Rating (1 Easy — 5 Hard)</span>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-200">
-        <!-- Your Fixtures -->
-        <div class="p-5">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="text-xs tabular-nums font-bold uppercase tracking-wider text-pitch">Your Squad Schedule</h3>
-            <span class="text-[11px] tabular-nums text-gray-400">Average Squad FDR</span>
-          </div>
-          <div class="space-y-2">
-            {% for fixture in comparison.fixture_schedules.mine %}
-            <div class="flex items-center justify-between p-2.5 bg-gray-50 border border-gray-100 tabular-nums text-xs">
-              <span class="font-bold text-gray-700">GW{{ fixture.gameweek }}</span>
-              <div class="flex items-center gap-3">
-                <span class="font-bold {% if fixture.rating == 'easy' %}text-success{% elif fixture.rating == 'hard' %}text-danger{% else %}text-gray-600{% endif %}">
-                  {{ fixture.difficulty_score|floatformat:1 }} FDR
-                </span>
-                <div class="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
-                  <div class="h-full {% if fixture.rating == 'easy' %}bg-success{% elif fixture.rating == 'hard' %}bg-danger{% else %}bg-gray-400{% endif %}" style="width: {% widthratio fixture.difficulty_score 5 100 %}%"></div>
-                </div>
-              </div>
-            </div>
-            {% empty %}
-            <p class="text-xs tabular-nums text-gray-400 py-4 text-center">No fixture data available</p>
-            {% endfor %}
-          </div>
-        </div>
-
-        <!-- Rival Fixtures -->
-        <div class="p-5">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="text-xs tabular-nums font-bold uppercase tracking-wider text-danger">Rival Squad Schedule</h3>
-            <span class="text-[11px] tabular-nums text-gray-400">Average Squad FDR</span>
-          </div>
-          <div class="space-y-2">
-            {% for fixture in comparison.fixture_schedules.rival %}
-            <div class="flex items-center justify-between p-2.5 bg-gray-50 border border-gray-100 tabular-nums text-xs">
-              <span class="font-bold text-gray-700">GW{{ fixture.gameweek }}</span>
-              <div class="flex items-center gap-3">
-                <span class="font-bold {% if fixture.rating == 'easy' %}text-success{% elif fixture.rating == 'hard' %}text-danger{% else %}text-gray-600{% endif %}">
-                  {{ fixture.difficulty_score|floatformat:1 }} FDR
-                </span>
-                <div class="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
-                  <div class="h-full {% if fixture.rating == 'easy' %}bg-success{% elif fixture.rating == 'hard' %}bg-danger{% else %}bg-gray-400{% endif %}" style="width: {% widthratio fixture.difficulty_score 5 100 %}%"></div>
-                </div>
-              </div>
-            </div>
-            {% empty %}
-            <p class="text-xs tabular-nums text-gray-400 py-4 text-center">No fixture data available</p>
-            {% endfor %}
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Transfer Recommendations & Counter-Moves -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-      <!-- Your Transfer Opportunities -->
-      <div class="app-panel bg-white border border-gray-200 shadow-sm">
-        <div class="px-5 py-3 border-b border-gray-200 bg-gray-50/50 flex items-center justify-between">
-          <h2 class="app-section-title text-xs font-black uppercase tracking-wider text-pitch tabular-nums">
-            Your Transfer Opportunities
-          </h2>
-          <span class="text-[11px] tabular-nums text-gray-500">Target Differentials</span>
-        </div>
-
-        <div class="p-5">
-          {% if comparison.transfer_recommendations.mine %}
-          <div class="space-y-3">
-            {% for rec in comparison.transfer_recommendations.mine|slice:":3" %}
-            <div class="border border-gray-200 p-3.5 bg-gray-50/50">
-              <div class="flex items-center justify-between text-[11px] tabular-nums mb-2">
-                <span class="text-danger font-bold uppercase">Sell</span>
-                <span class="text-pitch font-bold uppercase">Buy</span>
-              </div>
-              <div class="flex items-center justify-between text-xs">
-                <div>
-                  <p class="font-bold text-text-main">{{ rec.transfer_out.name }}</p>
-                  <p class="text-[11px] tabular-nums text-gray-500">{{ rec.transfer_out.team }} · £{{ rec.transfer_out.price|floatformat:1 }}m</p>
-                </div>
-                <span class="text-gray-400 tabular-nums text-sm px-2">→</span>
-                <div class="text-right">
-                  <p class="font-bold text-pitch">{{ rec.transfer_in.0.name }}</p>
-                  <p class="text-[11px] tabular-nums text-gray-500">{{ rec.transfer_in.0.team }} · £{{ rec.transfer_in.0.price|floatformat:1 }}m</p>
-                </div>
-              </div>
-              <p class="mt-2 text-[11px] tabular-nums text-gray-600 bg-white p-2 border border-gray-100">
-                {{ rec.reasoning }}
-              </p>
-            </div>
-            {% endfor %}
-          </div>
-          {% else %}
-          <p class="text-xs tabular-nums text-gray-400 py-6 text-center">No transfer recommendations available.</p>
-          {% endif %}
-        </div>
-      </div>
-
-      <!-- Rival Likely Moves -->
-      <div class="app-panel bg-white border border-gray-200 shadow-sm">
-        <div class="px-5 py-3 border-b border-gray-200 bg-gray-50/50 flex items-center justify-between">
-          <h2 class="app-section-title text-xs font-black uppercase tracking-wider text-danger tabular-nums">
-            Rival Likely Moves
-          </h2>
-          <span class="text-[11px] tabular-nums text-gray-500">Anticipated Opponent Transfers</span>
-        </div>
-
-        <div class="p-5">
-          {% if comparison.transfer_recommendations.rival %}
-          <div class="space-y-3">
-            {% for rec in comparison.transfer_recommendations.rival|slice:":3" %}
-            <div class="border border-gray-200 p-3.5 bg-gray-50/50">
-              <div class="flex items-center justify-between text-[11px] tabular-nums mb-2">
-                <span class="text-danger font-bold uppercase">Likely Out</span>
-                <span class="text-danger font-bold uppercase">Likely In</span>
-              </div>
-              <div class="flex items-center justify-between text-xs">
-                <div>
-                  <p class="font-bold text-text-main">{{ rec.transfer_out.name }}</p>
-                  <p class="text-[11px] tabular-nums text-gray-500">{{ rec.transfer_out.team }} · £{{ rec.transfer_out.price|floatformat:1 }}m</p>
-                </div>
-                <span class="text-gray-400 tabular-nums text-sm px-2">→</span>
-                <div class="text-right">
-                  <p class="font-bold text-danger">{{ rec.transfer_in.0.name }}</p>
-                  <p class="text-[11px] tabular-nums text-gray-500">{{ rec.transfer_in.0.team }} · £{{ rec.transfer_in.0.price|floatformat:1 }}m</p>
-                </div>
-              </div>
-              <p class="mt-2 text-[11px] tabular-nums text-gray-600 bg-white p-2 border border-gray-100">
-                {{ rec.reasoning }}
-              </p>
-            </div>
-            {% endfor %}
-          </div>
-          {% else %}
-          <p class="text-xs tabular-nums text-gray-400 py-6 text-center">No rival transfer predictions available.</p>
-          {% endif %}
-        </div>
-      </div>
-    </div>
-
-    <!-- Strategic Intelligence Insights -->
-    {% if comparison.key_insights %}
-    <div class="app-panel bg-white border border-gray-200 shadow-sm mb-8">
-      <div class="px-5 py-3 border-b border-gray-200 bg-gray-50/50 flex items-center justify-between">
-        <h2 class="app-section-title text-xs font-black uppercase tracking-wider text-text-main tabular-nums">
-          Strategic Matchup Insights
-        </h2>
-        <span class="text-[11px] tabular-nums text-gray-500">Analytical Brief</span>
-      </div>
-      <div class="p-5 space-y-2.5">
-        {% for insight in comparison.key_insights %}
-        <div class="flex items-start gap-3 p-3 bg-gray-50 border border-gray-100">
-          <span class="text-pitch tabular-nums font-bold text-xs">#</span>
-          <p class="text-xs tabular-nums text-text-main leading-relaxed">{{ insight }}</p>
-        </div>
-        {% endfor %}
-      </div>
-    </div>
-    {% endif %}
-
-    <div class="text-center text-[11px] tabular-nums text-gray-400">
-      Head-to-head analysis generated: {{ comparison.analysis_timestamp }}
-    </div>
-
-    {% endif %}
-  </div>
+  {% if comparison.key_insights %}<section class="rv-section" aria-labelledby="insights-heading"><header class="rv-section-heading"><div><p class="rv-eyebrow">The analytical brief</p><h2 id="insights-heading">What else stands out.</h2></div></header><ul class="rv-insights">{% for insight in comparison.key_insights %}<li>{{ insight }}</li>{% endfor %}</ul></section>{% endif %}
+  <details class="rv-details"><summary>The season ledger</summary><div class="rv-table-scroll"><table class="rv-table"><caption class="rv-sr-only">Season rank and squad finances</caption><thead><tr><th scope="col">Metric</th><th scope="col">You</th><th scope="col">Rival</th></tr></thead><tbody><tr><th scope="row">Overall rank</th><td>{% if my_team.current_overall_rank %}#{{ my_team.current_overall_rank|intcomma }}{% else %}—{% endif %}</td><td>{% if rival_team.current_overall_rank %}#{{ rival_team.current_overall_rank|intcomma }}{% else %}—{% endif %}</td></tr><tr><th scope="row">Squad value</th><td>£{{ my_team.value_in_millions|floatformat:1 }}m</td><td>£{{ rival_team.value_in_millions|floatformat:1 }}m</td></tr><tr><th scope="row">In the bank</th><td>£{{ my_team.bank_in_millions|floatformat:1 }}m</td><td>£{{ rival_team.bank_in_millions|floatformat:1 }}m</td></tr></tbody></table></div></details>
+  <p class="rv-footnote">Analysis generated: {{ comparison.analysis_timestamp|default:"Not available" }}. Squad and season updates may arrive at different times.</p>
+  {% endif %}
+</div>
 </c-layouts.base>

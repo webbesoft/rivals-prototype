@@ -1153,6 +1153,12 @@ class TeamAnalysisService:
             return {
                 "my_team": my_summary,
                 "rival_team": rival_summary,
+                # Keep missing entry totals distinct from a genuine zero. The
+                # database profile can lag behind this comparison's FPL fetches.
+                "season_totals": {
+                    "mine": my_info.get("summary_overall_points"),
+                    "rival": rival_info.get("summary_overall_points"),
+                },
                 "position_comparisons": pos_comparisons,
                 "head_to_head_advantages": advantages,
                 "key_insights": insights,

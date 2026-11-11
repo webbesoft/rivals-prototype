@@ -21,17 +21,18 @@
 {% endif %}
 {% if report %}
   {% if report.risks %}<div class="app-panel border border-gray-200 bg-white p-5 mb-6"><h2 class="text-lg font-bold mb-3">Availability watch</h2><ul class="space-y-2 text-sm">{% for risk in report.risks %}<li><strong>{{ risk.name }}</strong>: {{ risk.news }}</li>{% endfor %}</ul></div>{% endif %}
-  <div class="app-panel border border-gray-200 bg-white p-5 mb-6">
+  <div class="rv-plan-comparison app-panel border border-gray-200 bg-white p-5 mb-6">
     <h2 class="text-lg font-bold mb-4">Transfer versus hold</h2>
     <p class="text-sm text-gray-600 mb-4">{% if report.strategy == 'protect' %}Protecting a lead favours gains with less uncertainty.{% else %}Chasing a gap gives more weight to upside, while still requiring a positive estimated gain after transfer costs.{% endif %} These are possible outcomes, not guarantees.</p>
-    <div class="space-y-4">
+    <div class="rv-plan-routes">
     {% for option in report.options %}
-      <article class="border border-gray-200 p-4">
+      <article class="rv-plan-route {% if not option.moves %}rv-plan-hold{% endif %}">
+        <p class="rv-eyebrow">{% if option.moves %}Change the squad{% else %}The baseline / Keep the squad{% endif %}</p>
         <h3 class="font-bold">{% if report.manual and option.key == report.manual.key %}Your route · {% endif %}{% if option.moves %}{% for move in option.moves %}{{ move.out_name }} → {{ move.in_name }}{% if not forloop.last %} + {% endif %}{% endfor %}{% else %}Hold / roll{% endif %}</h3>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3 text-sm">
+        <div class="rv-plan-metrics">
           <p>Forecast squad points<br><strong>{{ option.points }}</strong></p>
           <p>Points cost<br><strong>{{ option.hits|default_if_none:"—" }}</strong></p>
-          <p>Gain versus hold<br><strong>{% if option.net_gain != None %}{{ option.net_gain }}{% else %}{{ option.gain_low }} to {{ option.gain_high }}{% endif %}</strong></p>
+          <p class="rv-plan-gain {% if option.net_gain > 0 %}rv-plan-positive{% endif %}">Gain versus hold<br><strong>{% if option.net_gain != None %}{% if option.net_gain > 0 %}+{% endif %}{{ option.net_gain }}{% else %}{{ option.gain_low }} to {{ option.gain_high }}{% endif %}</strong></p>
           <p>Gain sensitivity<br><strong>{{ option.gain_low }} to {{ option.gain_high }}</strong></p>
         </div>
         {% for move in option.moves %}<details class="my-3 text-sm"><summary class="cursor-pointer">{{ move.in_name }} · £{{ move.buy_price }}m · fixtures and news</summary><p class="mt-2">{% for fixture in move.schedule %}GW{{ fixture.gameweek }}: {{ fixture.opponents|join:", "|default:"Blank" }} ({{ fixture.points }} est. pts){% if not forloop.last %} · {% endif %}{% endfor %}</p>{% if move.news %}<p class="mt-2">{{ move.news }}</p>{% endif %}{% if move.minutes_risk %}<p>Limited season minutes make this projection less certain.</p>{% endif %}</details>{% endfor %}

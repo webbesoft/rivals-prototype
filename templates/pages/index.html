@@ -1,88 +1,85 @@
-{% load humanize %}
+{% load humanize static %}
 <c-layouts.base landing="true">
-  <div class="matchday">
-    <header class="md-header md-wrap">
-      <a class="md-brand" href="{% url 'core:index' %}" aria-label="RivalSpy home"><span class="md-crest" aria-hidden="true">R<span>•</span></span> RivalSpy</a>
+  <div class="rival-room">
+    <header class="rs-header rs-wrap">
+      <a class="rs-brand" href="{% url 'core:index' %}" aria-label="RivalSpy home"><span class="rs-mark" aria-hidden="true"><i></i><i></i></span>RivalSpy</a>
+      <span class="rs-header-note">The league within your league.</span>
       <nav aria-label="Main navigation">
-        <a class="md-nav-preview" href="#preview">The gameweek briefing</a>
-        {% if user.is_authenticated %}
-        <a class="md-button md-button-small" href="{% url 'rivals:dashboard' %}">My dashboard <span aria-hidden="true">↗</span></a>
-        {% else %}
-        <a href="{% url 'accounts:login' %}">Log in</a>
-        <a class="md-button md-button-small" href="{% url 'accounts:signup' %}">Get started <span aria-hidden="true">↗</span></a>
-        {% endif %}
+        <a class="rs-briefing-link" href="#scouting-feed">FPL briefing</a>
+        {% if user.is_authenticated %}<a class="rs-nav-action" href="{% url 'rivals:dashboard' %}">My dashboard <span aria-hidden="true">↗</span></a>
+        {% else %}<a href="{% url 'accounts:login' %}">Log in</a><a class="rs-nav-action" href="{% url 'accounts:signup' %}">Join the chase <span aria-hidden="true">↗</span></a>{% endif %}
       </nav>
     </header>
 
-    <section class="md-hero md-wrap" aria-labelledby="landing-title">
-      <div class="md-hero-copy">
-        <p class="md-eyebrow"><span class="md-dot" aria-hidden="true"></span> For the league within the league</p>
-        <h1 id="landing-title">The real rivalry<br>is <em>in your<br>mini-league.</em></h1>
-        <p class="md-intro">The mate you’re chasing. The captain you didn’t pick. The four-point hit that might just pay off.</p>
-        <p class="md-description">Keep your squad, your rivals and the race for first in one place. RivalSpy makes the numbers behind the bragging rights easier to follow.</p>
-        <div class="md-actions">
-          <a class="md-button" href="{% url 'accounts:signup' %}">Track my rivals <span aria-hidden="true">↗</span></a>
-          <a class="md-text-link" href="#how-it-works">How it works <span aria-hidden="true">↓</span></a>
+    <section class="rs-opening rs-wrap" aria-labelledby="landing-title">
+      <div class="rs-opening-label"><span>Fantasy Premier League / Rival intelligence</span><span aria-hidden="true">Look closer. Play your game.</span></div>
+      <h1 id="landing-title">The table tells you where.<br><em>The rivalry tells you why.</em></h1>
+      <p>Who’s gaining on you? Where did they find those points? Follow the managers in your mini-league, compare the moves, and make your next call with the whole picture.</p>
+    </section>
+
+    <section class="rs-case rs-wrap" aria-labelledby="case-title">
+      <div class="rs-case-top"><h2 id="case-title"><span class="rs-case-cross" aria-hidden="true">⌖</span> Inside a rivalry</h2><span class="rs-example-label">Illustrative gameweek · Not live scores</span></div>
+      <div class="rs-race">
+        <div class="rs-manager rs-manager-rival"><span class="rs-manager-label">The one to catch</span><h3>Jamie<span>Expected Toulouse</span></h3><p>1,482 <span>total pts</span></p></div>
+        <div class="rs-gap"><span class="rs-gap-caption">The gap</span><strong>8<span>pts</span></strong><p>Was 22 before this gameweek</p></div>
+        <div class="rs-manager rs-manager-you"><span class="rs-manager-label">You’re closing in</span><h3>Alex<span>It’s coming home</span></h3><p>1,474 <span>total pts</span></p></div>
+        <div class="rs-chase-line" aria-hidden="true"><span class="rs-chase-trail"></span><span class="rs-chase-you">A</span><span class="rs-chase-rival">J</span></div>
+      </div>
+      <div class="rs-breakdown-heading"><p>You gained <strong>14 points.</strong> Here’s where the gap moved.</p><span>Inspect the difference ↓</span></div>
+      <div class="rs-tabs" role="tablist" aria-label="Explore the example rivalry" data-rival-tabs hidden>
+        <button type="button" id="captain-tab" role="tab" aria-selected="true" aria-controls="captain-panel" tabindex="0"><span>01 / Captain choice</span><strong>+7 <small>pts</small></strong></button>
+        <button type="button" id="transfers-tab" role="tab" aria-selected="false" aria-controls="transfers-panel" tabindex="-1"><span>02 / Transfer cost</span><strong>+4 <small>pts</small></strong></button>
+        <button type="button" id="players-tab" role="tab" aria-selected="false" aria-controls="players-panel" tabindex="-1"><span>03 / Different players</span><strong>+3 <small>pts</small></strong></button>
+      </div>
+      <div class="rs-insight" id="captain-panel" role="tabpanel" aria-labelledby="captain-tab" tabindex="0">
+        <div class="rs-insight-copy"><span class="rs-kicker">The captain choice</span><h3>Same players.<br>Different armbands.</h3><p>You both own Salah and Palmer. Salah’s 12 points versus Palmer’s 5 means your captain choice alone gained you 7 extra points.</p></div>
+        <div class="rs-comparison"><div><span class="rs-comparison-owner">You captained</span><p>Salah <span class="rs-armband">C</span></p><span class="rs-comparison-bar rs-comparison-bar-you" style="--bar:100%"></span><strong>12 <small>extra captain pts</small></strong></div><div><span class="rs-comparison-owner">Jamie captained</span><p>Palmer <span class="rs-armband">C</span></p><span class="rs-comparison-bar" style="--bar:42%"></span><strong>5 <small>extra captain pts</small></strong></div></div>
+      </div>
+      <div class="rs-insight" id="transfers-panel" role="tabpanel" aria-labelledby="transfers-tab" tabindex="0" hidden>
+        <div class="rs-insight-copy"><span class="rs-kicker">The transfer cost</span><h3>A move has a price.<br>So does a hit.</h3><p>Jamie spent 4 points on extra transfers. You didn’t take a hit. That closes the gap by another 4 before either squad scores.</p></div>
+        <div class="rs-comparison rs-cost-comparison"><div><span class="rs-comparison-owner">Your transfer cost</span><strong>0 <small>pts</small></strong><p>No hit taken</p></div><div><span class="rs-comparison-owner">Jamie’s transfer cost</span><strong>−4 <small>pts</small></strong><p>Four points deducted</p></div></div>
+      </div>
+      <div class="rs-insight" id="players-panel" role="tabpanel" aria-labelledby="players-tab" tabindex="0" hidden>
+        <div class="rs-insight-copy"><span class="rs-kicker">The different players</span><h3>The shared picks cancel.<br>The differences count.</h3><p>The rest of your shared players score equally. Your different players return 9 points against Jamie’s 6. Another 3 points in your favour.</p></div>
+        <div class="rs-comparison"><div><span class="rs-comparison-owner">Your different players</span><p>The edge</p><span class="rs-comparison-bar rs-comparison-bar-you" style="--bar:100%"></span><strong>9 <small>pts</small></strong></div><div><span class="rs-comparison-owner">Jamie’s different players</span><p>The opposition</p><span class="rs-comparison-bar" style="--bar:67%"></span><strong>6 <small>pts</small></strong></div></div>
+      </div>
+      <div class="rs-case-foot"><p>Alex 72 · Jamie 58 after hits. Example names and scores; your own league will tell a different story.</p><a href="#your-rivalry">Now follow your own rivalry <span aria-hidden="true">↗</span></a></div>
+    </section>
+
+    <section class="rs-start rs-wrap" id="your-rivalry" aria-labelledby="start-title">
+      <div class="rs-start-title"><span class="rs-kicker">Your mini-league is personal.</span><h2 id="start-title">So is your <br>next move.</h2><a class="rs-button" href="{% if user.is_authenticated %}{% url 'rivals:dashboard' %}{% else %}{% url 'accounts:signup' %}{% endif %}">{% if user.is_authenticated %}Open my dashboard{% else %}Find my rivals{% endif %}<span aria-hidden="true">↗</span></a><p>Start with an account and your FPL team ID.</p></div>
+      <ol class="rs-route">
+        <li><span class="rs-route-number">01</span><div><h3>Choose who matters.</h3><p>Connect your FPL team, add a mini-league and track the managers you want to follow. The runaway leader. The mate one place behind.</p></div></li>
+        <li><span class="rs-route-number">02</span><div><h3>Read the rivalry.</h3><p>Compare squads, captain choices and transfers. Separate the players you share from the differences that move the gap.</p></div></li>
+        <li><span class="rs-route-number">03</span><div><h3>Make the call yours.</h3><p>Explore transfer plans, compare them with holding your squad, and save a decision to review after the points come in.</p></div></li>
+      </ol>
+    </section>
+
+    <section class="rs-feed rs-wrap" id="scouting-feed" aria-labelledby="feed-title">
+      <header class="rs-feed-heading"><div><span class="rs-kicker">Outside your mini-league</span><h2 id="feed-title">The scouting feed<span aria-hidden="true">↘</span></h2></div><p>Public FPL data{% if current_gameweek %} · GW {{ current_gameweek }}{% endif %}<br>Cached for up to 15 minutes</p></header>
+      <div class="rs-feed-layout">
+        <div class="rs-feed-main">
+          <section class="rs-feed-section" aria-labelledby="ownership-title">
+            <div class="rs-feed-section-title"><h3 id="ownership-title">The widely owned</h3><span>Selection / FPL-wide</span></div>
+            <div class="rs-table-scroll"><table><caption class="rs-sr-only">Player ownership and form, not captaincy share</caption><thead><tr><th scope="col">Player</th><th scope="col">Club</th><th scope="col">Owned</th><th scope="col">Form</th></tr></thead><tbody>{% for player in captain_picks %}<tr><th scope="row">{{ player.name }}</th><td>{{ player.team }}</td><td>{{ player.captaincy_percent }}%</td><td>{{ player.form }}</td></tr>{% empty %}<tr><td colspan="4" class="rs-empty">Ownership data is unavailable right now. Check back for the next update.</td></tr>{% endfor %}</tbody></table></div>
+            <p class="rs-data-note">Ownership across FPL. Not the share of managers captaining a player.</p>
+          </section>
+          <section class="rs-feed-section" aria-labelledby="transfers-title">
+            <div class="rs-feed-section-title"><h3 id="transfers-title">The incoming traffic</h3><span>Transfers / This gameweek</span></div>
+            <div class="rs-table-scroll"><table><caption class="rs-sr-only">Most transferred-in players this gameweek</caption><thead><tr><th scope="col">Player</th><th scope="col">Club</th><th scope="col">Transfers in</th><th scope="col">Price</th></tr></thead><tbody>{% for player in transfer_trends.transfers_in %}<tr><th scope="row">{{ player.name }}</th><td>{{ player.team }}</td><td>+{{ player.transfers_in_delta|intcomma }}</td><td>£{{ player.cost|floatformat:1 }}</td></tr>{% empty %}<tr><td colspan="4" class="rs-empty">Transfer data is unavailable right now. Check back for the next update.</td></tr>{% endfor %}</tbody></table></div>
+            <p class="rs-data-note">Transfer volume is a trend, not a recommendation.</p>
+          </section>
         </div>
-        <p class="md-smallprint">Your FPL team. Your mini-leagues. A little more perspective.</p>
-      </div>
-
-      <figure class="md-demo" aria-labelledby="demo-caption">
-        <div class="md-demo-top"><span>THE MINI-LEAGUE PICTURE</span><span>GW 24 · EXAMPLE</span></div>
-        <div class="md-demo-heading"><div><p class="md-eyebrow">Saturday service</p><h2>The office league</h2></div><span class="md-league-badge" aria-hidden="true">11<br><small>MANAGERS</small></span></div>
-        <table class="md-league-table">
-          <caption class="md-sr-only">Illustrative mini-league standings, not live scores</caption>
-          <thead><tr><th scope="col">Rank / Team</th><th scope="col">GW</th><th scope="col">Total</th></tr></thead>
-          <tbody>
-            <tr><th scope="row"><span class="md-rank">1</span><span>Expected Toulouse<small>Jamie · Captain: Palmer</small></span></th><td>58</td><td>1,482</td></tr>
-            <tr class="md-your-team"><th scope="row"><span class="md-rank">2</span><span>It’s coming home <b class="md-you">YOU</b><small>Alex · Captain: Salah</small></span></th><td>72</td><td>1,474</td></tr>
-            <tr><th scope="row"><span class="md-rank">3</span><span>Net six and chill<small>Sam · Captain: Haaland</small></span></th><td>49</td><td>1,461</td></tr>
-          </tbody>
-        </table>
-        <div class="md-gap"><div><p>THE GAP TO FIRST</p><strong>8 <span>points</span></strong></div><div class="md-gap-note"><span>↗ 14 points gained this GW</span><p>One good captain call.<br>A very different Monday.</p></div></div>
-        <div class="md-rival-note"><span class="md-note-symbol" aria-hidden="true">⇄</span><div><strong>A move worth watching</strong><p>Jamie brought in Palmer for a −4 hit.</p></div><span class="md-note-tag">RIVAL ACTIVITY</span></div>
-        <figcaption id="demo-caption">An example of the race. Your own league tells the real story.</figcaption>
-      </figure>
-    </section>
-
-    <section class="md-gameplan" id="how-it-works" aria-labelledby="gameplan-title">
-      <div class="md-wrap md-gameplan-inner">
-        <div class="md-gameplan-title"><p class="md-eyebrow">Your weekly ritual</p><h2 id="gameplan-title">Less tab-hopping.<br>More football.</h2></div>
-        <ol class="md-steps">
-          <li><span class="md-step-number">01</span><h3>Bring your team</h3><p>Create an account and connect your FPL team ID.</p></li>
-          <li><span class="md-step-number">02</span><h3>Find your competition</h3><p>Add a mini-league and choose the managers to track.</p></li>
-          <li><span class="md-step-number">03</span><h3>Follow the swings</h3><p>Compare squads, check transfers and see how the gap changes.</p></li>
-        </ol>
+        <aside class="rs-fixtures" aria-labelledby="fixtures-title">
+          <span class="rs-kicker">Next scheduled gameweek</span><h3 id="fixtures-title">The run ahead</h3><p class="rs-fixture-group">More favourable</p>
+          {% for fixture in fixture_highlights.best_fixtures %}<div class="rs-fixture"><strong>{{ fixture.team }}</strong><span>v {{ fixture.opponent }}</span><span class="rs-difficulty rs-difficulty-{{ fixture.difficulty }}">{{ fixture.difficulty }}<span class="rs-sr-only"> out of 5 difficulty</span></span></div>{% empty %}<p class="rs-empty">Upcoming fixtures are unavailable right now.</p>{% endfor %}
+          {% if fixture_highlights.worst_fixtures %}<p class="rs-fixture-group">A tougher assignment</p>{% for fixture in fixture_highlights.worst_fixtures %}<div class="rs-fixture"><strong>{{ fixture.team }}</strong><span>v {{ fixture.opponent }}</span><span class="rs-difficulty rs-difficulty-{{ fixture.difficulty }}">{{ fixture.difficulty }}<span class="rs-sr-only"> out of 5 difficulty</span></span></div>{% endfor %}{% endif %}
+          <p class="rs-data-note">FPL difficulty: 1 (easier) to 5 (harder).<br>Source: Fantasy Premier League.</p>
+          <div class="rs-fixture-pitch" aria-hidden="true"><span></span><span></span><span></span></div>
+        </aside>
       </div>
     </section>
-
-    <section class="md-briefing md-wrap" id="preview" aria-labelledby="briefing-title">
-      <div class="md-section-heading"><div><p class="md-eyebrow">The wider pitch{% if current_gameweek %} / Gameweek {{ current_gameweek }}{% endif %}</p><h2 id="briefing-title">Before you make your move.</h2></div><p>A look at player ownership, transfer traffic and the fixtures ahead. Straight from FPL data.</p></div>
-      <div class="md-briefing-grid">
-        <article class="md-data-panel">
-          <div class="md-panel-heading"><span class="md-panel-number">01 / SELECTION</span><h3>The popular picks</h3><p>Widely owned. Worth knowing about.</p></div>
-          <table class="md-data-table"><caption class="md-sr-only">Player ownership and form</caption><thead><tr><th scope="col">Player</th><th scope="col">Owned</th><th scope="col">Form</th></tr></thead><tbody>
-            {% for player in captain_picks %}<tr><th scope="row">{{ player.name }} <small>{{ player.team }}</small></th><td>{{ player.captaincy_percent }}%</td><td>{{ player.form }}</td></tr>{% empty %}<tr><td colspan="3" class="md-empty">Player ownership is unavailable right now. Check back for the next briefing.</td></tr>{% endfor %}
-          </tbody></table><p class="md-panel-footnote">Ownership across FPL, not captaincy share.</p>
-        </article>
-        <article class="md-data-panel">
-          <div class="md-panel-heading"><span class="md-panel-number">02 / TRANSFERS</span><h3>Who’s coming in?</h3><p>The gameweek’s most transferred-in players.</p></div>
-          <table class="md-data-table"><caption class="md-sr-only">Most transferred-in players this gameweek</caption><thead><tr><th scope="col">Player</th><th scope="col">Transfers in</th><th scope="col">Price</th></tr></thead><tbody>
-            {% for player in transfer_trends.transfers_in %}<tr><th scope="row">{{ player.name }} <small>{{ player.team }}</small></th><td class="md-positive">+{{ player.transfers_in_delta|intcomma }}</td><td>£{{ player.cost|floatformat:1 }}</td></tr>{% empty %}<tr><td colspan="3" class="md-empty">Transfer data is unavailable right now. The next move can wait a moment.</td></tr>{% endfor %}
-          </tbody></table><p class="md-panel-footnote">Transfer volume is a trend, not a recommendation.</p>
-        </article>
-        <article class="md-data-panel md-fixtures">
-          <div class="md-panel-heading"><span class="md-panel-number">03 / FIXTURES</span><h3>The run ahead</h3><p>Selected fixtures in the next scheduled gameweek.</p></div>
-          <p class="md-fixture-label">More favourable</p>
-          {% for fixture in fixture_highlights.best_fixtures %}<div class="md-fixture-row"><strong>{{ fixture.team }}</strong><span>v {{ fixture.opponent }}</span><span class="md-fdr md-fdr-{{ fixture.difficulty }}">{{ fixture.difficulty }}<span class="md-sr-only"> out of 5 difficulty</span></span></div>{% empty %}<p class="md-empty">Upcoming fixtures are unavailable right now.</p>{% endfor %}
-          {% if fixture_highlights.worst_fixtures %}<p class="md-fixture-label md-fixture-label-second">A tougher assignment</p>{% for fixture in fixture_highlights.worst_fixtures %}<div class="md-fixture-row"><strong>{{ fixture.team }}</strong><span>v {{ fixture.opponent }}</span><span class="md-fdr md-fdr-{{ fixture.difficulty }}">{{ fixture.difficulty }}<span class="md-sr-only"> out of 5 difficulty</span></span></div>{% endfor %}{% endif %}
-          <p class="md-panel-footnote">FPL difficulty: 1 (easier) to 5 (harder).</p>
-        </article>
-      </div>
-      <p class="md-data-source">Source: Fantasy Premier League · Briefing data is cached for up to 15 minutes.</p>
-    </section>
-
-    <section class="md-final md-wrap" aria-labelledby="final-title"><div class="md-final-copy"><p class="md-eyebrow">38 gameweeks. Plenty of plot twists.</p><h2 id="final-title">Make the chase<br><em>part of the fun.</em></h2><p>Keep an eye on the table. And a closer one on your mates.</p><a class="md-button md-button-yellow" href="{% url 'accounts:signup' %}">Set up my RivalSpy <span aria-hidden="true">↗</span></a></div><div class="md-pitch" aria-hidden="true"><div class="md-pitch-box"></div><div class="md-pitch-circle"></div><span class="md-marker md-marker-one">YOU</span><span class="md-marker md-marker-two">THE RIVAL</span><span class="md-pitch-caption">EVERY POINT HAS A STORY.</span></div></section>
-    <footer class="md-footer md-wrap"><a class="md-brand" href="{% url 'core:index' %}">RivalSpy<span class="md-footer-year">© {% now 'Y' %}</span></a><p>An independent FPL companion. Not affiliated with the Premier League.</p><a href="https://tawandamunongo.dev">Built by Tawanda Munongo ↗</a></footer>
+    <footer class="rs-footer rs-wrap"><a class="rs-brand" href="{% url 'core:index' %}">RivalSpy<span class="rs-copyright">© {% now 'Y' %}</span></a><p>An independent FPL companion. Not affiliated with the Premier League.</p><a href="https://tawandamunongo.dev">Built by Tawanda Munongo ↗</a></footer>
   </div>
+  <script src="{% static 'js/landing.js' %}" defer></script>
 </c-layouts.base>

@@ -1,0 +1,3 @@
+{% for rec in recommendations|slice:":3" %}
+<article class="rv-transfer-route"><div><span class="rv-eyebrow">Out</span><strong>{{ rec.transfer_out.name }}</strong><small>{{ rec.transfer_out.team }} · £{{ rec.transfer_out.price|floatformat:1 }}m</small></div><span aria-hidden="true">→</span><div><span class="rv-eyebrow">In</span><strong>{{ rec.transfer_in.0.name }}</strong><small>{{ rec.transfer_in.0.team }} · £{{ rec.transfer_in.0.price|floatformat:1 }}m</small></div>{% if rec.reasoning %}<p>{{ rec.reasoning }}</p>{% endif %}</article>
+{% empty %}<p class="rv-section-note">No transfer suggestions available.</p>{% endfor %}

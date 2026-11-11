@@ -1,0 +1,3 @@
+<ol class="rv-fixture-schedule">
+{% for fixture in schedule %}<li class="{% if fixture.difficulty_score > 0 %}rv-fdr-{{ fixture.rating }}{% else %}rv-fdr-unknown{% endif %}"><span>GW{{ fixture.gameweek }}</span><strong>{% if fixture.difficulty_score > 0 %}{{ fixture.difficulty_score|floatformat:2 }}{% else %}—{% endif %}</strong><small>{% if fixture.difficulty_score > 0 %}{{ fixture.rating }}{% else %}No fixture data{% endif %}</small></li>{% empty %}<li class="rv-section-note">Fixture estimates are unavailable.</li>{% endfor %}
+</ol>

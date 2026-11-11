@@ -2,7 +2,7 @@
   {% load humanize static %}
   {% load math_filters %}
 
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+  <div class="rv-wrap rv-dashboard">
 
     <!-- Flash messages -->
     {% if messages %}
@@ -13,15 +13,6 @@
       </div>
       {% endfor %}
     </div>
-    {% endif %}
-
-    {% if user_team %}
-    <section data-remote-panel data-loading-message="Preparing your transfer outlook…" data-error-message="We couldn't load your outlook. Open the planner to try again.">
-      <p data-panel-status role="status" hidden class="my-3 text-sm"></p>
-      <div hx-get="{% url 'rivals:decisions.summary' %}" hx-trigger="load" hx-request='{"timeout":25000}'>
-        <a class="text-pitch underline" href="{% url 'rivals:decisions' %}">Plan your next move</a>
-      </div>
-    </section>
     {% endif %}
 
     {% include "partials/refresh_status.html" %}
@@ -49,11 +40,11 @@
     </div>
     {% endif %}
 
-    <!-- Top Masthead & Manager Identity -->
-    <div class="pb-6 mb-6 border-b border-gray-200 flex flex-col md:flex-row md:items-end justify-between gap-4">
+    <!-- Gameweek identity -->
+    <div class="rv-page-heading">
       <div>
         <div class="flex items-center gap-2 mb-1.5">
-          <span class="text-[11px] tabular-nums uppercase tracking-widest text-muted">Your gameweek</span>
+          <span class="text-[11px] tabular-nums uppercase tracking-widest text-muted">Your gameweek briefing</span>
           {% if user_team and user_team.current_season %}
           <span class="text-gray-300 tabular-nums text-xs">/</span>
           <span class="text-[11px] tabular-nums text-pitch font-bold uppercase">{{ user_team.current_season }} Campaign</span>
@@ -88,90 +79,80 @@
     {% include "partials/score_panel.html" with score_team=user_team %}
     {% endif %}
 
-    <!-- Manager Season Ledger (Analytical Forecast Strip) -->
-    {% if user_projection and user_team %}
-    <div class="mb-10 app-panel bg-white border border-gray-200 shadow-sm">
-      <div class="px-5 py-2.5 border-b border-gray-200 bg-gray-50/75 flex items-center justify-between text-xs tabular-nums">
-        <span class="font-bold uppercase tracking-wider text-text-main">Season Performance & Projections</span>
-        <span class="text-gray-500">
-          Gameweek <span class="text-text-main font-bold">{{ user_projection.completed_gameweeks }}</span> of 38
-          <span class="text-gray-300 mx-1.5">|</span>
-          {{ user_projection.remaining_gameweeks }} GWs remaining
-        </span>
+    {% if user_team %}
+    <section data-remote-panel data-loading-message="Preparing your transfer outlook…" data-error-message="We couldn't load your outlook. Open the planner to try again.">
+      <p data-panel-status role="status" hidden class="my-3 text-sm"></p>
+      <div hx-get="{% url 'rivals:decisions.summary' %}" hx-trigger="load" hx-request='{"timeout":25000}'>
+        <a class="text-pitch underline" href="{% url 'rivals:decisions' %}">Plan your next move</a>
       </div>
-
-      <div class="grid grid-cols-2 md:grid-cols-5 divide-y md:divide-y-0 md:divide-x divide-gray-200">
-        <!-- 1. Overall Rank -->
-        <div class="p-4 sm:p-5">
-          <p class="text-[11px] tabular-nums uppercase tracking-wider text-gray-500 mb-1">Current Rank</p>
-          <p class="text-2xl font-black tabular-nums text-text-main">
-            {% if user_team.current_overall_rank %}#{{ user_team.current_overall_rank|intcomma }}{% else %}—{% endif %}
-          </p>
-          <p class="text-xs text-gray-500 tabular-nums mt-1">
-            <span class="font-bold text-text-main">{{ user_team.current_total_points|intcomma }}</span> total pts
-          </p>
-        </div>
-
-        <!-- 2. Projected Finish -->
-        <div class="p-4 sm:p-5">
-          <p class="text-[11px] tabular-nums uppercase tracking-wider text-gray-500 mb-1">Projected Finish</p>
-          <p class="text-2xl font-black tabular-nums text-pitch">
-            #{{ user_projection.projected_overall_rank|intcomma }}
-          </p>
-          <p class="text-xs text-gray-600 tabular-nums mt-1">
-            {{ user_projection.projected_rank_tier }}
-          </p>
-        </div>
-
-        <!-- 3. Trajectory -->
-        <div class="p-4 sm:p-5">
-          <p class="text-[11px] tabular-nums uppercase tracking-wider text-gray-500 mb-1">Trajectory</p>
-          <p class="text-2xl font-black tabular-nums {% if user_projection.rank_change > 0 %}text-success{% elif user_projection.rank_change < 0 %}text-danger{% else %}text-gray-500{% endif %}">
-            {% if user_projection.rank_change > 0 %}
-              ▲ +{{ user_projection.rank_change|intcomma }}
-            {% elif user_projection.rank_change < 0 %}
-              ▼ {{ user_projection.rank_change|abs|intcomma }}
-            {% else %}
-              — Steady
-            {% endif %}
-          </p>
-          <p class="text-xs text-gray-500 tabular-nums mt-1">
-            vs current rank
-          </p>
-        </div>
-
-        <!-- 4. Campaign Pace -->
-        <div class="p-4 sm:p-5">
-          <p class="text-[11px] tabular-nums uppercase tracking-wider text-gray-500 mb-1">Season Pace</p>
-          <p class="text-2xl font-black tabular-nums text-text-main">
-            {{ user_projection.projected_ppg }} <span class="text-xs font-normal text-gray-400">PPG</span>
-          </p>
-          <p class="text-xs text-gray-500 tabular-nums mt-1">
-            Last 5: <span class="text-text-main font-semibold">{{ user_projection.recent_ppg }}</span> PPG
-          </p>
-        </div>
-
-        <!-- 5. Projected Points Total -->
-        <div class="p-4 sm:p-5 col-span-2 md:col-span-1">
-          <p class="text-[11px] tabular-nums uppercase tracking-wider text-gray-500 mb-1">Target Points</p>
-          <p class="text-2xl font-black tabular-nums text-text-main">
-            {{ user_projection.projected_points|intcomma }} <span class="text-xs font-normal text-gray-400">pts</span>
-          </p>
-          <p class="text-xs text-gray-500 tabular-nums mt-1">
-            Range: {{ user_projection.projected_points_min|intcomma }}–{{ user_projection.projected_points_max|intcomma }}
-          </p>
-        </div>
-      </div>
-    </div>
+    </section>
     {% endif %}
 
+    <nav class="rv-briefing-nav" aria-label="Gameweek briefing sections"><a href="#watchlist">The rivals ↓</a><a href="#rival-activity">Recent activity ↓</a><a href="#your-leagues">Your leagues ↓</a></nav>
     <!-- Operational Dual-Column Grid -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
       <!-- Primary Column: Mini-Leagues & Tracked Rivals -->
       <div class="lg:col-span-7 xl:col-span-8 space-y-8">
 
+        <!-- Tracked Rivals (Scout Watchlist) -->
+        <span id="watchlist" class="rv-anchor" aria-hidden="true"></span>
+        <div class="app-panel bg-white border border-gray-200 shadow-sm">
+          <div class="px-5 py-3 border-b border-gray-200 flex items-center justify-between bg-gray-50/50">
+            <div class="flex items-center gap-3">
+              <h2 class="app-section-title text-xs font-black uppercase tracking-wider text-text-main tabular-nums">The rivals you’re watching</h2>
+              <span class="text-xs tabular-nums text-gray-500">
+                {{ tracked_teams_count }} tracked · Stored season totals
+              </span>
+            </div>
+            {% if tracked_teams_count > 0 %}
+            <form action="{% url 'rivals:rivals.sync' %}" method="POST" class="inline">
+              {% csrf_token %}
+              <button type="submit" class="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] tabular-nums font-bold uppercase tracking-wider text-text-main bg-white hover:border-pitch hover:text-pitch transition-colors border border-gray-300 shadow-xs cursor-pointer" title="Sync all tracked rivals">
+                <svg class="w-3 h-3 text-pitch" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                </svg>
+                Sync Rivals
+              </button>
+            </form>
+            {% else %}
+            <span class="text-[11px] tabular-nums text-gray-400 hidden sm:inline">Follow the moves that matter</span>
+            {% endif %}
+          </div>
+
+          {% if not tracked_teams %}
+          <div class="p-8 text-center">
+            <p class="text-xs tabular-nums text-gray-500 mb-2">Who’s the manager to beat?</p>
+            <p class="text-xs text-gray-400">Open any mini-league table and select <strong class="text-gray-600">Track Rival</strong> to monitor opposing managers here.</p>
+          </div>
+          {% else %}
+          <ul class="rv-watch-rows" aria-label="Tracked rivals and your points gaps">
+            {% for team in tracked_teams %}<li class="rv-watch-item">
+              <div class="rv-watch-identity"><a href="{% url 'rivals:teams.show' team.team.id %}">{{ team.team.team_name }}</a><p>{{ team.team.manager_name }}</p><span>{{ team.team.current_total_points|default_if_none:"—"|intcomma }} pts{% if team.team.current_overall_rank %} · Rank #{{ team.team.current_overall_rank|intcomma }}{% endif %}</span></div>
+              <div class="rv-watch-gap"><span>Your gap</span>
+                {% if user_team and user_team.current_total_points != None and team.team.current_total_points != None %}
+                  {% if user_team.current_total_points > team.team.current_total_points %}<strong>+{{ user_team.current_total_points|subtract:team.team.current_total_points }}</strong><span>pts ahead</span>
+                  {% elif user_team.current_total_points < team.team.current_total_points %}<strong>−{{ team.team.current_total_points|subtract:user_team.current_total_points }}</strong><span>pts behind</span>
+                  {% else %}<strong>0</strong><span>level on points</span>{% endif %}
+                {% else %}<strong>—</strong><span>Not available</span>{% endif %}
+              </div>
+              <div class="rv-watch-actions"><a href="{% url 'rivals:teams.compare' team.team.id %}">Compare ↗</a><form method="POST" action="{% url 'rivals:teams.untrack' team.team.id %}">{% csrf_token %}<button type="submit" aria-label="Stop tracking {{ team.team.team_name }}">Remove</button></form></div>
+            </li>{% endfor %}
+          </ul>
+
+          {% if tracked_teams_count > 5 %}
+          <div class="px-5 py-2.5 border-t border-gray-200 bg-gray-50/50 text-right">
+            <span class="text-xs tabular-nums text-gray-500">
+              Showing top 5 of {{ tracked_teams_count }} tracked rivals
+            </span>
+          </div>
+          {% endif %}
+          {% endif %}
+        </div>
+
+
         <!-- Mini-Leagues Section -->
+        <span id="your-leagues" class="rv-anchor" aria-hidden="true"></span>
         <div class="app-panel bg-white border border-gray-200 shadow-sm">
           <div class="px-5 py-3 border-b border-gray-200 flex items-center justify-between bg-gray-50/50">
             <div class="flex items-center gap-3">
@@ -291,109 +272,13 @@
           {% endif %}
         </div>
 
-        <!-- Tracked Rivals (Scout Watchlist) -->
-        <div class="app-panel bg-white border border-gray-200 shadow-sm">
-          <div class="px-5 py-3 border-b border-gray-200 flex items-center justify-between bg-gray-50/50">
-            <div class="flex items-center gap-3">
-              <h2 class="app-section-title text-xs font-black uppercase tracking-wider text-text-main tabular-nums">The rivals you’re watching</h2>
-              <span class="text-xs tabular-nums text-gray-500">
-                {{ tracked_teams_count }} rival{{ tracked_teams_count|pluralize }} monitored
-              </span>
-            </div>
-            {% if tracked_teams_count > 0 %}
-            <form action="{% url 'rivals:rivals.sync' %}" method="POST" class="inline">
-              {% csrf_token %}
-              <button type="submit" class="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] tabular-nums font-bold uppercase tracking-wider text-text-main bg-white hover:border-pitch hover:text-pitch transition-colors border border-gray-300 shadow-xs cursor-pointer" title="Sync all tracked rivals">
-                <svg class="w-3 h-3 text-pitch" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
-                </svg>
-                Sync Rivals
-              </button>
-            </form>
-            {% else %}
-            <span class="text-[11px] tabular-nums text-gray-400 hidden sm:inline">Follow the moves that matter</span>
-            {% endif %}
-          </div>
-
-          {% if not tracked_teams %}
-          <div class="p-8 text-center">
-            <p class="text-xs tabular-nums text-gray-500 mb-2">Who’s the manager to beat?</p>
-            <p class="text-xs text-gray-400">Open any mini-league table and select <strong class="text-gray-600">Track Rival</strong> to monitor opposing managers here.</p>
-          </div>
-          {% else %}
-          <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
-              <thead>
-                <tr class="border-b border-gray-200 bg-gray-50/25 text-[11px] tabular-nums uppercase tracking-wider text-gray-500">
-                  <th class="py-2.5 px-4 font-semibold">Rival Squad & Manager</th>
-                  <th class="py-2.5 px-3 font-semibold text-right">Points</th>
-                  <th class="py-2.5 px-3 font-semibold text-right">Overall Rank</th>
-                  <th class="py-2.5 px-4 font-semibold text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-gray-100 text-xs">
-                {% for team in tracked_teams %}
-                <tr class="hover:bg-gray-50/75 transition-colors group">
-                  <!-- Squad / Manager -->
-                  <td class="py-3 px-4">
-                    <a href="{% url 'rivals:teams.show' team.team.id %}" class="text-text-main font-bold group-hover:text-pitch transition-colors block">
-                      {{ team.team.team_name }}
-                    </a>
-                    <span class="text-[11px] text-gray-500 tabular-nums block">
-                      {{ team.team.manager_name }}
-                    </span>
-                  </td>
-
-                  <!-- Points -->
-                  <td class="py-3 px-3 text-right tabular-nums font-bold text-text-main">
-                    {{ team.team.current_total_points|intcomma }} <span class="text-[10px] text-gray-400 font-normal">pts</span>
-                  </td>
-
-                  <!-- Overall Rank -->
-                  <td class="py-3 px-3 text-right tabular-nums text-gray-600">
-                    {% if team.team.current_overall_rank %}
-                      #{{ team.team.current_overall_rank|intcomma }}
-                    {% else %}
-                      —
-                    {% endif %}
-                  </td>
-
-                  <!-- Actions -->
-                  <td class="py-3 px-4 text-right whitespace-nowrap">
-                    <div class="inline-flex items-center gap-3">
-                      <a href="{% url 'rivals:teams.compare' team.team.id %}" class="text-xs tabular-nums font-semibold text-pitch hover:underline">
-                        Compare →
-                      </a>
-                      <form method="POST" action="{% url 'rivals:teams.untrack' team.team.id %}" class="inline-block">
-                        {% csrf_token %}
-                        <button type="submit" class="text-gray-400 hover:text-danger tabular-nums text-[11px] transition-colors" title="Untrack rival">
-                          Remove
-                        </button>
-                      </form>
-                    </div>
-                  </td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-
-          {% if tracked_teams_count > 5 %}
-          <div class="px-5 py-2.5 border-t border-gray-200 bg-gray-50/50 text-right">
-            <span class="text-xs tabular-nums text-gray-500">
-              Showing top 5 of {{ tracked_teams_count }} tracked rivals
-            </span>
-          </div>
-          {% endif %}
-          {% endif %}
-        </div>
-
       </div>
 
       <!-- Secondary Intelligence Column: Live Rival Activity Feed -->
       <div class="lg:col-span-5 xl:col-span-4 space-y-6">
 
         <!-- Activity Stream Container -->
+        <span id="rival-activity" class="rv-anchor" aria-hidden="true"></span>
         <div class="app-panel bg-white border border-gray-200 shadow-sm">
           <div class="px-5 py-3 border-b border-gray-200 bg-gray-50/50 flex items-center justify-between">
             <div class="flex items-center gap-2">
@@ -425,6 +310,85 @@
 
     </div>
 
+    {% if user_projection and user_team %}<details class="rv-details rv-season-outlook"><summary>Your season outlook · Rank, pace and projections</summary>
+    <!-- Manager Season Ledger (Analytical Forecast Strip) -->
+    {% if user_projection and user_team %}
+    <div class="mb-10 app-panel bg-white border border-gray-200 shadow-sm">
+      <div class="px-5 py-2.5 border-b border-gray-200 bg-gray-50/75 flex items-center justify-between text-xs tabular-nums">
+        <span class="font-bold uppercase tracking-wider text-text-main">Season Performance & Projections</span>
+        <span class="text-gray-500">
+          Gameweek <span class="text-text-main font-bold">{{ user_projection.completed_gameweeks }}</span> of 38
+          <span class="text-gray-300 mx-1.5">|</span>
+          {{ user_projection.remaining_gameweeks }} GWs remaining
+        </span>
+      </div>
+
+      <div class="grid grid-cols-2 md:grid-cols-5 divide-y md:divide-y-0 md:divide-x divide-gray-200">
+        <!-- 1. Overall Rank -->
+        <div class="p-4 sm:p-5">
+          <p class="text-[11px] tabular-nums uppercase tracking-wider text-gray-500 mb-1">Current Rank</p>
+          <p class="text-2xl font-black tabular-nums text-text-main">
+            {% if user_team.current_overall_rank %}#{{ user_team.current_overall_rank|intcomma }}{% else %}—{% endif %}
+          </p>
+          <p class="text-xs text-gray-500 tabular-nums mt-1">
+            <span class="font-bold text-text-main">{{ user_team.current_total_points|intcomma }}</span> total pts
+          </p>
+        </div>
+
+        <!-- 2. Projected Finish -->
+        <div class="p-4 sm:p-5">
+          <p class="text-[11px] tabular-nums uppercase tracking-wider text-gray-500 mb-1">Projected Finish</p>
+          <p class="text-2xl font-black tabular-nums text-pitch">
+            #{{ user_projection.projected_overall_rank|intcomma }}
+          </p>
+          <p class="text-xs text-gray-600 tabular-nums mt-1">
+            {{ user_projection.projected_rank_tier }}
+          </p>
+        </div>
+
+        <!-- 3. Trajectory -->
+        <div class="p-4 sm:p-5">
+          <p class="text-[11px] tabular-nums uppercase tracking-wider text-gray-500 mb-1">Trajectory</p>
+          <p class="text-2xl font-black tabular-nums {% if user_projection.rank_change > 0 %}text-success{% elif user_projection.rank_change < 0 %}text-danger{% else %}text-gray-500{% endif %}">
+            {% if user_projection.rank_change > 0 %}
+              ▲ +{{ user_projection.rank_change|intcomma }}
+            {% elif user_projection.rank_change < 0 %}
+              ▼ {{ user_projection.rank_change|abs|intcomma }}
+            {% else %}
+              — Steady
+            {% endif %}
+          </p>
+          <p class="text-xs text-gray-500 tabular-nums mt-1">
+            vs current rank
+          </p>
+        </div>
+
+        <!-- 4. Campaign Pace -->
+        <div class="p-4 sm:p-5">
+          <p class="text-[11px] tabular-nums uppercase tracking-wider text-gray-500 mb-1">Season Pace</p>
+          <p class="text-2xl font-black tabular-nums text-text-main">
+            {{ user_projection.projected_ppg }} <span class="text-xs font-normal text-gray-400">PPG</span>
+          </p>
+          <p class="text-xs text-gray-500 tabular-nums mt-1">
+            Last 5: <span class="text-text-main font-semibold">{{ user_projection.recent_ppg }}</span> PPG
+          </p>
+        </div>
+
+        <!-- 5. Projected Points Total -->
+        <div class="p-4 sm:p-5 col-span-2 md:col-span-1">
+          <p class="text-[11px] tabular-nums uppercase tracking-wider text-gray-500 mb-1">Target Points</p>
+          <p class="text-2xl font-black tabular-nums text-text-main">
+            {{ user_projection.projected_points|intcomma }} <span class="text-xs font-normal text-gray-400">pts</span>
+          </p>
+          <p class="text-xs text-gray-500 tabular-nums mt-1">
+            Range: {{ user_projection.projected_points_min|intcomma }}–{{ user_projection.projected_points_max|intcomma }}
+          </p>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    </details>{% endif %}
   </div>
 <script src="{% static 'js/team-panels.js' %}"></script>
 </c-layouts.base>
