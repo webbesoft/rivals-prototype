@@ -3,12 +3,12 @@ import logging
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.db.models import Prefetch, prefetch_related_objects
+from django.db.models import Count
 from django.shortcuts import redirect, render
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 
-from rivals.models import GameweekData, MiniLeagueTeam, Transfer
+from rivals.models import GameweekData, Transfer
 from rivals.services.gameweek_context_service import GameweekContextService
 from rivals.services.refresh_service import (
     enqueue_refresh,
@@ -44,6 +44,7 @@ def dashboard(request):
             mini_league__active=True,
         )
         .select_related("mini_league")
+        .annotate(total_teams=Count("mini_league__mini_league_teams"))
         .order_by("mini_league__name", "-mini_league__last_synced_at", "-id")
     )
 
@@ -86,23 +87,13 @@ def dashboard(request):
         projection_service = ProjectionService(context=gameweek_context)
         user_projection = projection_service.project_team_finish(user_team)
 
-        prefetch_related_objects(
-            [uml.mini_league for uml in mini_leagues],
-            Prefetch(
-                "mini_league_teams",
-                queryset=MiniLeagueTeam.objects.select_related("team"),
-            ),
-        )
-        projections_by_id = {}
         for uml in mini_leagues:
             ml_proj = projection_service.get_team_mini_league_summary(
                 user_team,
                 uml.mini_league,
-                standings=uml.mini_league.mini_league_teams.all(),
             )
             if ml_proj:
                 mini_league_projections.append(ml_proj)
-                projections_by_id[uml.mini_league_id] = ml_proj
                 uml.projection = ml_proj
 
         gw_qs = request.user.team.gameweek_data.filter(rank__isnull=False)

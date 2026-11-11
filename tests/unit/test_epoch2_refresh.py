@@ -569,6 +569,33 @@ def test_cold_dashboard_and_unknown_context_do_not_fetch_fpl(manager):
 
 
 @pytest.mark.django_db
+def test_warm_dashboard_checks_refresh_freshness_in_one_batch(manager, stored_context):
+    user, _ = manager
+    Team.objects.bulk_create(
+        [
+            Team(fpl_team_id=str(1000 + index), team_name=f"Rival {index}")
+            for index in range(30)
+        ]
+    )
+    TrackedTeam.objects.bulk_create(
+        [
+            TrackedTeam(user=user, team=team)
+            for team in Team.objects.filter(
+                fpl_team_id__in=[str(1000 + i) for i in range(30)]
+            )
+        ]
+    )
+    enqueue_user(user)
+    with CaptureQueriesContext(connection) as queries:
+        enqueue_user(user)
+    # Context, tracked IDs, league IDs, then all existing refresh states.
+    assert len(queries) == 4
+    assert not any(
+        sql["sql"].startswith(("INSERT", "UPDATE", "BEGIN")) for sql in queries
+    )
+
+
+@pytest.mark.django_db
 @pytest.mark.parametrize(
     "league_count,page,visible_count", [(1, 1, 1), (10, 1, 10), (12, 2, 2)]
 )
@@ -608,7 +635,13 @@ def test_dashboard_batches_projection_queries(
             for query in queries
             if 'FROM "rivals_minileagueteam"' in query["sql"]
         ]
-        assert len(standings_queries) == 1
+        # Each visible league reads one manager row, aggregate counts, and at
+        # most three scores. No request hydrates the entire league's teams.
+        assert len(standings_queries) == 3 * visible_count
+        assert all(
+            "COUNT(" in sql or "LIMIT 1" in sql or "LIMIT 3" in sql
+            for sql in standings_queries
+        )
         # Dashboard context and refresh status each read it once; the team and
         # league projections must reuse the dashboard's context.
         context_queries = [

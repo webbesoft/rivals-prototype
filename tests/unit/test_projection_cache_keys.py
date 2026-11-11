@@ -7,6 +7,7 @@ from django.core.cache import cache
 from django.core.cache.backends.base import CacheKeyWarning
 
 from rivals.services.projection_service import ProjectionService
+from rivals.models import MiniLeague, MiniLeagueTeam, Team
 
 
 @pytest.mark.parametrize(
@@ -40,5 +41,51 @@ def test_league_projection_cache_is_portable_and_invalidates_after_sync(synced_a
                 assert refreshed["standings"][0]["current_points"] == 600
                 assert league.mini_league_teams.select_related.call_count == 2
                 context_lookup.assert_called_once()
+    finally:
+        cache.clear()
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("gameweek", [1, 2, 11, 38, 39])
+@pytest.mark.parametrize("size", [1, 2, 6])
+def test_small_summary_matches_full_projection(gameweek, size):
+    league = MiniLeague.objects.create(fpl_league_id="summary-test", name="League")
+    # Include tied points/ranks, zero ranks, and zero scores that fall back to
+    # the team's stored total. Compare every manager, including tied entries.
+    entries = [
+        (500, 1, 500),
+        (500, 1, 500),
+        (0, 0, 300),
+        (400, 3, 400),
+        (0, 5, 0),
+        (500, 2, 500),
+    ]
+    teams = []
+    for index, (points, rank, fallback) in enumerate(entries[:size]):
+        team = Team.objects.create(
+            fpl_team_id=str(index + 1),
+            team_name=f"Team {index}",
+            current_total_points=fallback,
+        )
+        MiniLeagueTeam.objects.create(
+            mini_league=league, team=team, total_points=points, current_rank=rank
+        )
+        teams.append(team)
+    service = ProjectionService(
+        context={"season": "test", "scoring_gameweek": gameweek}
+    )
+    cache.clear()
+    try:
+        for team in teams:
+            full = service.get_team_mini_league_summary(
+                team,
+                league,
+                standings=league.mini_league_teams.select_related("team").order_by(
+                    "pk"
+                ),
+            )
+            assert service.get_team_mini_league_summary(team, league) == full
+        outsider = Team.objects.create(fpl_team_id="outsider", team_name="Outside")
+        assert service.get_team_mini_league_summary(outsider, league) is None
     finally:
         cache.clear()

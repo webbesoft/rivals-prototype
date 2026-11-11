@@ -3,6 +3,7 @@ import math
 from typing import Any, Dict, List, Optional
 
 from django.core.cache import cache
+from django.db.models import Case, Count, F, IntegerField, Q, Value, When
 
 from rivals.models import GameweekData, MiniLeague, MiniLeagueTeam, Team
 from rivals.services.fpl_api_service import FplApiService
@@ -372,6 +373,8 @@ class ProjectionService:
         """
         Gets a single team's projected finish within a specific mini-league.
         """
+        if standings is None:
+            return self._team_mini_league_summary(team, mini_league, current_gw)
         league_proj = self.project_mini_league(
             mini_league, current_gw=current_gw, standings=standings
         )
@@ -389,3 +392,65 @@ class ProjectionService:
                     "total_teams": league_proj["total_teams"],
                 }
         return None
+
+    def _team_mini_league_summary(self, team, mini_league, current_gw):
+        """Compute a dashboard summary without materialising the league's teams.
+
+        All entries use the same pace multiplier, so ordering by points gives
+        the same projected order. Preserve the full projection's zero fallbacks
+        and stable ordering for tied points/ranks.
+        """
+        live_gw = current_gw or self._gameweek_context()["scoring_gameweek"]
+        if live_gw is None:
+            return None
+        rows = mini_league.mini_league_teams.annotate(
+            summary_points=Case(
+                When(total_points=0, then=F("team__current_total_points")),
+                default=F("total_points"),
+                output_field=IntegerField(),
+            ),
+            summary_rank=Case(
+                When(current_rank=0, then=Value(999)),
+                default=F("current_rank"),
+                output_field=IntegerField(),
+            ),
+        )
+        own = (
+            rows.filter(team_id=team.pk)
+            .values("pk", "summary_points", "summary_rank")
+            .first()
+        )
+        if own is None:
+            return None
+        points, rank = own["summary_points"], own["summary_rank"]
+        ahead = (
+            Q(summary_points__gt=points)
+            | Q(summary_points=points, summary_rank__lt=rank)
+            | Q(summary_points=points, summary_rank=rank, pk__lt=own["pk"])
+        )
+        totals = rows.aggregate(total=Count("pk"), ahead=Count("pk", filter=ahead))
+        top_points = list(
+            rows.order_by("-summary_points", "summary_rank", "pk").values_list(
+                "summary_points", flat=True
+            )[:3]
+        )
+        completed = max(0, min(TOTAL_GAMEWEEKS, live_gw - 1))
+        remaining = TOTAL_GAMEWEEKS - completed
+
+        def project(score):
+            pace = score / completed if completed else 50.0
+            return int(round(score + remaining * pace))
+
+        projected = project(points)
+        projected_rank = totals["ahead"] + 1
+        return {
+            "league_id": mini_league.pk,
+            "league_name": mini_league.name,
+            "current_rank": rank,
+            "projected_rank": projected_rank,
+            "rank_change": rank - projected_rank,
+            "projected_points": projected,
+            "gap_to_leader": project(top_points[0]) - projected,
+            "gap_to_podium": max(0, project(top_points[-1]) - projected),
+            "total_teams": totals["total"],
+        }

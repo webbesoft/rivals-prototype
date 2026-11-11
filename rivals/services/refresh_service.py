@@ -76,19 +76,32 @@ def enqueue_team(team_id, force=False, context=None):
 
 def enqueue_user(user, force=False):
     context = GameweekContextService.cached()
-    enqueue_refresh("context", context=context)
-    enqueue_refresh("players", context=context)
+    resources = [("context", None), ("players", None)]
     team_ids = set(
         user.tracked_teams.filter(active=True).values_list("team_id", flat=True)
     )
     if user.team_id:
         team_ids.add(user.team_id)
     for team_id in sorted(team_ids):
-        enqueue_team(team_id, force=force, context=context)
+        resources.extend(
+            (kind, team_id) for kind in ("profile", "history", "transfers")
+        )
     for league_id in user.customminileagues.filter(
         active=True, mini_league__active=True
     ).values_list("mini_league_id", flat=True):
-        enqueue_refresh("league", league_id, force=force, context=context)
+        resources.append(("league", league_id))
+    # A warm page load checks freshness in one read, regardless of rival count.
+    # Due resources still recheck/claim atomically in enqueue_refresh.
+    existing = SyncState.objects.in_bulk(
+        [resource_key(kind, pk) for kind, pk in resources], field_name="key"
+    )
+    now = timezone.now()
+    for kind, pk in resources:
+        state = existing.get(resource_key(kind, pk))
+        resource_force = force and kind not in ("context", "players")
+        if state and _skip_refresh(state, kind, context, now, resource_force):
+            continue
+        enqueue_refresh(kind, pk, force=resource_force, context=context)
 
 
 def refresh_status(user):
