@@ -1,4 +1,6 @@
 import logging
+from collections import defaultdict
+from decimal import Decimal, InvalidOperation
 from typing import Dict, List, Optional
 
 from django.core.cache import cache
@@ -25,6 +27,120 @@ class LandingDataService:
         gameweek = self.fpl_api.fetch_current_gameweek()
         cache.set(cache_key, gameweek, self.cache_timeout)
         return gameweek
+
+    def get_best_xi(self) -> Optional[Dict]:
+        """Maximise next-gameweek expected points with legal formations and club caps.
+
+        Use FPL ep_next projections from one bootstrap snapshot. This is an
+        unrestricted-budget starting XI, not a complete 15-player FPL squad.
+        """
+        cache_key = "landing_best_xi_expected_v2"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return cached
+
+        bootstrap = self.fpl_api.fetch_bootstrap_static()
+        if not bootstrap:
+            return None
+        clubs = {team["id"]: team for team in bootstrap.get("teams", [])}
+        by_club = defaultdict(lambda: defaultdict(list))
+        players = {}
+        for player in bootstrap.get("elements", []):
+            position = player.get("element_type")
+            if position not in (1, 2, 3, 4) or player.get("team") not in clubs:
+                continue
+            try:
+                expected_points = Decimal(str(player.get("ep_next")))
+            except InvalidOperation:
+                continue
+            if not expected_points.is_finite():
+                continue
+            player = {**player, "expected_points": expected_points}
+            players[player["id"]] = player
+            by_club[player["team"]][position].append(player)
+
+        # Dynamic programming keeps the best score for each positional count.
+        # The temporary club count enforces the cap without greedy selection.
+        limits = (1, 5, 5, 3)
+        states = {(0, 0, 0, 0): (0, ())}
+        for club_id in sorted(by_club):
+            club_states = {(shape, 0): result for shape, result in states.items()}
+            for position, candidates in sorted(by_club[club_id].items()):
+                # At most three players from any club can feature, so lower
+                # scorers at the same club and position cannot improve the XI.
+                candidates.sort(key=lambda p: (-p["expected_points"], p["id"]))
+                for player in candidates[:3]:
+                    updated = dict(club_states)
+                    for (shape, club_count), (points, ids) in club_states.items():
+                        if (
+                            club_count == 3
+                            or shape[position - 1] == limits[position - 1]
+                            or sum(shape) == 11
+                        ):
+                            continue
+                        new_shape = list(shape)
+                        new_shape[position - 1] += 1
+                        key = (tuple(new_shape), club_count + 1)
+                        result = (
+                            points + player["expected_points"],
+                            ids + (player["id"],),
+                        )
+                        if key not in updated or result[0] > updated[key][0]:
+                            updated[key] = result
+                    club_states = updated
+            states = {}
+            for (shape, _), result in club_states.items():
+                if shape not in states or result[0] > states[shape][0]:
+                    states[shape] = result
+
+        legal = [
+            (shape, result)
+            for shape, result in states.items()
+            if shape[0] == 1
+            and sum(shape) == 11
+            and shape[1] >= 3
+            and shape[2] >= 2
+            and shape[3] >= 1
+        ]
+        if not legal:
+            return None
+        shape, (points, ids) = max(legal, key=lambda item: item[1][0])
+        if points <= 0:
+            return None
+        selected = [players[player_id] for player_id in ids]
+        rows = []
+        for position, label in (
+            (1, "Goalkeeper"),
+            (2, "Defenders"),
+            (3, "Midfielders"),
+            (4, "Forwards"),
+        ):
+            rows.append(
+                {
+                    "label": label,
+                    "players": [
+                        {
+                            "id": p["id"],
+                            "name": p["web_name"],
+                            "team": clubs[p["team"]].get("short_name", "UNK"),
+                            "expected_points": p["expected_points"],
+                            "cost": p.get("now_cost", 0) / 10,
+                        }
+                        for p in sorted(
+                            selected, key=lambda p: (-p["expected_points"], p["id"])
+                        )
+                        if p["element_type"] == position
+                    ],
+                }
+            )
+        result = {
+            "formation": "–".join(str(count) for count in shape[1:]),
+            "expected_points": points,
+            "cost": sum(p.get("now_cost", 0) for p in selected) / 10,
+            "rows": rows,
+        }
+        cache.set(cache_key, result, self.cache_timeout)
+        return result
 
     def get_top_captain_picks(self, limit: int = 5) -> List[Dict]:
         """Get the most captained players this gameweek."""

@@ -10,6 +10,7 @@ def index(request):
 
     context = {
         "current_gameweek": landing_service.get_current_gameweek(),
+        "best_xi": landing_service.get_best_xi(),
         "captain_picks": landing_service.get_top_captain_picks(),
         "transfer_trends": landing_service.get_transfer_trends(),
         "fixture_highlights": landing_service.get_fixture_difficulty_highlights(),

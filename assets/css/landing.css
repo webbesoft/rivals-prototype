@@ -500,6 +500,87 @@
 .rs-case-foot a span {
   margin-left: 14px;
 }
+.rs-xi {
+  margin-top: 56px;
+  padding-top: 24px;
+  border-top: 2px solid var(--rs-ink);
+}
+.rs-xi .rs-feed-heading {
+  padding-bottom: 12px;
+}
+.rs-xi-intro {
+  margin: 0 0 24px;
+  max-width: 620px;
+  font-size: 13px;
+  color: var(--rs-muted);
+}
+.rs-xi-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 36px;
+  padding: 16px 20px;
+  border: 1px solid var(--rs-rule);
+  font-size: 11px;
+  color: var(--rs-muted);
+}
+.rs-xi-summary strong {
+  color: var(--rs-ink);
+  font-size: 20px;
+  margin-right: 6px;
+  font-variant-numeric: tabular-nums;
+}
+.rs-xi-pitch {
+  padding: 20px clamp(8px, 3vw, 40px) 28px;
+  color: var(--rs-paper);
+  background: repeating-linear-gradient(0deg, #1c3c31 0 96px, #203f34 96px 192px);
+}
+.rs-xi-line h3 {
+  margin: 16px 0 12px;
+  text-align: center;
+  font: 10px ui-monospace, monospace;
+  color: #c6d2be;
+}
+.rs-xi-line ul {
+  display: flex;
+  justify-content: center;
+  gap: clamp(4px, 1.5vw, 20px);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.rs-xi-line li {
+  flex: 0 1 150px;
+  min-width: 0;
+  padding: 12px 3px;
+  text-align: center;
+  background: #142e29;
+  border-top: 2px solid #859b7b;
+}
+.rs-xi-club {
+  display: block;
+  color: #c6d2be;
+  font-size: clamp(8px, 1.1vw, 10px);
+}
+.rs-xi-line li > strong {
+  display: block;
+  margin: 6px 0;
+  font-size: clamp(10px, 1.5vw, 15px);
+  overflow-wrap: anywhere;
+}
+.rs-xi-points {
+  color: var(--rs-yellow);
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+.rs-xi-points small {
+  font-size: 9px;
+}
+.rs-xi-empty {
+  padding: 24px;
+  border: 1px solid var(--rs-rule);
+  color: var(--rs-muted);
+  font-size: 13px;
+}
 .rs-start {
   display: grid;
   grid-template-columns: 1fr 1.2fr;

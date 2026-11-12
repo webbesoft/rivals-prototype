@@ -46,6 +46,36 @@
       <div class="rs-case-foot"><p>Alex 72 · Jamie 58 after hits. Example names and scores; your own league will tell a different story.</p><a href="#your-rivalry">Now follow your own rivalry <span aria-hidden="true">↗</span></a></div>
     </section>
 
+    <section class="rs-xi rs-wrap" id="best-xi" aria-labelledby="best-xi-title">
+      <header class="rs-feed-heading">
+        <div><span class="rs-kicker">The numbers pick the team</span><h2 id="best-xi-title">The statistically best XI</h2></div>
+        <p>Next gameweek · FPL expected points<br>Cached for up to 15 minutes</p>
+      </header>
+      <p class="rs-xi-intro">Eleven players. The highest combined expected points for the next gameweek. See who earns a place when the stats pick the side.</p>
+      {% if best_xi %}
+      <div class="rs-xi-summary">
+        <span><strong>{{ best_xi.formation }}</strong> formation</span>
+        <span><strong>{{ best_xi.expected_points|floatformat:1 }}</strong> expected points</span>
+        <span><strong>£{{ best_xi.cost|floatformat:1 }}m</strong> current cost</span>
+      </div>
+      <div class="rs-xi-pitch" aria-label="Best XI by position">
+        {% for row in best_xi.rows %}
+        <div class="rs-xi-line">
+          <h3>{{ row.label }}</h3>
+          <ul>
+            {% for player in row.players %}
+            <li><span class="rs-xi-club">{{ player.team }} · £{{ player.cost|floatformat:1 }}m</span><strong>{{ player.name }}</strong><span class="rs-xi-points">{{ player.expected_points|floatformat:1 }} <small>xPts</small></span></li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="rs-xi-empty">The best XI will appear when expected points are available for enough players. If FPL data is temporarily unavailable, check back for the next update.</p>
+      {% endif %}
+      <p class="rs-data-note">Highest combined FPL expected points for the next gameweek across valid FPL starting formations, with at most three players per club. No budget cap; starting XI only. Expected points count once per player, without captain multipliers. Projections are estimates, not guaranteed returns. Source: Fantasy Premier League.</p>
+    </section>
+
     <section class="rs-start rs-wrap" id="your-rivalry" aria-labelledby="start-title">
       <div class="rs-start-title"><span class="rs-kicker">Your mini-league is personal.</span><h2 id="start-title">So is your <br>next move.</h2><a class="rs-button" href="{% if user.is_authenticated %}{% url 'rivals:dashboard' %}{% else %}{% url 'accounts:signup' %}{% endif %}">{% if user.is_authenticated %}Open my dashboard{% else %}Find my rivals{% endif %}<span aria-hidden="true">↗</span></a><p>Start with an account and your FPL team ID.</p></div>
       <ol class="rs-route">
