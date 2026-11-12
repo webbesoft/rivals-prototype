@@ -1,0 +1,43 @@
+<c-layouts.base title="{{ mini_league.name }} - Mini League">
+{% load humanize math_filters %}
+<div class="rv-wrap rv-league">
+  {% include "partials/refresh_status.html" %}
+  <header class="rv-page-heading">
+    <div><p class="rv-eyebrow">Your league</p><h1>{{ mini_league.name }}</h1>
+      <p class="rv-section-note">{% if mini_league.rank_count %}{{ mini_league.rank_count|intcomma }} participants · {% endif %}Leaders, your position and the managers around you.</p>
+    </div>
+    <div class="rv-page-actions"><a href="{% url 'rivals:dashboard' %}">My gameweek ↗</a>
+      <form method="post" action="{% url 'rivals:minileagues.sync' mini_league.id %}">{% csrf_token %}<button class="app-secondary-button">Refresh standings</button></form>
+    </div>
+  </header>
+  {% if rank_snapshot %}
+  <section class="rv-league-place" aria-label="Your published league position">
+    <div><span class="rv-eyebrow">Your position</span><strong>#{{ rank_snapshot.current_rank|intcomma }}</strong></div>
+    <div><span class="rv-eyebrow">Published movement</span><strong>{% if rank_snapshot.rank_change > 0 %}▲ +{{ rank_snapshot.rank_change|intcomma }}{% elif rank_snapshot.rank_change < 0 %}▼ {{ rank_snapshot.rank_change|abs|intcomma }}{% elif rank_snapshot.rank_change == 0 %}Steady{% else %}—{% endif %}</strong></div>
+    <div><span class="rv-eyebrow">Season points</span><strong>{{ rank_snapshot.total_points|intcomma }}</strong></div>
+  </section>
+  <p class="rv-section-note">GW{{ rank_snapshot.gameweek }} · Position updated {{ rank_snapshot.updated_at|timesince }} ago. Published positions can lag live scores.</p>
+  {% else %}<p role="status">Your published league position will appear after your profile updates.</p>{% endif %}
+  <div id="large-league-content" {% if waiting %}hx-get="{{ request.path }}?{{ request.GET.urlencode }}" hx-trigger="every 15s" hx-select="#large-league-content" hx-swap="outerHTML"{% endif %}>
+    {% if pages_stale %}<p role="status">Standings are updating. Showing the last available results.</p>{% endif %}
+    {% if leaders %}
+    <section class="app-panel p-5 mb-6"><h2 class="app-section-title">League leaders</h2>
+      <ol>{% for row in leaders %}<li>#{{ row.rank|intcomma }} · {{ row.entry_name }} · {{ row.total|intcomma }} pts{% if rank_snapshot and can_compare_points %} · {{ row.total|subtract:rank_snapshot.total_points }} pts from you{% endif %}</li>{% endfor %}</ol>
+      {% if gap_to_leader != None %}<p class="rv-section-note">{{ gap_to_leader|intcomma }} pts to the leader · {{ gap_to_podium|intcomma }} pts to the podium</p>{% endif %}
+    </section>{% endif %}
+    <section class="app-panel p-5 mb-6">
+      <div class="rv-page-actions"><a href="?section=nearby">Around my position</a><a href="?section=table&amp;standings_page=1">Browse standings</a></div>
+      <h2 class="app-section-title">{% if section == 'nearby' %}Around your position{% else %}Standings · page {{ standings_page }}{% endif %}</h2>
+      {% if section == 'nearby' and not found_user and rank_snapshot %}<p>Your position is shown above. This nearby section may not include your team while tied ranks or standings are changing.</p>{% endif %}
+      <div class="overflow-x-auto"><table class="rv-league-table w-full text-left">
+        <thead><tr><th>Rank</th><th>Team &amp; manager</th><th>Points</th><th>Actions</th></tr></thead>
+        <tbody>{% for row in visible_rows %}<tr {% if row.entry|stringformat:'s' == user.team.fpl_team_id %}aria-current="true" class="rv-standing-you"{% endif %}><td>#{{ row.rank|intcomma }}</td><td>{{ row.entry_name }}<br><small>{{ row.player_name }}</small></td><td>{{ row.total|intcomma }}</td><td>{% if row.entry|stringformat:"s" != user.team.fpl_team_id %}<form method="post" action="{% url 'rivals:minileagues.track' mini_league.id row.page_number row.entry %}">{% csrf_token %}<button class="app-secondary-button">Track rival</button></form>{% endif %}</td></tr>{% empty %}<tr><td colspan="4">{% if waiting %}Loading standings. Results will appear here shortly.{% else %}Standings are temporarily unavailable.{% endif %}</td></tr>{% endfor %}</tbody>
+      </table></div>
+      <nav class="rv-page-actions" aria-label="Standings pages">{% if standings_page > 1 %}<a href="?section=table&amp;standings_page={{ previous_page }}">Previous page</a>{% endif %}{% if has_next %}<a href="?section=table&amp;standings_page={{ next_page }}">Next page</a>{% endif %}</nav>
+      {% if pages_updated_at %}<p class="rv-section-note">Standings updated {{ pages_updated_at|timesince }} ago.</p>{% endif %}
+    </section>
+    {% if tracked_ranks %}<section class="app-panel p-5 mb-6"><h2 class="app-section-title">You and your tracked rivals</h2><ul>{% for item in tracked_ranks %}<li><a href="{% url 'rivals:teams.show' item.team_id %}">{{ item.team.team_name }}</a> · #{{ item.current_rank|intcomma }} · {{ item.total_points|intcomma }} season pts · GW{{ item.gameweek }}</li>{% endfor %}</ul></section>{% endif %}
+  </div>
+  {% if rank_history %}<details class="app-panel p-5"><summary>Your rank history</summary><table class="w-full"><thead><tr><th>Gameweek</th><th>Position</th><th>Points</th><th>Actions</th></tr></thead><tbody>{% for item in rank_history %}<tr><td>{{ item.gameweek }}</td><td>#{{ item.current_rank|intcomma }}</td><td>{{ item.total_points|intcomma }}</td></tr>{% endfor %}</tbody></table></details>{% endif %}
+</div>
+</c-layouts.base>

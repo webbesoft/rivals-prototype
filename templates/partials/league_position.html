@@ -1,0 +1,12 @@
+{% load humanize math_filters %}
+<section class="league-overview" aria-label="Your league position">
+  <div class="league-position">
+    <span class="league-label">Your position</span>
+    <strong>{% if position %}<span>#</span>{{ position.current_rank|intcomma }}{% else %}—{% endif %}</strong>
+    <p>{% if user.team %}{{ user.team.team_name }}{% else %}Your place in the race{% endif %}</p>
+  </div>
+  <div class="league-stat"><span class="league-label">Total points</span><strong>{% if position %}{{ position.total_points|intcomma }}{% else %}—{% endif %}</strong><p>Season so far</p></div>
+  <div class="league-stat"><span class="league-label">Rank movement</span><strong>{% if position and position.previous_rank %}{% with change=position.previous_rank|sub:position.current_rank %}{% if change > 0 %}<span class="league-up">↑ {{ change|intcomma }}</span>{% elif change < 0 %}<span class="league-down">↓ {{ change|abs|intcomma }}</span>{% else %}—{% endif %}{% endwith %}{% else %}—{% endif %}</strong><p>{% if position.previous_rank %}Since the last update{% else %}Awaiting a previous position{% endif %}</p></div>
+  <div class="league-stat"><span class="league-label">{% if large_league %}Gameweek{% else %}Gap to the leader{% endif %}</span><strong>{% if large_league and position %}{{ position.gameweek }}{% elif position and league_projection.leader %}{% with gap=league_projection.leader.current_points|subtract:position.total_points %}{% if gap > 0 %}{{ gap|intcomma }}<small> pts</small>{% else %}Level{% endif %}{% endwith %}{% else %}—{% endif %}</strong><p>{% if large_league %}Published league position{% elif position.current_rank == 1 %}Setting the pace{% else %}Every point counts{% endif %}</p></div>
+</section>
+<div class="league-update"><span class="league-update-dot" aria-hidden="true"></span>{% if large_league and position %}Position updated {{ position.updated_at|timesince }} ago{% elif mini_league.last_synced_at %}Standings updated {{ mini_league.last_synced_at|timesince }} ago{% else %}Standings are being prepared{% endif %}<span>Published scores can lag live play.</span>{% if position and not large_league %}<a href="#your-standing">Find my team ↓</a>{% endif %}</div>

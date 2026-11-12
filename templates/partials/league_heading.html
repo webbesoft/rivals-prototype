@@ -1,0 +1,13 @@
+{% load humanize %}
+<header class="league-heading">
+  <div>
+    <a class="league-back" href="{% url 'rivals:dashboard' %}">← My gameweek</a>
+    <p class="rv-eyebrow">The mini-league race</p>
+    <h1>{{ mini_league.name }}</h1>
+    <p class="league-meta">{% if mini_league.rank_count %}{{ mini_league.rank_count|intcomma }} managers <span aria-hidden="true">·</span> {% endif %}FPL league {{ mini_league.fpl_league_id }}</p>
+  </div>
+  <form action="{% url 'rivals:minileagues.sync' mini_league.id %}" method="POST">
+    {% csrf_token %}<button type="submit" class="league-refresh"><span aria-hidden="true">↻</span> Refresh standings</button>
+  </form>
+</header>
+{% include "partials/account_messages.html" %}

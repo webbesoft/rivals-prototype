@@ -1,6 +1,8 @@
 import logging
 
 from django.contrib.auth import authenticate, get_user_model
+from django.conf import settings
+from django.db.models import Q
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import AllowAny
@@ -8,7 +10,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from rivals.models import MiniLeague, Team
-from rivals.services.access_service import accessible_leagues, track_team, TrackingLimitReached
+from rivals.services.access_service import (
+    accessible_leagues,
+    track_team,
+    TrackingLimitReached,
+)
 
 from .permissions import IsVerified
 from .serializers import (
@@ -162,9 +168,31 @@ class DashboardView(APIView):
                 # For now getting all, ordered by current_rank
                 best_standing = (
                     team.mini_league_teams.select_related("mini_league")
+                    .exclude(
+                        Q(mini_league__summary_only=True)
+                        | Q(
+                            mini_league__rank_count__gt=settings.LEAGUE_FULL_IMPORT_LIMIT
+                        )
+                    )
                     .order_by("current_rank")
                     .first()
                 )
+
+                from rivals.services.gameweek_context_service import (
+                    GameweekContextService,
+                )
+
+                published = (
+                    team.league_ranks.filter(
+                        season=GameweekContextService.cached()["season"],
+                        mini_league__in=accessible_leagues(user),
+                    )
+                    .select_related("mini_league")
+                    .order_by("-gameweek", "current_rank")
+                    .first()
+                )
+                if published:
+                    best_standing = published
 
                 if best_standing:
                     data["best_league_rank"] = best_standing.current_rank
@@ -199,9 +227,7 @@ class LeagueDetailView(APIView):
 
     def get(self, request, league_id):
         try:
-            league = MiniLeague.objects.prefetch_related("mini_league_teams__team").get(
-                id=league_id
-            )
+            league = MiniLeague.objects.get(id=league_id)
         except MiniLeague.DoesNotExist:
             return Response(
                 {"error": "League not found."},
@@ -215,6 +241,39 @@ class LeagueDetailView(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
+        if league.uses_summary:
+            from rivals.services.gameweek_context_service import GameweekContextService
+            from rivals.services.league_summary_service import large_league_context
+
+            data = large_league_context(
+                request.user,
+                league,
+                GameweekContextService.cached(),
+                request.query_params,
+            )
+            rank = data.get("rank_snapshot")
+            return Response(
+                {
+                    **MiniLeagueSerializer(league).data,
+                    "partial": True,
+                    "standings": data.get("visible_rows", []),
+                    "leaders": data.get("leaders", []),
+                    "page": data.get("standings_page"),
+                    "has_next": data.get("has_next", False),
+                    "waiting": data.get("waiting", False),
+                    "stale": data.get("pages_stale", True),
+                    "user_rank": (
+                        {
+                            "current_rank": rank.current_rank,
+                            "previous_rank": rank.previous_rank,
+                            "gameweek": rank.gameweek,
+                            "updated_at": rank.updated_at,
+                        }
+                        if rank
+                        else None
+                    ),
+                }
+            )
         serializer = MiniLeagueDetailSerializer(league)
         return Response(serializer.data)
 
@@ -246,6 +305,8 @@ class LeagueSyncView(APIView):
         from rivals.services.refresh_service import enqueue_refresh
 
         enqueue_refresh("league", league.id, force=True)
+        if league.uses_summary and request.user.team_id:
+            enqueue_refresh("profile", request.user.team_id, force=True)
         return Response(
             {
                 "success": True,

@@ -327,6 +327,7 @@ class MiniLeague(models.Model):
     entry_can_admin = models.BooleanField(default=False)
     entry_can_invite = models.BooleanField(default=False)
     rank_count = models.IntegerField(null=True, blank=True)
+    summary_only = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -339,6 +340,13 @@ class MiniLeague(models.Model):
 
     def is_system_league(self):
         return self.league_type == "s"
+
+    @property
+    def uses_summary(self):
+        return (
+            self.summary_only
+            or (self.rank_count or 0) > settings.LEAGUE_FULL_IMPORT_LIMIT
+        )
 
     def is_custom_league(self):
         return self.league_type == "x"
@@ -891,5 +899,52 @@ class DecisionRecord(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=["user", "fingerprint"], name="unique_saved_decision"
+            )
+        ]
+
+
+class LeagueRankSnapshot(models.Model):
+    team = models.ForeignKey(
+        Team, on_delete=models.CASCADE, related_name="league_ranks"
+    )
+    mini_league = models.ForeignKey(
+        MiniLeague, on_delete=models.CASCADE, related_name="rank_snapshots"
+    )
+    season = models.CharField(max_length=20)
+    gameweek = models.PositiveSmallIntegerField()
+    current_rank = models.PositiveIntegerField()
+    previous_rank = models.PositiveIntegerField(null=True, blank=True)
+    total_points = models.IntegerField()
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["team", "mini_league", "season", "gameweek"],
+                name="unique_league_rank_snapshot",
+            )
+        ]
+
+    @property
+    def rank_change(self):
+        return self.previous_rank - self.current_rank if self.previous_rank else None
+
+
+class LeagueStandingsPage(models.Model):
+    mini_league = models.ForeignKey(
+        MiniLeague, on_delete=models.CASCADE, related_name="standings_pages"
+    )
+    season = models.CharField(max_length=20)
+    number = models.PositiveIntegerField()
+    rows = models.JSONField(default=list)
+    has_next = models.BooleanField(default=False)
+    page_size = models.PositiveIntegerField(default=50)
+    updated_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["mini_league", "season", "number"],
+                name="unique_league_standings_page",
             )
         ]

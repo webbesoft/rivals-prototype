@@ -112,6 +112,22 @@ def ingest(state):
         TransferPlayerAssociationService().associate_all_transfers(
             season=context["season"]
         )
+    elif state.kind == "league_page":
+        from rivals.models import LeagueStandingsPage
+        from rivals.services.league_summary_service import save_page
+
+        page = LeagueStandingsPage.objects.select_related("mini_league").get(
+            pk=state.object_id
+        )
+        if page.season != context["season"]:
+            return {}
+        data = api.fetch_mini_league_page(page.mini_league.fpl_league_id, page.number)
+        with transaction.atomic():
+            if not SyncState.objects.filter(
+                pk=state.pk, generation=state.generation, status="running"
+            ).exists():
+                raise RuntimeError("Standings page lease superseded")
+            save_page(page.mini_league, page.season, page.number, data)
     elif state.kind == "league":
         from rivals.services.league_import_service import LeagueImportService
 
@@ -166,6 +182,10 @@ def ingest(state):
                 get_user_model().objects.filter(team=team).select_related("team")
             ):
                 reconcile_memberships(user, data)
+
+            from rivals.services.league_summary_service import save_profile_ranks
+
+            save_profile_ranks(team, data, context)
 
     return {}
 

@@ -199,12 +199,14 @@
 
                   <!-- Total Teams -->
                   <td class="py-3 px-3 text-right tabular-nums text-gray-600">
-                    {{ league.total_teams }}
+                    {{ league.total_teams|default_if_none:"—" }}
                   </td>
 
                   <!-- Current Rank -->
                   <td class="py-3 px-3 text-right tabular-nums font-bold">
-                    {% if league.projection and league.projection.current_rank %}
+                    {% if league.rank_snapshot %}
+                      #{{ league.rank_snapshot.current_rank }}
+                    {% elif league.projection and league.projection.current_rank %}
                       #{{ league.projection.current_rank }}
                     {% else %}
                       —
@@ -222,7 +224,12 @@
 
                   <!-- Trend -->
                   <td class="py-3 px-3 text-right tabular-nums text-[11px]">
-                    {% if league.projection %}
+                    {% if league.rank_snapshot %}
+                      {% if league.rank_snapshot.rank_change > 0 %}<span class="text-success font-bold">▲ +{{ league.rank_snapshot.rank_change }}</span>
+                      {% elif league.rank_snapshot.rank_change < 0 %}<span class="text-danger font-bold">▼ {{ league.rank_snapshot.rank_change|abs }}</span>
+                      {% elif league.rank_snapshot.rank_change == 0 %}<span class="text-gray-400">—</span>
+                      {% else %}<span class="text-gray-400">Pending</span>{% endif %}
+                    {% elif league.projection %}
                       {% if league.projection.rank_change > 0 %}
                         <span class="text-success font-bold">▲ +{{ league.projection.rank_change }}</span>
                       {% elif league.projection.rank_change < 0 %}

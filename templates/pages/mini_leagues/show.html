@@ -1,256 +1,39 @@
 <c-layouts.base title="{{ mini_league.name }} - Mini League">
-  {% load math_filters %}
-  {% load humanize %}
+{% load humanize math_filters %}
+<div class="rv-wrap rv-league league-page">
+  {% include "partials/league_heading.html" %}
+  {% include "partials/league_position.html" with position=user_standing %}
 
-  <div class="rv-wrap rv-league">
-
-    <!-- Flash messages -->
-    {% if messages %}
-    <div class="mb-6 space-y-2">
-      {% for message in messages %}
-      <div class="border-l-4 px-4 py-2.5 text-xs tabular-nums font-medium {% if message.tags == 'error' %}border-danger bg-danger/5 text-danger{% else %}border-success bg-success/5 text-pitch{% endif %}">
-        {{ message }}
-      </div>
-      {% endfor %}
+  <section class="league-board" aria-label="League Standings & Projections">
+    <div class="league-board-heading"><div><p class="rv-eyebrow">The table</p><h2>League standings</h2></div><span class="league-count">{{ standings|length|intcomma }} managers</span></div>
+    <div class="league-table-wrap">
+      <table class="league-table">
+        <caption class="league-sr-only">Current league standings. Points gaps are relative to your team.</caption>
+        <thead><tr><th scope="col" class="league-rank">Rank</th><th scope="col">Team &amp; manager</th><th scope="col" class="league-points">Points</th>{% if user_standing %}<th scope="col" class="league-gap">Gap to you</th>{% endif %}<th scope="col" class="league-actions">Follow the race</th></tr></thead>
+        <tbody>
+        {% for standing in standings %}
+          <tr {% if user.team_id == standing.team_id %}id="your-standing" aria-current="true" class="league-row-you"{% endif %}>
+            <td class="league-rank"><strong>{{ standing.current_rank|intcomma }}</strong>{% if standing.previous_rank %}{% with change=standing.previous_rank|sub:standing.current_rank %}{% if change > 0 %}<small class="league-up" aria-label="Up {{ change }} places">↑ {{ change }}</small>{% elif change < 0 %}<small class="league-down" aria-label="Down {{ change|abs }} places">↓ {{ change|abs }}</small>{% else %}<small class="league-no-change" aria-label="No change">—</small>{% endif %}{% endwith %}{% endif %}</td>
+            <td class="league-team"><div><a href="{% url 'rivals:teams.show' standing.team_id %}">{{ standing.team.team_name }}</a>{% if user.team_id == standing.team_id %}<span class="league-badge league-badge-you">You</span>{% elif standing.team_id in tracked_team_ids %}<span class="league-badge">Following</span>{% endif %}</div><span class="league-manager">{{ standing.team.manager_name }}</span></td>
+            <td class="league-points"><strong>{{ standing.total_points|intcomma }}</strong>{% if user_standing and user.team_id != standing.team_id %}<span class="league-mobile-gap">{% include "partials/league_gap.html" with position=user_standing points=standing.total_points %}</span>{% endif %}</td>
+            {% if user_standing %}<td class="league-gap">{% if user.team_id == standing.team_id %}<span class="league-gap-level">Your team</span>{% else %}{% include "partials/league_gap.html" with position=user_standing points=standing.total_points %}{% endif %}</td>{% endif %}
+            <td class="league-actions"><div class="league-row-actions">{% if user.team_id == standing.team_id %}<a class="league-squad-link" href="{% url 'rivals:teams.show' standing.team_id %}">Your squad ↗</a>{% else %}{% if user.team_id %}<a href="{% url 'rivals:teams.compare' standing.team_id %}" aria-label="Compare with {{ standing.team.team_name }}">Compare ↗</a>{% endif %}{% if standing.team_id in tracked_team_ids %}<form action="{% url 'rivals:teams.untrack' standing.team_id %}" method="POST">{% csrf_token %}<button class="league-follow is-following" type="submit" aria-label="Unfollow {{ standing.team.team_name }}">✓ Following</button></form>{% else %}<form action="{% url 'rivals:teams.track' standing.team_id %}" method="POST">{% csrf_token %}<button class="league-follow" type="submit" aria-label="Follow {{ standing.team.team_name }}">+ Follow</button></form>{% endif %}{% endif %}</div></td>
+          </tr>
+        {% empty %}
+          <tr><td class="league-empty" colspan="{% if user_standing %}5{% else %}4{% endif %}"><span class="rv-eyebrow">A new race awaits</span><h3>Your league table is on its way.</h3><p>Standings will appear after the next update. You can also refresh them above.</p></td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
     </div>
-    {% endif %}
+    <div class="league-board-footer"><span><i class="league-you-key" aria-hidden="true"></i> Your team</span><span>↑ ↓ Movement since the previous update</span></div>
+  </section>
 
-    {% include "partials/refresh_status.html" %}
-
-    <header class="rv-page-heading"><div><p class="rv-eyebrow">The league within your league / FPL {{ mini_league.fpl_league_id }}</p><h1>{{ mini_league.name }}</h1><p class="rv-section-note">{{ standings|length }} teams · {% if mini_league.last_synced_at %}Standings updated {{ mini_league.last_synced_at|timesince }} ago{% else %}Waiting for standings{% endif %}</p></div><div class="rv-page-actions"><a href="{% url 'rivals:dashboard' %}">My gameweek ↗</a><form action="{% url 'rivals:minileagues.sync' mini_league.id %}" method="POST">{% csrf_token %}<button type="submit" class="app-secondary-button">Refresh standings</button></form></div></header>
-    {% if user_standing %}<section class="rv-league-place" aria-label="Your current league position"><div><span class="rv-eyebrow">Your place in the race</span><strong>#{{ user_standing.current_rank|default_if_none:"—" }}</strong></div><div><span class="rv-eyebrow">Stored season points</span><strong>{{ user_standing.total_points|floatformat:0|intcomma }}</strong></div><a href="#your-standing">Find my team in the table ↓</a></section>{% endif %}
-    <!-- League Standings Table -->
-    <div class="app-panel bg-white border border-gray-200 shadow-sm mb-8">
-      <div class="px-5 py-3 border-b border-gray-200 flex items-center justify-between bg-gray-50/50">
-        <div class="flex items-center gap-3">
-          <h2 class="app-section-title text-xs font-black uppercase tracking-wider text-text-main tabular-nums">League Standings & Projections</h2>
-          <span class="text-xs tabular-nums text-gray-500">{{ standings|length }} Teams Total</span>
-        </div>
-        <span class="text-[11px] tabular-nums text-gray-400">Official Standings</span>
-      </div>
-
-      <div class="overflow-x-auto">
-        <table class="rv-league-table w-full text-left border-collapse">
-          <thead>
-            <tr class="border-b border-gray-200 bg-gray-50/25 text-[11px] tabular-nums uppercase tracking-wider text-gray-500">
-              <th class="py-2.5 px-4 font-semibold text-center w-14">Rank</th>
-              <th class="py-2.5 px-4 font-semibold">Team & Manager</th>
-              <th class="py-2.5 px-3 font-semibold text-right">Points</th>
-              {% if user_standing %}<th scope="col" class="py-2.5 px-3 font-semibold text-right">Gap to you</th>{% endif %}
-              <th class="py-2.5 px-4 font-semibold text-right">Projected Finish</th>
-              <th class="py-2.5 px-3 font-semibold text-center">GW Form</th>
-              <th class="py-2.5 px-3 font-semibold text-center">Status</th>
-              <th class="py-2.5 px-4 font-semibold text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-100 text-xs">
-            {% for standing in standings %}
-            <tr {% if user.team and user.team.id == standing.team.id %}id="your-standing" aria-current="true"{% endif %} class="hover:bg-gray-50/75 transition-colors group {% if user.team and user.team.id == standing.team.id %}rv-standing-you{% elif standing.team.id in tracked_team_ids %}rv-standing-tracked{% endif %}">
-              <!-- Rank -->
-              <td class="py-3 px-4 text-center tabular-nums font-black text-sm text-text-main tabular-nums">
-                #{{ standing.current_rank }}
-              </td>
-
-              <!-- Team & Manager -->
-              <td class="py-3 px-4">
-                <a href="{% url 'rivals:teams.show' standing.team.id %}" class="font-bold text-text-main group-hover:text-pitch transition-colors block">
-                  {{ standing.team.team_name }}
-                </a>
-                <span class="text-[11px] text-gray-500 tabular-nums block">
-                  {{ standing.team.manager_name }}
-                </span>
-              </td>
-
-              <!-- Total Points -->
-              <td class="py-3 px-3 text-right tabular-nums font-bold text-sm text-text-main">
-                {{ standing.total_points|floatformat:0|intcomma }} <span class="text-[10px] text-gray-400 font-normal">pts</span>
-              </td>
-
-              {% if user_standing %}<td class="rv-watch-gap py-3 px-3 text-right">
-                {% if user.team.id == standing.team.id %}<span>Your team</span>
-                {% elif standing.total_points != None and user_standing.total_points != None %}
-                  {% if standing.total_points > user_standing.total_points %}<strong>+{{ standing.total_points|subtract:user_standing.total_points }}</strong><span>ahead of you</span>
-                  {% elif standing.total_points < user_standing.total_points %}<strong>−{{ user_standing.total_points|subtract:standing.total_points }}</strong><span>behind you</span>
-                  {% else %}<strong>0</strong><span>level with you</span>{% endif %}
-                {% else %}—{% endif %}
-              </td>{% endif %}
-              <!-- Projected Finish -->
-              <td class="py-3 px-4 text-right">
-                <div class="tabular-nums font-bold text-pitch">
-                  #{{ standing.projected_rank }}
-                  <span class="text-[11px] text-gray-500 font-normal">({{ standing.projected_points|intcomma }} pts)</span>
-                </div>
-                <div class="text-[10px] tabular-nums">
-                  {% if standing.projected_rank_change > 0 %}
-                    <span class="text-success font-semibold">▲ +{{ standing.projected_rank_change }} spots</span>
-                  {% elif standing.projected_rank_change < 0 %}
-                    <span class="text-danger font-semibold">▼ {{ standing.projected_rank_change|abs }} spots</span>
-                  {% else %}
-                    <span class="text-gray-400">— Steady</span>
-                  {% endif %}
-                </div>
-              </td>
-
-              <!-- GW Form (Rank Delta) -->
-              <td class="py-3 px-3 text-center tabular-nums text-xs">
-                {% if standing.previous_rank %}
-                  {% with change=standing.previous_rank|sub:standing.current_rank %}
-                    {% if change > 0 %}
-                      <span class="text-success font-bold">▲ +{{ change }}</span>
-                    {% elif change < 0 %}
-                      <span class="text-danger font-bold">▼ {{ change|abs }}</span>
-                    {% else %}
-                      <span class="text-gray-400">—</span>
-                    {% endif %}
-                  {% endwith %}
-                {% else %}
-                  <span class="text-gray-400 tabular-nums">—</span>
-                {% endif %}
-              </td>
-
-              <!-- Status Tag -->
-              <td class="py-3 px-3 text-center whitespace-nowrap">
-                {% if user.team and user.team.id == standing.team.id %}
-                  <span class="px-2 py-0.5 bg-pitch text-white text-[10px] tabular-nums font-bold uppercase tracking-wider">
-                    You
-                  </span>
-                {% elif standing.team.id in tracked_team_ids %}
-                  <span class="px-2 py-0.5 bg-gray-100 border border-gray-300 text-gray-700 text-[10px] tabular-nums font-bold uppercase tracking-wider">
-                    Tracked
-                  </span>
-                {% else %}
-                  <span class="text-[10px] tabular-nums text-gray-400 uppercase">
-                    Scouted
-                  </span>
-                {% endif %}
-              </td>
-
-              <!-- Actions -->
-              <td class="py-3 px-4 text-right whitespace-nowrap">
-                {% if user.team and user.team.id == standing.team.id %}
-                  <span class="text-[11px] tabular-nums text-gray-400">—</span>
-                {% elif standing.team.id in tracked_team_ids %}
-                  <div class="inline-flex items-center gap-2">
-                    <a href="{% url 'rivals:teams.compare' standing.team.id %}" class="text-xs tabular-nums font-semibold text-pitch hover:underline">
-                      Compare →
-                    </a>
-                    <form action="{% url 'rivals:teams.untrack' standing.team.id %}" method="POST" class="inline-block">
-                      {% csrf_token %}
-                      <button type="submit" class="text-gray-400 hover:text-danger tabular-nums text-[11px] transition-colors cursor-pointer" title="Untrack">
-                        Untrack
-                      </button>
-                    </form>
-                  </div>
-                {% else %}
-                  <div class="inline-flex items-center gap-2">
-                    <a href="{% url 'rivals:teams.compare' standing.team.id %}" class="text-xs tabular-nums font-semibold text-gray-500 hover:text-pitch hover:underline">
-                      Compare
-                    </a>
-                    <form action="{% url 'rivals:teams.track' standing.team.id %}" method="POST" class="inline-block" onsubmit="this.querySelector('button').disabled=true; this.querySelector('button').innerText='...';">
-                      {% csrf_token %}
-                      <button type="submit" class="text-pitch hover:underline tabular-nums text-xs font-bold uppercase transition-colors cursor-pointer">
-                        + Track
-                      </button>
-                    </form>
-                  </div>
-                {% endif %}
-              </td>
-            </tr>
-            {% empty %}
-            <tr>
-              <td colspan="{% if user_standing %}8{% else %}7{% endif %}" class="py-8 px-4 text-center tabular-nums text-xs text-gray-400">
-                No teams registered in this mini-league yet. Run "Sync Standings" to fetch current table.
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    {% if user_league_projection %}<details class="rv-details"><summary>Your projected finish · Estimated rank, pace and title gap</summary>    <!-- User League Projection Strip -->
-    {% if user_league_projection %}
-    <div class="mb-8 app-panel bg-white border border-gray-200 shadow-sm">
-      <div class="px-5 py-2.5 border-b border-gray-200 bg-gray-50/75 flex flex-wrap items-center justify-between text-xs tabular-nums gap-2">
-        <span class="font-bold uppercase tracking-wider text-text-main">Your Projected League Campaign</span>
-        <span class="text-gray-500">
-          {% if user_league_projection.gap_to_leader > 0 %}
-            <span class="text-danger font-semibold tabular-nums">-{{ user_league_projection.gap_to_leader }} pts</span> behind projected winner
-          {% else %}
-            <span class="text-pitch font-bold tabular-nums">Projected Champion Pace</span>
-          {% endif %}
-        </span>
-      </div>
-
-      <div class="grid grid-cols-2 md:grid-cols-5 divide-y md:divide-y-0 md:divide-x divide-gray-200">
-        <!-- 1. Current Rank -->
-        <div class="p-4 sm:p-5">
-          <p class="text-[11px] tabular-nums uppercase tracking-wider text-gray-500 mb-1">Current Standing</p>
-          <p class="text-2xl font-black tabular-nums text-text-main">
-            #{{ user_league_projection.current_rank }}
-          </p>
-          <p class="text-xs text-gray-500 tabular-nums mt-0.5">
-            {% if user_standing %}{{ user_standing.total_points|intcomma }} pts{% else %}Active squad{% endif %}
-          </p>
-        </div>
-
-        <!-- 2. Projected Finish -->
-        <div class="p-4 sm:p-5">
-          <p class="text-[11px] tabular-nums uppercase tracking-wider text-gray-500 mb-1">Projected Finish</p>
-          <p class="text-2xl font-black tabular-nums text-pitch">
-            #{{ user_league_projection.projected_rank }}
-          </p>
-          <p class="text-xs text-gray-600 tabular-nums mt-0.5">
-            of {{ user_league_projection.total_teams }} teams
-          </p>
-        </div>
-
-        <!-- 3. Trajectory -->
-        <div class="p-4 sm:p-5">
-          <p class="text-[11px] tabular-nums uppercase tracking-wider text-gray-500 mb-1">Projected Trend</p>
-          <p class="text-2xl font-black tabular-nums {% if user_league_projection.rank_change > 0 %}text-success{% elif user_league_projection.rank_change < 0 %}text-danger{% else %}text-gray-500{% endif %}">
-            {% if user_league_projection.rank_change > 0 %}
-              ▲ +{{ user_league_projection.rank_change }}
-            {% elif user_league_projection.rank_change < 0 %}
-              ▼ {{ user_league_projection.rank_change|abs }}
-            {% else %}
-              — Steady
-            {% endif %}
-          </p>
-          <p class="text-xs text-gray-500 tabular-nums mt-0.5">
-            vs current rank
-          </p>
-        </div>
-
-        <!-- 4. Target Points -->
-        <div class="p-4 sm:p-5">
-          <p class="text-[11px] tabular-nums uppercase tracking-wider text-gray-500 mb-1">Target Total</p>
-          <p class="text-2xl font-black tabular-nums text-text-main">
-            {{ user_league_projection.projected_points|intcomma }} <span class="text-xs font-normal text-gray-400">pts</span>
-          </p>
-          <p class="text-xs text-gray-500 tabular-nums mt-0.5">
-            Forecasted points
-          </p>
-        </div>
-
-        <!-- 5. Gap to Podium / Leader -->
-        <div class="p-4 sm:p-5 col-span-2 md:col-span-1">
-          <p class="text-[11px] tabular-nums uppercase tracking-wider text-gray-500 mb-1">Projected title gap</p>
-          <p class="text-xl sm:text-2xl font-black tabular-nums {% if user_league_projection.gap_to_leader > 0 %}text-gray-700{% else %}text-pitch{% endif %}">
-            {% if user_league_projection.gap_to_leader > 0 %}
-              -{{ user_league_projection.gap_to_leader }} <span class="text-xs font-normal text-gray-400">pts</span>
-            {% else %}
-              Leading
-            {% endif %}
-          </p>
-          <p class="text-xs text-gray-500 tabular-nums mt-0.5">
-            {% if user_league_projection.gap_to_podium > 0 %}-{{ user_league_projection.gap_to_podium }} pts to podium{% else %}In medal contention{% endif %}
-          </p>
-        </div>
-      </div>
-    </div>
-    {% endif %}
-
-</details>{% endif %}
-  </div>
+  {% if user_league_projection %}
+  <details class="league-details"><summary><span><span class="rv-eyebrow">Looking ahead</span><strong>Your projected finish</strong></span><span class="league-details-preview">#{{ user_league_projection.projected_rank }} <span aria-hidden="true">＋</span></span></summary>
+    <div class="league-forecast-summary"><div><span class="rv-eyebrow">Estimated finish</span><strong>#{{ user_league_projection.projected_rank }}</strong></div><div><span class="rv-eyebrow">Estimated points</span><strong>{{ user_league_projection.projected_points|intcomma }}</strong></div><div><span class="rv-eyebrow">Projected title gap</span><strong>{% if user_league_projection.gap_to_leader > 0 %}{{ user_league_projection.gap_to_leader|intcomma }} <small>pts</small>{% else %}Leading{% endif %}</strong></div></div>
+    <p class="league-explainer">A pace-based estimate if current scoring trends continue. Future transfers, captain choices and results can change the race.</p>
+    <div class="league-table-wrap"><table class="league-forecast-table"><caption class="league-sr-only">Estimated final league standings</caption><thead><tr><th scope="col">Team</th><th scope="col">Estimated rank</th><th scope="col">Estimated points</th></tr></thead><tbody>{% for standing in standings %}<tr><td>{{ standing.team.team_name }}</td><td>#{{ standing.projected_rank }}</td><td>{{ standing.projected_points|intcomma }}</td></tr>{% endfor %}</tbody></table></div>
+  </details>
+  {% endif %}
+</div>
 </c-layouts.base>

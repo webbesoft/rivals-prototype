@@ -1,11 +1,13 @@
 """Bounded HTTP batches with durable checkpoints and atomic publication."""
 
 from django.db import transaction
+from django.conf import settings
 from django.utils import timezone
 
 from rivals.models import (
     LeagueImport,
     LeagueImportPage,
+    MiniLeague,
     MiniLeagueTeam,
     SyncState,
     Team,
@@ -30,6 +32,13 @@ class LeagueImportService:
             raise RuntimeError("League import lease superseded")
 
     def run_batch(self):
+        league = MiniLeague.objects.get(pk=self.state.object_id)
+        if league.uses_summary:
+            # Existing large imports switch immediately, including queued
+            # continuations from before this policy was deployed.
+            data = self.api.fetch_mini_league_page(league.fpl_league_id, 1)
+            self._publish_summary(league, data)
+            return True
         with transaction.atomic():
             self._check_owner()
             run = LeagueImport.objects.filter(league_id=self.state.object_id).first()
@@ -45,6 +54,24 @@ class LeagueImportService:
                     league_id=self.state.object_id, stamp=self.stamp
                 )
 
+        imported_count = sum(
+            len(rows) for rows in run.pages.values_list("standings", flat=True)
+        )
+        if imported_count > settings.LEAGUE_FULL_IMPORT_LIMIT:
+            first = run.pages.get(number=1)
+            self._publish_summary(
+                league,
+                {
+                    "league": run.league_info,
+                    "standings": {
+                        "results": first.standings,
+                        "has_next": True,
+                        "page": 1,
+                    },
+                },
+            )
+            return True
+
         for _ in range(self.PAGES_PER_BATCH):
             if run.next_page == 0:
                 break
@@ -52,6 +79,25 @@ class LeagueImportService:
             data = self.api.fetch_mini_league_page(run.league.fpl_league_id, page)
             rows = self._validated_rows(data, page)
             standings = data["standings"]
+            imported_count += len(rows)
+            if imported_count > settings.LEAGUE_FULL_IMPORT_LIMIT or (
+                imported_count == settings.LEAGUE_FULL_IMPORT_LIMIT
+                and standings["has_next"]
+            ):
+                first = (
+                    data
+                    if page == 1
+                    else {
+                        "league": run.league_info,
+                        "standings": {
+                            "results": run.pages.get(number=1).standings,
+                            "has_next": True,
+                            "page": 1,
+                        },
+                    }
+                )
+                self._publish_summary(league, first)
+                return True
             with transaction.atomic():
                 self._check_owner()
                 LeagueImportPage.objects.create(
@@ -68,6 +114,18 @@ class LeagueImportService:
             return False
         self._publish(run)
         return True
+
+    def _publish_summary(self, league, data):
+        from rivals.services.league_summary_service import save_page
+
+        # Validate before touching either the previous publication or checkpoint.
+        self._validated_rows(data, 1)
+        with transaction.atomic():
+            self._check_owner()
+            league.summary_only = True
+            league.save(update_fields=["summary_only"])
+            save_page(league, self.context["season"], 1, data)
+            LeagueImport.objects.filter(league=league).delete()
 
     def _reconcile(self, run):
         """Recover entries lost to unstable ordering at tied page boundaries.

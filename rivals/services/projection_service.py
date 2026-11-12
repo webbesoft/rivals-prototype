@@ -276,6 +276,13 @@ class ProjectionService:
         Projects final standings and finishing positions for all teams in a mini-league.
         """
         context = self._gameweek_context()
+        if mini_league.uses_summary:
+            return {
+                "league_id": mini_league.id,
+                "standings": [],
+                "total_teams": mini_league.rank_count,
+                "partial": True,
+            }
         live_gw = current_gw or context["scoring_gameweek"]
         synced_at = (
             mini_league.last_synced_at.isoformat()
@@ -400,6 +407,8 @@ class ProjectionService:
         the same projected order. Preserve the full projection's zero fallbacks
         and stable ordering for tied points/ranks.
         """
+        if mini_league.uses_summary:
+            return None
         live_gw = current_gw or self._gameweek_context()["scoring_gameweek"]
         if live_gw is None:
             return None

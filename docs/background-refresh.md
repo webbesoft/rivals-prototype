@@ -78,3 +78,51 @@ Keep this SQLite installation on one host with one job role. More users or a bac
 4. For upstream failures, leave saved data visible and inspect retry status. Fix any persistent payload/import error before forcing more requests.
 
 The web and API refresh controls now enqueue work. API sync endpoints return HTTP 202 with the saved representation; clients should not interpret acceptance as completed ingestion. Web refresh controls require POST; team refreshes are limited to the user's own team or an actively tracked rival, and league refreshes require subscription.
+
+## Large leagues
+
+Apply migration `0020_league_summaries` and restart both web and worker processes.
+`LEAGUE_FULL_IMPORT_LIMIT` defaults to 1,000 participants. Leagues above that size
+use published manager ranks and shared standings pages rather than recurring full
+imports. The migration marks existing oversized imports without deleting their
+team or membership history. In-progress imports with unknown sizes switch when
+they reach the limit and still have another page; known large leagues switch
+immediately. Small leagues retain atomic full publication and resumable imports.
+
+A profile refresh records `entry_rank`, `entry_last_rank`, points, and refresh time
+per team, league, season, and gameweek. Repeated refreshes update that gameweek's
+snapshot; movement comes from FPL's published previous rank, never from the last
+poll. Rank zero/missing ranks are unknown. Profiles lagging the scoring gameweek
+do not overwrite snapshots. Histories begin with the first successful profile
+refresh after deployment, without backfilling invented positions.
+
+Routine large-league refreshes fetch only page one. Opening a league requests the
+leaders plus at most three nearby pages, or a single explicitly browsed page.
+Each page is stored durably and shared across users/web processes. Nearby lookup
+uses the first page's observed size (50 until available), checks for the manager's
+entry, and deduplicates moving page boundaries. Ties may place the manager beyond
+that bounded window; their independently published position remains visible and
+users can browse further. No fallback crawls the remaining league. Tracking a rival
+creates a local team only for the selected cached entry and uses normal tracking
+limits and queued profile/history/transfer refreshes.
+
+Saved page data survives upstream errors, with the normal leases and retry backoff.
+The large-league screen labels stale pages and shows the rank's gameweek/update
+time separately. Old full-import rows are retained for history but excluded from
+large-league standings, league-wide projections, and planner league comparisons.
+The API league detail response marks these results `partial: true` and
+`summary_only: true`; its `standings` contain bounded FPL page rows, with separate
+`leaders`, `user_rank`, `page`, `has_next`, `waiting`, and `stale` fields. Small
+leagues keep the existing detail representation. Large-league projected finishing
+ranks and planner league comparisons are unavailable until a method that works
+with partial standings is implemented.
+
+Only visited pages are refreshed on demand; the dispatcher never walks cached
+pages. A league stays in summary mode once classified, even if its reported size
+later drops. To opt a smaller league back into full ingestion, clear its
+`summary_only` flag after confirming its size is within the configured limit.
+
+Profile snapshots store season points. Leader/podium gaps are displayed only for
+leagues confirmed to start at GW1, where those totals are comparable. Late-start
+leagues still show their published ranks and page scores, without comparing those
+scores with a manager's full-season total.

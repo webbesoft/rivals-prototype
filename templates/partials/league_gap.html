@@ -1,0 +1,2 @@
+{% load math_filters humanize %}
+{% if position and points != None %}{% with gap=points|subtract:position.total_points %}{% if gap > 0 %}<span class="league-gap-ahead">+{{ gap|intcomma }}<small> ahead</small></span>{% elif gap < 0 %}<span class="league-gap-behind">−{{ gap|abs|intcomma }}<small> behind</small></span>{% else %}<span class="league-gap-level">Level</span>{% endif %}{% endwith %}{% else %}<span class="league-gap-level">—</span>{% endif %}

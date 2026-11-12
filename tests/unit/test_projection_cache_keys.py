@@ -18,7 +18,7 @@ def test_league_projection_cache_is_portable_and_invalidates_after_sync(synced_a
         id=1, team_name="My team", manager_name="Manager", current_total_points=500
     )
     standing = Mock(team=team, total_points=500, current_rank=1)
-    league = Mock(id=1, last_synced_at=synced_at)
+    league = Mock(id=1, last_synced_at=synced_at, uses_summary=False)
     league.name = "My league"
     league.mini_league_teams.select_related.return_value.all.return_value = [standing]
     service = ProjectionService()

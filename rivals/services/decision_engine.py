@@ -573,6 +573,8 @@ class DecisionEngine:
         )
         if not league:
             return None
+        if league.mini_league.uses_summary:
+            return {"league": league.mini_league.name, "unavailable": True}
         standings = MiniLeagueTeam.objects.filter(
             mini_league=league.mini_league, season=self.context["season"]
         ).select_related("team")

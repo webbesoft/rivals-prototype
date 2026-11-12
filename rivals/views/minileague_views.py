@@ -11,11 +11,12 @@ from rivals.services.fpl_api_service import FplApiService
 from rivals.services.mini_league_sync_service import MiniLeagueSyncService
 from rivals.services.projection_service import ProjectionService
 from rivals.services.refresh_service import enqueue_refresh, refresh_status
+from rivals.services.gameweek_context_service import GameweekContextService
 
 
 @login_required
 def mini_league_index(request):
-    mini_leagues = accessible_leagues(request.user).prefetch_related("teams")
+    mini_leagues = accessible_leagues(request.user)
     return render(request, "mini_leagues/index.html", {"mini_leagues": mini_leagues})
 
 
@@ -27,6 +28,23 @@ def mini_league_show(request, mini_league_id):
         raise Http404
 
     enqueue_refresh("league", mini_league.id)
+    if mini_league.uses_summary:
+        from rivals.services.league_summary_service import large_league_context
+
+        return render(
+            request,
+            "pages/mini_leagues/large.html",
+            {
+                **refresh_status(request.user),
+                **large_league_context(
+                    request.user,
+                    mini_league,
+                    GameweekContextService.cached(),
+                    request.GET,
+                ),
+                "mini_league": mini_league,
+            },
+        )
     standings = mini_league.mini_league_teams.select_related("team").order_by(
         "current_rank"
     )
@@ -99,7 +117,7 @@ def mini_league_store(request):
 
     if created:
         fpl_api = FplApiService()
-        league_data = fpl_api.fetch_mini_league(fpl_league_id)
+        league_data = fpl_api.fetch_mini_league_page(fpl_league_id, 1)
 
         if not league_data:
             messages.error(
@@ -107,7 +125,7 @@ def mini_league_store(request):
             )
             return redirect("rivals:minileagues.create")
 
-        mini_league.name = league_data["league_info"]["name"]
+        mini_league.name = league_data["league"]["name"]
         mini_league.save()
 
         enqueue_refresh("league", mini_league.id)
@@ -128,5 +146,44 @@ def mini_league_sync(request, mini_league_id):
     if not accessible_leagues(request.user).filter(pk=mini_league.pk).exists():
         raise Http404
     enqueue_refresh("league", mini_league.id, force=True)
+    if mini_league.uses_summary and request.user.team_id:
+        enqueue_refresh("profile", request.user.team_id, force=True)
     messages.info(request, "Standings update requested.")
     return redirect("rivals:minileagues.show", mini_league_id=mini_league.id)
+
+
+@login_required
+@require_POST
+def mini_league_track(request, mini_league_id, page_number, entry_id):
+    from django.db import transaction
+    from rivals.models import LeagueStandingsPage, Team
+    from rivals.services.access_service import track_team, TrackingLimitReached
+    from rivals.services.refresh_service import enqueue_team
+
+    league = get_object_or_404(accessible_leagues(request.user), pk=mini_league_id)
+    context = GameweekContextService.cached()
+    page = get_object_or_404(
+        LeagueStandingsPage,
+        mini_league=league,
+        season=context["season"],
+        number=page_number,
+    )
+    row = next((row for row in page.rows if row["entry"] == entry_id), None)
+    if row is None:
+        raise Http404
+    try:
+        with transaction.atomic():
+            team, _ = Team.objects.get_or_create(
+                fpl_team_id=str(entry_id),
+                defaults={
+                    "team_name": row["entry_name"],
+                    "manager_name": row["player_name"],
+                },
+            )
+            track_team(request.user, team)
+    except TrackingLimitReached as error:
+        messages.error(request, str(error))
+        return redirect("rivals:minileagues.show", mini_league_id=league.pk)
+    enqueue_team(team.pk)
+    messages.success(request, "Team is now being tracked.")
+    return redirect("rivals:teams.show", team_id=team.pk)

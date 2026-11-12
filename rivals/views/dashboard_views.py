@@ -3,12 +3,12 @@ import logging
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.db.models import Count
+from django.db.models import Count, Prefetch
 from django.shortcuts import redirect, render
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 
-from rivals.models import GameweekData, Transfer
+from rivals.models import GameweekData, LeagueRankSnapshot, Transfer
 from core.rate_limits import rate_limit
 from rivals.services.gameweek_context_service import GameweekContextService
 from rivals.services.refresh_service import (
@@ -46,6 +46,15 @@ def dashboard(request):
         )
         .select_related("mini_league")
         .annotate(total_teams=Count("mini_league__mini_league_teams"))
+        .prefetch_related(
+            Prefetch(
+                "mini_league__rank_snapshots",
+                queryset=LeagueRankSnapshot.objects.filter(
+                    team_id=request.user.team_id, season=gameweek_context["season"]
+                ).order_by("-gameweek"),
+                to_attr="user_rank_history",
+            )
+        )
         .order_by("mini_league__name", "-mini_league__last_synced_at", "-id")
     )
 
@@ -56,6 +65,9 @@ def dashboard(request):
 
     for uml in all_user_leagues:
         ml = uml.mini_league
+        uml.rank_snapshot = next(iter(ml.user_rank_history), None)
+        if ml.uses_summary:
+            uml.total_teams = ml.rank_count
         # Deduplicate: if duplicate name or fpl_league_id
         league_key = ml.name.strip().lower()
         if ml.fpl_league_id in seen_fpl_ids or league_key in seen_league_names:
@@ -89,6 +101,8 @@ def dashboard(request):
         user_projection = projection_service.project_team_finish(user_team)
 
         for uml in mini_leagues:
+            if uml.mini_league.uses_summary:
+                continue
             ml_proj = projection_service.get_team_mini_league_summary(
                 user_team,
                 uml.mini_league,

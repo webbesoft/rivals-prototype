@@ -94,6 +94,8 @@ class MiniLeagueTeamSerializer(serializers.ModelSerializer):
 
 
 class MiniLeagueSerializer(serializers.ModelSerializer):
+    summary_only = serializers.BooleanField(source="uses_summary", read_only=True)
+
     class Meta:
         model = MiniLeague
         fields = [
@@ -106,16 +108,23 @@ class MiniLeagueSerializer(serializers.ModelSerializer):
             "has_cup",
             "rank_count",
             "last_synced_at",
+            "summary_only",
         ]
 
 
 class MiniLeagueDetailSerializer(MiniLeagueSerializer):
-    standings = MiniLeagueTeamSerializer(
-        source="mini_league_teams", many=True, read_only=True
-    )
+    standings = serializers.SerializerMethodField()
+    partial = serializers.BooleanField(source="uses_summary", read_only=True)
+
+    def get_standings(self, league):
+        if league.uses_summary:
+            return []
+        return MiniLeagueTeamSerializer(
+            league.mini_league_teams.select_related("team"), many=True
+        ).data
 
     class Meta(MiniLeagueSerializer.Meta):
-        fields = MiniLeagueSerializer.Meta.fields + ["standings"]
+        fields = MiniLeagueSerializer.Meta.fields + ["standings", "partial"]
 
 
 class GameweekDataSerializer(serializers.ModelSerializer):

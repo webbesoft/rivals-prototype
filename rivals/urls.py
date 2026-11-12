@@ -93,6 +93,11 @@ urlpatterns = [
         minileague_views.mini_league_sync,
         name="minileagues.sync",
     ),
+    path(
+        "mini-leagues/<int:mini_league_id>/pages/<int:page_number>/track/<int:entry_id>/",
+        minileague_views.mini_league_track,
+        name="minileagues.track",
+    ),
     path("teams/<int:team_id>/lineup/", team_views.team_lineup, name="teams.lineup"),
     # Squad History
     path(

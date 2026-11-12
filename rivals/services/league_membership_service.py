@@ -62,7 +62,11 @@ def reconcile_memberships(user, profile, *, retire_legacy=True):
                     "name": row["name"],
                     "league_type": row["league_type"],
                     "scoring_type": row.get("scoring", "c"),
-                    "rank_count": row.get("rank_count"),
+                    **(
+                        {"rank_count": row["rank_count"]}
+                        if type(row.get("rank_count")) is int and row["rank_count"] > 0
+                        else {}
+                    ),
                     **metadata,
                 },
             )

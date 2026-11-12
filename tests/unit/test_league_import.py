@@ -362,7 +362,8 @@ def test_background_runner_leaves_a_runnable_continuation(state):
     assert LeagueImport.objects.get().next_page == 6
 
 
-def test_bulk_publication_across_multiple_database_batches(state):
+def test_bulk_publication_across_multiple_database_batches(state, settings):
+    settings.LEAGUE_FULL_IMPORT_LIMIT = 2000
     api = Mock()
     responses = []
     for number in range(1, 13):

@@ -368,3 +368,6 @@ AI_GENERATION_ENABLED = os.getenv("AI_GENERATION_ENABLED", "True").lower() in (
     "true",
     "yes",
 )
+
+# Larger leagues use published manager ranks and standings pages on demand.
+LEAGUE_FULL_IMPORT_LIMIT = int(os.getenv("LEAGUE_FULL_IMPORT_LIMIT", "1000"))
