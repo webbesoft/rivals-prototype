@@ -272,6 +272,7 @@ def test_cold_history_only_fetches_requested_gameweek(manager, api):
 def test_full_sync_reuses_each_pick_and_skips_completed_record_import(manager, api):
     for element in api.fetch_bootstrap_static.return_value["elements"]:
         Player.objects.create(
+            season=manager.team.current_season,
             fpl_id=element["id"],
             web_name=element["web_name"],
             element_type=element["element_type"],
