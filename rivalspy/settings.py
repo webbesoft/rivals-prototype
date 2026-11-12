@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 import logging
 import os
+import socket
 import sys
 from pathlib import Path
 
@@ -70,6 +71,8 @@ ALLOWED_HOSTS = [
     ).split(",")
     if host.strip()
 ]
+# Kamal probes the container directly, using its hostname as the Host header.
+ALLOWED_HOSTS.append(socket.gethostname())
 
 CSRF_TRUSTED_ORIGINS = [
     origin.strip()

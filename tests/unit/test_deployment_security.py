@@ -196,6 +196,39 @@ def runtime_environment(production):
     return env
 
 
+@pytest.mark.parametrize("hostname", ["3d7af4ec6640", "a1b2c3d4e5f6"])
+def test_container_healthcheck_hostname_is_allowed(production, hostname):
+    script = """
+import socket
+import dotenv
+dotenv.load_dotenv = lambda: False
+socket.gethostname = lambda: HOSTNAME
+from django.conf import settings
+from django.core.exceptions import DisallowedHost
+from django.test import RequestFactory
+
+assert 'rivals.example' in settings.ALLOWED_HOSTS
+request = RequestFactory().get('/health', HTTP_HOST=HOSTNAME + ':8000')
+assert request.get_host() == HOSTNAME + ':8000'
+try:
+    RequestFactory().get('/health', HTTP_HOST='untrusted.example').get_host()
+except DisallowedHost:
+    pass
+else:
+    raise AssertionError('Untrusted hosts must still be rejected')
+""".replace("HOSTNAME", repr(hostname))
+    env = runtime_environment(production)
+    env["DJANGO_SETTINGS_MODULE"] = "rivalspy.settings"
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        cwd=ROOT,
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
+
+
 def test_settings_import_does_not_validate_before_runtime_injection(production):
     env = runtime_environment(production)
     env.pop("SECRET_KEY")
