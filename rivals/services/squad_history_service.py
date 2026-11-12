@@ -9,9 +9,11 @@ from rivals.services.team_sync_service import TeamSyncService
 
 
 class SquadHistoryService:
-    def __init__(self, team, api=None):
+    def __init__(self, team, api=None, *, publication_guard=None):
         self.team = team
-        self.api = api or FplApiService()
+        self.publication_guard = publication_guard
+        self.read_only = api is None
+        self.api = api or FplApiService(snapshot_only=True)
         self.api.TIMEOUT = 4
         self.context = GameweekContextService.cached()
 
@@ -80,6 +82,35 @@ class SquadHistoryService:
                 "position"
             )
         )
+        if self.read_only:
+            complete = len(rows) == 15
+            current = season == self.context["season"]
+            settled = complete and all(
+                row.points_final and row.gameweek_points is not None for row in rows
+            )
+            scores_complete = complete and all(
+                row.gameweek_points is not None for row in rows
+            )
+            recent = (
+                complete and (timezone.now() - rows[0].updated_at).total_seconds() < 120
+            )
+            if self.context["stale"]:
+                from .refresh_service import enqueue_refresh
+
+                enqueue_refresh("context")
+            if current and not settled and (not scores_complete or not recent):
+                from .fpl_snapshot_service import enqueue_squad
+
+                enqueue_squad(self.team, season, gameweek)
+            if not complete:
+                return [], (
+                    "This lineup is being refreshed. Please try again shortly."
+                    if current
+                    else "This lineup is currently unavailable."
+                )
+            if not scores_complete:
+                return rows, "Player scores are currently unavailable."
+            return rows, None
         current_season = season == self.context["season"]
         # A queued or expired dispatcher must not stop an explicit lineup read.
         # When the live season is unknown, verify the team's recorded season
@@ -118,6 +149,7 @@ class SquadHistoryService:
             return (rows if complete else []), "This lineup is not available yet."
         service = TeamSyncService(self.team)
         service.fpl_api_service = self.api
+        service.publication_guard = self.publication_guard
         picks = service.get_gameweek_picks(gameweek)
         if not picks:
             return (
@@ -184,4 +216,9 @@ class SquadHistoryService:
             club = clubs.get(elements.get(row.player_fpl_id, {}).get("team"), {})
             row.club_name = club.get("name", "")
             row.club_short_name = club.get("short_name", "")
-        SquadHistory.objects.bulk_update(rows, ["club_name", "club_short_name"])
+        from django.db import transaction
+
+        with transaction.atomic():
+            if self.publication_guard:
+                self.publication_guard()
+            SquadHistory.objects.bulk_update(rows, ["club_name", "club_short_name"])

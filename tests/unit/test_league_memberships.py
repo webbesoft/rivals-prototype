@@ -138,7 +138,10 @@ def test_profile_worker_reconciles_memberships(owner):
     )
     unrelated = membership(other_owner, 39, "legacy")
     state = SyncState.objects.create(
-        key=f"profile:{owner.team_id}", kind="profile", object_id=owner.team_id
+        key=f"profile:{owner.team_id}",
+        kind="profile",
+        object_id=owner.team_id,
+        status="running",
     )
     with (
         patch("rivals.tasks.FplApiService") as api,

@@ -134,9 +134,40 @@ Apply `accounts.0005_user_fpl_revision` before serving the new code. Password em
 
 Validation: all 543 Python tests and 12 JavaScript tests pass. The final lifecycle suite passes 33 regression cases after adding an existing-phantom-record check and bounding pasted league IDs. Django system checks, application migration consistency and diff whitespace checks pass. The account revision migration is applied locally. No production deployment or real SMTP delivery was performed.
 
-### Remaining security remediation epochs (planned)
+## Epoch 10 — Bounded ingestion and maintainable snapshots (implemented)
 
-- **Epoch 10 — Bounded ingestion and maintainable snapshots:** coordinate with the ongoing league-summary work to bound ingestion/publication and paginate reads; reduce synchronous HTTP and establish shared snapshot/cache behavior; preserve historical player identity across seasons. Review the audit against the final combined implementation before closing the remediation work.
+- Full league ingestion/publication has a hard ceiling of 1,000 entries, with at most 100 rows per upstream page and 100 staged pages. A smaller configured limit still applies; a larger setting cannot lift the ceiling. Imports switch to shared summary pages when either ceiling is reached. Publication no longer materializes every obsolete membership. Small-league HTML/API standings are paginated in deterministic 100-row pages; oversized legacy standings cannot trigger an unbounded projection.
+- Large-league demand shares a six-job ceiling per league/season for additional standings pages. Excess requests show waiting state without creating another page/task. The recurring FPL dispatcher walks resumable batches of 100 teams and 100 leagues; transfer association processes 500 records per player refresh with a persisted cursor. Plan reads and writes are bounded to two transfers per gameweek, 76 per plan; a next-deadline comparison reads at most three records before rejecting an oversized plan.
+- The worker publishes JSON FPL snapshots in the shared database after checking its ingestion generation. Bootstrap/fixtures are published together by the context job. Web planner, lineup, comparison, score, profile and landing reads make no FPL HTTP calls: missing publications queue bounded worker work and return saved data or an unavailable/refreshing state. Account/league ID validation deliberately remains a live call, limited to one five-second attempt. Failed signup validation now returns a form error. Derived computation caches may remain local; source publications no longer depend on that cache being shared.
+- Players are identified by `(season, fpl_id)`. Imports derive both season and elements from one bootstrap response. Existing players remain unclassified rather than receiving a guessed season; new-season imports create separate records. Transfer names and IDs are saved snapshots, association resolves only within the recorded season and does not overwrite known names, and planning rejects cross-season references. Squad score refreshes retain previously imported player/price/club metadata and finalized scores. These are first-import snapshots, not a reconstructed historical market feed.
+
+Apply `rivals.0021` and `rivals.0022`, then restart web and worker processes. On a cold publication store, allow the context job and requested squad jobs to run before expecting forecasts/lineups. Old saved plans referencing unclassified players must be recreated with current-season players. Existing historical names already corrupted by earlier imports cannot be reconstructed automatically. Do not reverse the player uniqueness migration after season-specific duplicate FPL IDs have been imported; restore a compatible backup for a rollback.
+
+API contract: league-list, gameweek-history, transfer-history and plan-list reads now return `{count, next, previous, results}` with 100-item pages. Small-league detail retains its object/standings shape and adds `pagination: {count, page, pages, has_next}`. Use `?page=N`; a client-supplied page size cannot lift the limit. Large-league detail keeps its existing partial-page representation. Historical transfer/gameweek rows and player representations now include season information.
+
+Validation: the full suite passes 581 Python tests and all 12 JavaScript tests. All 35 architecture regression cases pass, covering worker-only web reads, shared publication lifetime and revocation, queued lineup completion, immutable historical metadata, seasonal identity, import/response ceilings, shared page-demand limits and resumable dispatch. Django system checks, application migration consistency and whitespace checks pass; migrations `0021`/`0022` applied locally. No production deployment, real upstream load test or real SMTP delivery was performed.
+
+### Security review reconciliation
+
+| Original finding | Remediation checkpoint |
+| --- | --- |
+| Unverified API authentication | Epoch 7 verification permission, including existing tokens |
+| Missing abuse limits | Epoch 7 shared database limits on authentication and expensive/mutating actions |
+| Login open redirect | Epoch 7 current-host redirect validation |
+| GET mutations | Epoch 7 POST and CSRF-protected browser mutations |
+| Inactive league membership access | Epoch 7 shared active-access query |
+| Unsafe production defaults | Epoch 8 explicit resolved-environment validation |
+| Incomplete deployment test selection | Epoch 8 full pytest/JavaScript release gate |
+| Missing Kamal site/sender environment | Epoch 8 resolved role/host secret injection |
+| Partial team changes and stale initialization jobs | Epoch 9 transactional changes and account revisions |
+| Incomplete password recovery and broken pages/routes | Epoch 9 reset flow and league pages |
+| Phantom manual leagues | Epoch 9 validation before atomic persistence |
+| Unbounded league ingestion/publication/reads | League summaries plus Epoch 10 ceilings, pagination and demand limits |
+| Request-time FPL HTTP and process-local source caches | Epoch 10 worker-owned database publications; explicit bounded ID validation remains |
+| Reused seasonal player IDs and mutable history | Epoch 10 season identities and stored transfer/squad metadata |
+| Unverified moving Tailwind download | Epoch 8 pinned version and platform checksums |
+
+This reconciles the identified remediation list; it does not certify the absence of every possible vulnerability. Operational limits remain: the shared SQLite installation needs one host and one serial FPL worker, large backlogs lengthen refresh intervals, and the deadline-email dispatcher is a separate scaling concern. The wide model and analysis modules can be split along the existing service boundaries as product work warrants. Live upstream payload timing and production concurrency have not been load-tested in this checkpoint.
 
 ## Product ideas to prioritise through use
 

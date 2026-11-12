@@ -57,3 +57,16 @@ Apply migrations through `0014`, collect static assets as usual, and run `fpl_wo
 The planning API now uses the same engine. The projections route takes the internal team ID, requires the manager's own team, and applies an explicitly selected owned plan from the current season instead of ignoring it. Plans from other seasons or containing moves at other deadlines are rejected. Existing plans with no season must be recreated; their season is not guessed. Projection/suggestion responses now contain structured scenarios and assumptions rather than unconstrained player rankings.
 
 Initial shells render without FPL requests. Interactive requests have a 25-second client timeout; each FPL HTTP operation has a four-second timeout. Client timeouts are not a global server execution deadline. A warm report avoids the bounded candidate search; source, deadline and user-input changes invalidate it.
+
+## Published sources and season identities
+
+The web planner now reads shared worker publications. A cold or expired source queues
+refresh work and reports temporary unavailability; retry after the FPL worker runs.
+It does not fetch FPL data during a page request. The current public squad is read
+from saved season/gameweek rows or a published picks snapshot.
+
+Player database IDs are season-specific. API plan transfers must reference players
+from the plan's season; older plans containing unclassified legacy players must be
+recreated. A plan holds at most two transfers per gameweek and 76 total; next-deadline
+comparisons accept at most two moves. Plan-list responses use 100-item paginated
+`count`, `next`, `previous`, and `results` envelopes.

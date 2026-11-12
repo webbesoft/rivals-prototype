@@ -709,7 +709,7 @@ def test_form_left_open_across_deadline_cannot_confirm_old_transfer_count(manage
 
 @pytest.mark.django_db
 @pytest.mark.parametrize("context_status", ["missing", "queued", "stale"])
-def test_lineup_backfills_existing_points_without_a_recent_dispatcher(
+def test_lineup_queues_refresh_without_http_when_dispatcher_is_unavailable(
     manager, api, context_status
 ):
     import_rows(manager.team, api, points=False)
@@ -728,12 +728,13 @@ def test_lineup_backfills_existing_points_without_a_recent_dispatcher(
     with patch("rivals.services.squad_history_service.FplApiService", return_value=api):
         response = client.get(reverse("rivals:teams.lineup", args=[manager.team_id]))
     assert response.status_code == 200
-    assert "0 pts · ×3" in response.content.decode()
-    assert "Squad points:" in response.content.decode()
+    assert "Player scores are currently unavailable" in response.content.decode()
     assert (
-        manager.team.squad_histories.filter(gameweek_points__isnull=True).count() == 0
+        manager.team.squad_histories.filter(gameweek_points__isnull=True).count() == 15
     )
-    api.fetch_gameweek_live.assert_called_once_with(10, "2026/27")
+    api.fetch_bootstrap_static.assert_not_called()
+    api.fetch_gameweek_live.assert_not_called()
+    assert SyncState.objects.filter(key="context").exists()
 
 
 @pytest.mark.django_db

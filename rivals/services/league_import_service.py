@@ -1,7 +1,6 @@
 """Bounded HTTP batches with durable checkpoints and atomic publication."""
 
 from django.db import transaction
-from django.conf import settings
 from django.utils import timezone
 
 from rivals.models import (
@@ -12,6 +11,8 @@ from rivals.models import (
     SyncState,
     Team,
 )
+
+from .league_limits import MAX_IMPORT_PAGES, MAX_PAGE_ROWS, full_import_limit
 
 
 class LeagueImportService:
@@ -58,10 +59,16 @@ class LeagueImportService:
                     league_id=self.state.object_id, stamp=self.stamp
                 )
 
+        if run.next_page > MAX_IMPORT_PAGES:
+            self._publish_summary(
+                league, self.api.fetch_mini_league_page(league.fpl_league_id, 1)
+            )
+            return True
+
         imported_count = sum(
             len(rows) for rows in run.pages.values_list("standings", flat=True)
         )
-        if imported_count > settings.LEAGUE_FULL_IMPORT_LIMIT:
+        if imported_count > full_import_limit():
             first = run.pages.get(number=1)
             self._publish_summary(
                 league,
@@ -84,9 +91,10 @@ class LeagueImportService:
             rows = self._validated_rows(data, page)
             standings = data["standings"]
             imported_count += len(rows)
-            if imported_count > settings.LEAGUE_FULL_IMPORT_LIMIT or (
-                imported_count == settings.LEAGUE_FULL_IMPORT_LIMIT
-                and standings["has_next"]
+            if (
+                imported_count > full_import_limit()
+                or (imported_count == full_import_limit() and standings["has_next"])
+                or (page >= MAX_IMPORT_PAGES and standings["has_next"])
             ):
                 first = (
                     data
@@ -247,6 +255,7 @@ class LeagueImportService:
         rows = standings.get("results")
         if (
             not isinstance(rows, list)
+            or len(rows) > MAX_PAGE_ROWS
             or not isinstance(standings.get("has_next"), bool)
             or (not rows and standings["has_next"])
             or standings.get("page", page) != page
@@ -260,6 +269,8 @@ class LeagueImportService:
                 or row["entry"] <= 0
                 or not isinstance(row.get("entry_name"), str)
                 or not isinstance(row.get("player_name"), str)
+                or len(row["entry_name"]) > 255
+                or len(row["player_name"]) > 255
                 or type(row.get("rank")) is not int
                 or row["rank"] < 0
                 or type(row.get("total")) is not int
@@ -271,28 +282,24 @@ class LeagueImportService:
         pages = list(run.pages.order_by("number").values_list("standings", flat=True))
         unique_rows = {row["entry"]: row for page in pages for row in page}
 
+        if len(unique_rows) > full_import_limit():
+            raise RuntimeError("League publication exceeds the full import limit")
         with transaction.atomic():
             self._check_owner()
-            stale = set(
-                MiniLeagueTeam.objects.filter(mini_league_id=run.league_id).values_list(
-                    "pk", flat=True
-                )
-            )
             rows = list(unique_rows.values())
             for offset in range(0, len(rows), 500):
-                self._publish_page(run, rows[offset : offset + 500], stale)
-            stale = list(stale)
-            for offset in range(0, len(stale), 500):
-                MiniLeagueTeam.objects.filter(
-                    pk__in=stale[offset : offset + 500]
-                ).delete()
+                self._publish_page(run, rows[offset : offset + 500])
+            # Delete obsolete memberships in SQL without materializing a legacy table.
+            MiniLeagueTeam.objects.filter(mini_league_id=run.league_id).exclude(
+                team__fpl_team_id__in=[str(row["entry"]) for row in rows]
+            ).delete()
             league = run.league
             league.name = run.league_info["name"]
             league.last_synced_at = timezone.now()
             league.save(update_fields=["name", "last_synced_at"])
             run.delete()
 
-    def _publish_page(self, run, rows, stale):
+    def _publish_page(self, run, rows):
         ids = [str(row["entry"]) for row in rows]
         teams = {t.fpl_team_id: t for t in Team.objects.filter(fpl_team_id__in=ids)}
         Team.objects.bulk_create(
@@ -322,7 +329,6 @@ class LeagueImportService:
             team.current_total_points = row["total"]
             member = memberships.get(team.pk)
             if member:
-                stale.discard(member.pk)
                 member.previous_rank = (
                     member.current_rank
                     if member.season == self.context["season"]

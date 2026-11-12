@@ -128,6 +128,8 @@ class PlanningDefaults:
     def player_id(transfer):
         if transfer.player_in:
             return transfer.player_in.fpl_id
+        if transfer.player_in_fpl_id:
+            return transfer.player_in_fpl_id
         if transfer.player_in_name.startswith("Player #"):
             try:
                 return int(transfer.player_in_name.removeprefix("Player #"))

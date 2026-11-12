@@ -20,6 +20,7 @@ def test_signup_sends_verification_email(monkeypatch):
     class DummyFPL:
         def fetch_team_basic_info(self, fpl_id):
             return {
+                "id": int(fpl_id),
                 "name": "Dummy Team",
                 "player_first_name": "First",
                 "player_last_name": "Last",
@@ -32,9 +33,7 @@ def test_signup_sends_verification_email(monkeypatch):
         def save_user_info(self, basic_info=None):
             return None
 
-    monkeypatch.setattr(
-        "accounts.forms.FplApiService", lambda: DummyFPL()
-    )
+    monkeypatch.setattr("accounts.forms.FplApiService", lambda: DummyFPL())
     monkeypatch.setattr(
         "accounts.tasks.InitUserService",
         lambda user: DummyInit(user),

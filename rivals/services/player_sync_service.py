@@ -11,20 +11,33 @@ logger = logging.getLogger(__name__)
 
 
 class PlayerSyncService:
-    def __init__(self, api: FplApiService | None = None):
+    def __init__(self, api: FplApiService | None = None, *, publication_guard=None):
         self.api = api or FplApiService()
+        self.publication_guard = publication_guard
         self.new_count = 0
         self.updated_count = 0
         self.errors = []
 
     def sync_all_players(self) -> dict:
-        players_data = self._fetch_players_data()
+        self.new_count = self.updated_count = 0
+        self.errors = []
+        from .gameweek_context_service import GameweekContextService
 
-        if not players_data:
+        bootstrap = self.api.fetch_bootstrap_static()
+        self.season = GameweekContextService.derive(
+            (bootstrap or {}).get("events", [])
+        )["season"]
+        if not self.season:
+            return {"success": False, "error": "Player season unavailable"}
+        players_data = (bootstrap or {}).get("elements")
+
+        if not isinstance(players_data, list) or not 0 < len(players_data) <= 2000:
             return {"success": False, "error": "Failed to fetch player data"}
 
         try:
             with transaction.atomic():
+                if self.publication_guard:
+                    self.publication_guard()
                 for player_data in players_data:
                     self._sync_player(player_data)
                 if self.errors:
@@ -41,10 +54,6 @@ class PlayerSyncService:
         except Exception as e:
             logger.error(f"Player sync failed: {e}", exc_info=True)
             return {"success": False, "error": str(e)}
-
-    def _fetch_players_data(self) -> list | None:
-        # Fetch canonical elements list from bootstrap-static via shared FplApiService
-        return self.api.fetch_elements()
 
     def _sync_player(self, player_data: dict) -> None:
         try:
@@ -82,7 +91,7 @@ class PlayerSyncService:
             }
 
             player, created = Player.objects.update_or_create(
-                fpl_id=player_data["id"], defaults=defaults
+                season=self.season, fpl_id=player_data["id"], defaults=defaults
             )
 
             if created:

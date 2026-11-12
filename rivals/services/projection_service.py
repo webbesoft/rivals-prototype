@@ -41,7 +41,7 @@ class ProjectionService:
     """
 
     def __init__(self, api: Optional[FplApiService] = None, *, context=None):
-        self.api = api or FplApiService()
+        self.api = api or FplApiService(snapshot_only=True)
         self.context = context
 
     def _gameweek_context(self):
@@ -276,6 +276,8 @@ class ProjectionService:
         Projects final standings and finishing positions for all teams in a mini-league.
         """
         context = self._gameweek_context()
+        from .league_limits import full_import_limit
+
         if mini_league.uses_summary:
             return {
                 "league_id": mini_league.id,
@@ -304,8 +306,19 @@ class ProjectionService:
         mlts = (
             standings
             if standings is not None
-            else list(mini_league.mini_league_teams.select_related("team").all())
+            else list(
+                mini_league.mini_league_teams.select_related("team").all()[
+                    : full_import_limit() + 1
+                ]
+            )
         )
+        if len(mlts) > full_import_limit():
+            return {
+                "league_id": mini_league.id,
+                "standings": [],
+                "total_teams": None,
+                "partial": True,
+            }
         if not mlts:
             return {"league_id": mini_league.id, "standings": [], "total_teams": 0}
 

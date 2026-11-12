@@ -1,75 +1,63 @@
-import logging
+"""Resolve bounded transfer batches using only identities from the same season."""
 
-from django.db import models
+from django.db.models import Q
 
 from rivals.models import Player, Transfer
 
-logger = logging.getLogger(__name__)
-
 
 class TransferPlayerAssociationService:
-    def associate_all_transfers(self, season=None) -> dict:
-        associated_count = 0
-        unmatched_count = 0
+    BATCH_SIZE = 500
 
-        # Iterate in chunks for memory efficiency
-        queryset = Transfer.objects.select_related("player_in", "player_out")
-        if season:
-            queryset = queryset.filter(season=season)
-        queryset = queryset.iterator(chunk_size=100)
-
-        for transfer in queryset:
-            updated = False
-
-            if not transfer.player_in and transfer.player_in_name:
-                player = self.find_player_by_name(transfer.player_in_name)
+    def associate_all_transfers(self, season=None, *, after_pk=0):
+        if not season:
+            return {"associated_count": 0, "unmatched_count": 0, "next_cursor": 0}
+        rows = list(
+            Transfer.objects.filter(season=season, pk__gt=after_pk)
+            .filter(Q(player_in__isnull=True) | Q(player_out__isnull=True))
+            .order_by("pk")[: self.BATCH_SIZE + 1]
+        )
+        more = len(rows) > self.BATCH_SIZE
+        associated = unmatched = 0
+        for transfer in rows[: self.BATCH_SIZE]:
+            changed = []
+            for side in ("in", "out"):
+                field = f"player_{side}"
+                if getattr(transfer, field + "_id"):
+                    continue
+                element = getattr(transfer, field + "_fpl_id")
+                name = getattr(transfer, field + "_name")
+                player = (
+                    Player.objects.filter(season=season, fpl_id=element).first()
+                    if element
+                    else self.find_player_by_name(name, season)
+                )
                 if player:
-                    transfer.player_in = player
-                    updated = True
-
-            if not transfer.player_out and transfer.player_out_name:
-                player = self.find_player_by_name(transfer.player_out_name)
-                if player:
-                    transfer.player_out = player
-                    updated = True
-
-            if updated:
-                transfer.save(update_fields=["player_in", "player_out"])
-                associated_count += 1
-            elif not transfer.player_in or not transfer.player_out:
-                unmatched_count += 1
-
+                    setattr(transfer, field, player)
+                    setattr(transfer, field + "_fpl_id", player.fpl_id)
+                    changed.extend([field, field + "_fpl_id"])
+                    if not name or name.startswith("Player #"):
+                        setattr(transfer, field + "_name", player.web_name)
+                        changed.append(field + "_name")
+            if changed:
+                transfer.save(update_fields=changed)
+                associated += 1
+            if not transfer.player_in_id or not transfer.player_out_id:
+                unmatched += 1
         return {
-            "associated_count": associated_count,
-            "unmatched_count": unmatched_count,
+            "associated_count": associated,
+            "unmatched_count": unmatched,
+            "next_cursor": rows[self.BATCH_SIZE - 1].pk if more else 0,
         }
 
-    def find_player_by_name(self, name: str) -> Player | None:
-        """
-        Match by web_name first, then try first+second name.
-        """
-        try:
-            if name.startswith("Player #"):
-                try:
-                    return Player.objects.filter(
-                        fpl_id=int(name.removeprefix("Player #"))
-                    ).first()
-                except ValueError:
-                    return None
-            # Exact web_name match
-            player = Player.objects.filter(web_name=name).first()
-            if player:
-                return player
-
-            return (
-                Player.objects.annotate(
-                    full_name=models.functions.Concat(
-                        "first_name", models.Value(" "), "second_name"
-                    )
-                )
-                .filter(full_name__icontains=name)
-                .first()
-            )
-        except Exception as e:
-            logger.error(f"Error finding player by name '{name}': {e}", exc_info=True)
+    def find_player_by_name(self, name, season=None):
+        if not season or not name:
             return None
+        players = Player.objects.filter(season=season)
+        if name.startswith("Player #"):
+            try:
+                return players.filter(fpl_id=int(name.removeprefix("Player #"))).first()
+            except ValueError:
+                return None
+        # Ambiguous display names must remain unresolved.
+        matches = list(players.filter(web_name=name)[:2])
+        return matches[0] if len(matches) == 1 else None

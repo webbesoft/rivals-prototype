@@ -16,7 +16,10 @@ def validated_league(raw_id):
         raise ValueError("Enter a valid positive mini-league ID.")
     fpl_id = str(int(raw_id))
     try:
-        data = FplApiService().fetch_mini_league_page(fpl_id, 1)
+        api = FplApiService()
+        api.TIMEOUT = 5
+        api.MAX_ATTEMPTS = 1
+        data = api.fetch_mini_league_page(fpl_id, 1)
     except requests.RequestException:
         raise ValueError("FPL is unavailable. Please try again shortly.") from None
     league = data.get("league") if isinstance(data, dict) else None

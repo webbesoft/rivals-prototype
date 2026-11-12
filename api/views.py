@@ -1,7 +1,7 @@
 import logging
 
-from django.contrib.auth import authenticate, get_user_model
 from django.conf import settings
+from django.contrib.auth import authenticate, get_user_model
 from django.db.models import Q
 from rest_framework import status
 from rest_framework.authtoken.models import Token
@@ -11,11 +11,12 @@ from rest_framework.views import APIView
 
 from rivals.models import MiniLeague, Team
 from rivals.services.access_service import (
+    TrackingLimitReached,
     accessible_leagues,
     track_team,
-    TrackingLimitReached,
 )
 
+from .pagination import paginated_response
 from .permissions import IsVerified
 from .serializers import (
     GameweekDataSerializer,
@@ -217,8 +218,7 @@ class LeaguesView(APIView):
 
     def get(self, request):
         leagues = accessible_leagues(request.user)
-        serializer = MiniLeagueSerializer(leagues, many=True)
-        return Response(serializer.data)
+        return paginated_response(request, leagues.order_by("pk"), MiniLeagueSerializer)
 
 
 class LeagueDetailView(APIView):
@@ -277,7 +277,7 @@ class LeagueDetailView(APIView):
                     ),
                 }
             )
-        serializer = MiniLeagueDetailSerializer(league)
+        serializer = MiniLeagueDetailSerializer(league, context={"request": request})
         return Response(serializer.data)
 
 
@@ -314,7 +314,9 @@ class LeagueSyncView(APIView):
             {
                 "success": True,
                 "message": "Standings update requested.",
-                "league": MiniLeagueDetailSerializer(league).data,
+                "league": MiniLeagueDetailSerializer(
+                    league, context={"request": request}
+                ).data,
             },
             status=status.HTTP_202_ACCEPTED,
         )
@@ -357,8 +359,11 @@ class TeamGameweekHistoryView(APIView):
             )
 
         gameweeks = team.gameweek_data.all().order_by("-gameweek")
-        serializer = GameweekDataSerializer(gameweeks, many=True)
-        return Response(serializer.data)
+        return paginated_response(
+            request,
+            gameweeks.order_by("-season", "-gameweek", "-pk"),
+            GameweekDataSerializer,
+        )
 
 
 class TeamTransfersView(APIView):
@@ -378,8 +383,13 @@ class TeamTransfersView(APIView):
             )
 
         transfers = team.transfers.all().order_by("-gameweek", "-transfer_time")
-        serializer = TransferSerializer(transfers, many=True)
-        return Response(serializer.data)
+        return paginated_response(
+            request,
+            transfers.select_related("player_in", "player_out").order_by(
+                "-season", "-gameweek", "-transfer_time", "-pk"
+            ),
+            TransferSerializer,
+        )
 
 
 class TeamSquadView(APIView):

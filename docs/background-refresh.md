@@ -1,6 +1,6 @@
 # Background refresh operations
 
-The web process reads saved FPL data and queues due work. The worker performs HTTP requests; opening a dashboard no longer waits for rival syncs or live-season/projection lookups. Score panels retain their independent lightweight refresh from Epoch 1.
+The web process reads saved FPL data and queues due work. The worker performs HTTP requests; opening a dashboard no longer waits for rival syncs or live-season/projection lookups. Score panels refresh independently from worker-published profile and event snapshots; they no longer perform HTTP in the web process. Planner, comparison, landing and lineup reads also use published data. Explicit account/league ID validation remains a single live attempt with a five-second timeout.
 
 ## Local startup
 
@@ -37,9 +37,9 @@ The first dispatcher run queues event context. Once context is available, later 
 
 Every resource has a SyncState row containing its last successful refresh, attempt, queue state, retry time, and generation. A database reservation and task insertion occur in one transaction. Duplicate requests reuse the reservation; obsolete generations do no work. Fifteen-minute leases allow jobs abandoned by a killed worker to be reserved again. If a job finishes but its acknowledgement is lost, a later retry can safely re-import its data.
 
-Profile/history/transfer writes are transactional after fetching the source. Failed imports keep the previous records and successful-refresh timestamp. Automatic league refreshes fetch five standings pages per job and queue a continuation after five seconds. Each page and its next-page checkpoint are saved together in the database; worker restarts, expired leases, and upstream failures resume at the first unfinished page. There is no total page cap for automatic imports. Invalid player batches roll back. Transfers with missing player metadata display an FPL ID placeholder until a subsequent successful player refresh associates them.
+Profile/history/transfer writes are transactional after fetching the source. Failed imports keep the previous records and successful-refresh timestamp. Automatic league refreshes fetch five standings pages per job and queue a continuation after five seconds. Each page and its next-page checkpoint are saved together in the database; worker restarts, expired leases, and upstream failures resume at the first unfinished page. Full imports stop at 1,000 entries (or a smaller configured limit), 100 pages, and 100 rows per page; larger leagues switch to summary publications. Invalid player batches roll back. Transfers with missing player metadata display an FPL ID placeholder until a subsequent successful player refresh associates them.
 
-League pages are staged in `LeagueImport`/`LeagueImportPage`. Published team information, memberships, ranks, league name, and successful-refresh timestamps stay unchanged until the final page has arrived, then publish in one transaction using bulk writes. Failure during publication rolls back and retains the staged pages for another attempt. A season/gameweek change or a checkpoint older than 24 hours restarts collection. Repeated entries across page boundaries trigger reconciliation: the importer re-reads affected tied-rank pages and their neighbours, accumulating unique teams until their count matches the original page slots. Each repair job fetches at most five pages and checkpoints its cursor. After three unsuccessful repair passes, it marks the staged snapshot for replacement and applies normal failure backoff. The next attempt collects from page one with a new expected count, so a changed membership count cannot trap the importer in repeated repairs of the old snapshot. Published standings remain intact throughout; it never marks a deduplicated shortfall as complete. A union larger than the original slot count indicates changed membership and restarts collection. FPL does not provide a snapshot token here: a full paginated import can contain data fetched at different times, especially during live matches. Large leagues can take many jobs to complete; five-second continuation delays also give other queued resources opportunities to run.
+League pages are staged in `LeagueImport`/`LeagueImportPage`. Published team information, memberships, ranks, league name, and successful-refresh timestamps stay unchanged until the final page has arrived, then publish in one transaction using bulk writes. Failure during publication rolls back and retains the staged pages for another attempt. A season/gameweek change or a checkpoint older than 24 hours restarts collection. Repeated entries across page boundaries trigger reconciliation: the importer re-reads affected tied-rank pages and their neighbours, accumulating unique teams until their count matches the original page slots. Each repair job fetches at most five pages and checkpoints its cursor. After three unsuccessful repair passes, it marks the staged snapshot for replacement and applies normal failure backoff. The next attempt collects from page one with a new expected count, so a changed membership count cannot trap the importer in repeated repairs of the old snapshot. Published standings remain intact throughout; it never marks a deduplicated shortfall as complete. A union larger than the original slot count indicates changed membership and restarts collection. FPL does not provide a snapshot token here: a full paginated import can contain data fetched at different times, especially during live matches. Small full imports can span multiple jobs; five-second continuation delays also give other queued resources opportunities to run.
 
 League failure logs include the external FPL league ID and the failed page or import reason. The `league:<id>` resource key uses the local database ID, which can differ from the FPL ID. The older synchronous API helper retains its ten-page default; automatic ingestion uses the resumable page API instead. Apply migration `0011` and restart existing workers to load the new importer.
 
@@ -113,7 +113,7 @@ large-league standings, league-wide projections, and planner league comparisons.
 The API league detail response marks these results `partial: true` and
 `summary_only: true`; its `standings` contain bounded FPL page rows, with separate
 `leaders`, `user_rank`, `page`, `has_next`, `waiting`, and `stale` fields. Small
-leagues keep the existing detail representation. Large-league projected finishing
+leagues retain the detail object and standings list, adding 100-row pagination metadata. Large-league projected finishing
 ranks and planner league comparisons are unavailable until a method that works
 with partial standings is implemented.
 
@@ -126,3 +126,35 @@ Profile snapshots store season points. Leader/podium gaps are displayed only for
 leagues confirmed to start at GW1, where those totals are comparable. Late-start
 leagues still show their published ranks and page scores, without comparing those
 scores with a manager's full-season total.
+
+## Shared source publications and bounded demand
+
+Apply migrations `0021` and `0022` and restart both processes. `FplSnapshot` stores JSON
+bootstrap/fixture, profile/history, picks and event-score publications in the shared
+SQLite volume. Context publications retain bootstrap/fixtures for 15 minutes;
+profile/history publications for one hour; picks/live scores for two minutes. Normal
+worker scheduling refreshes them sooner when due. Expired snapshots fail closed and
+request a refresh rather than making a web HTTP call. A reader loads the global pair
+in one query and keeps it for its lifetime. Only the current ingestion generation can
+publish. The worker retains its bounded HTTP retries and normal durable failure backoff.
+
+Lineup reads return the saved 15-player snapshot and queue a `squad` resource when
+scores are missing or due. Each `SquadRefresh` identifies one team, season and
+gameweek. The worker fetches picks/scores, checks its lease before writing, and
+preserves player metadata already stored at first import. A missing season context
+queues context first; retry after the worker has published it. Old-season reads never
+request today's endpoint with an old season's recycled player IDs.
+
+Large-league readers reserve at most six additional page jobs per league/season,
+shared across all users. Further page requests retain existing data or show waiting
+state without allocating another job. The first page uses the normal league job.
+Each periodic FPL pass schedules at most 100 teams and 100 leagues, carrying database
+cursors to the next minute. With more resources, a full sweep takes multiple passes;
+page demand can still reserve its own resources through the normal deduplicated path.
+Transfer association also carries a 500-record batch cursor between player refreshes.
+
+Derived forecast/landing caches can remain process-local or use the configured cache
+backend. They are disposable: clearing them cannot remove authoritative publications
+or force web HTTP. Refresh controls acknowledge queued work, not completed ingestion.
+See [Epoch 10](epochs.md#epoch-10--bounded-ingestion-and-maintainable-snapshots-implemented)
+for API pagination changes and legacy-player migration limits.

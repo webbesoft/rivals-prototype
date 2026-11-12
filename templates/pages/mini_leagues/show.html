@@ -5,7 +5,7 @@
   {% include "partials/league_position.html" with position=user_standing %}
 
   <section class="league-board" aria-label="League Standings & Projections">
-    <div class="league-board-heading"><div><p class="rv-eyebrow">The table</p><h2>League standings</h2></div><span class="league-count">{{ standings|length|intcomma }} managers</span></div>
+    <div class="league-board-heading"><div><p class="rv-eyebrow">The table</p><h2>League standings</h2></div><span class="league-count">{{ standings_page.paginator.count|intcomma }} managers</span></div>
     <div class="league-table-wrap">
       <table class="league-table">
         <caption class="league-sr-only">Current league standings. Points gaps are relative to your team.</caption>
@@ -28,6 +28,13 @@
     <div class="league-board-footer"><span><i class="league-you-key" aria-hidden="true"></i> Your team</span><span>↑ ↓ Movement since the previous update</span></div>
   </section>
 
+  {% if standings_page.has_other_pages %}
+  <nav class="league-pagination" aria-label="Standings pages">
+    {% if standings_page.has_previous %}<a href="?page={{ standings_page.previous_page_number }}">← Previous</a>{% endif %}
+    <span>Page {{ standings_page.number }} of {{ standings_page.paginator.num_pages }}</span>
+    {% if standings_page.has_next %}<a href="?page={{ standings_page.next_page_number }}">Next →</a>{% endif %}
+  </nav>
+  {% endif %}
   {% if user_league_projection %}
   <details class="league-details"><summary><span><span class="rv-eyebrow">Looking ahead</span><strong>Your projected finish</strong></span><span class="league-details-preview">#{{ user_league_projection.projected_rank }} <span aria-hidden="true">＋</span></span></summary>
     <div class="league-forecast-summary"><div><span class="rv-eyebrow">Estimated finish</span><strong>#{{ user_league_projection.projected_rank }}</strong></div><div><span class="rv-eyebrow">Estimated points</span><strong>{{ user_league_projection.projected_points|intcomma }}</strong></div><div><span class="rv-eyebrow">Projected title gap</span><strong>{% if user_league_projection.gap_to_leader > 0 %}{{ user_league_projection.gap_to_leader|intcomma }} <small>pts</small>{% else %}Leading{% endif %}</strong></div></div>

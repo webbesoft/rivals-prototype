@@ -1,9 +1,10 @@
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from rest_framework import status
-from rest_framework.test import APITestCase
 from rest_framework.authtoken.models import Token
-from rivals.models import Team, MiniLeague, MiniLeagueTeam, UserMiniLeague
+from rest_framework.test import APITestCase
+
+from rivals.models import MiniLeague, MiniLeagueTeam, Team, UserMiniLeague
 
 User = get_user_model()
 
@@ -69,8 +70,8 @@ class ApiViewsTestCase(APITestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         # Should contain at least one league
-        self.assertTrue(len(response.data) > 0)
-        self.assertEqual(response.data[0]["name"], "Test League")
+        self.assertTrue(len(response.data["results"]) > 0)
+        self.assertEqual(response.data["results"][0]["name"], "Test League")
 
     def test_league_detail_view(self):
         url = reverse("api:league_detail", kwargs={"league_id": self.league1.id})

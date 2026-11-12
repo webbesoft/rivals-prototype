@@ -1043,8 +1043,12 @@ def test_partial_results_and_unknown_hits_never_invent_net_outcomes(manager, api
 def test_plan_api_applies_owned_plan_and_checks_season_and_ownership(manager, api):
     manager.is_verified = True
     manager.save(update_fields=["is_verified"])
-    outgoing = Player.objects.create(fpl_id=8, web_name="Out", element_type=3)
-    incoming = Player.objects.create(fpl_id=18, web_name="In", element_type=3)
+    outgoing = Player.objects.create(
+        season="2026/27", fpl_id=8, web_name="Out", element_type=3
+    )
+    incoming = Player.objects.create(
+        season="2026/27", fpl_id=18, web_name="In", element_type=3
+    )
     plan = TransferPlan.objects.create(
         user=manager, team=manager.team, season="2026/27"
     )

@@ -1,5 +1,5 @@
-from decimal import Decimal
 import uuid
+from decimal import Decimal
 
 from django.conf import settings
 from django.db import models
@@ -261,7 +261,9 @@ class Team(models.Model):
 
 
 class Player(models.Model):
-    fpl_id = models.IntegerField(unique=True)
+    # Empty means legacy/unclassified; never infer a season from today's date.
+    season = models.CharField(max_length=7, blank=True, default="")
+    fpl_id = models.IntegerField()
     web_name = models.CharField(max_length=255)
     first_name = models.CharField(max_length=255, null=True, blank=True)
     second_name = models.CharField(max_length=255, null=True, blank=True)
@@ -300,6 +302,11 @@ class Player(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["season", "fpl_id"], name="player_season_element"
+            )
+        ]
         indexes = [
             models.Index(fields=["fpl_id"]),
             models.Index(fields=["element_type"]),
@@ -461,6 +468,8 @@ class Transfer(models.Model):
     team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name="transfers")
     gameweek = models.IntegerField()
     season = models.CharField(max_length=20, null=True, blank=True)
+    player_in_fpl_id = models.PositiveIntegerField(null=True)
+    player_out_fpl_id = models.PositiveIntegerField(null=True)
     player_in_name = models.CharField(max_length=255)
     player_out_name = models.CharField(max_length=255)
     player_in_cost = models.DecimalField(
@@ -490,20 +499,10 @@ class Transfer(models.Model):
 
     @property
     def player_in_display_name(self) -> str:
-        """
-        Returns the linked player's web_name, falling back to the stored name.
-        """
-        if self.player_in:
-            return self.player_in.web_name
         return self.player_in_name or "Unknown Player"
 
     @property
     def player_out_display_name(self) -> str:
-        """
-        Returns the linked player's web_name, falling back to the stored name.
-        """
-        if self.player_out:
-            return self.player_out.web_name
         return self.player_out_name or "Unknown Player"
 
     @property
@@ -946,5 +945,27 @@ class LeagueStandingsPage(models.Model):
             models.UniqueConstraint(
                 fields=["mini_league", "season", "number"],
                 name="unique_league_standings_page",
+            )
+        ]
+
+
+class FplSnapshot(models.Model):
+    """Shared JSON publications; web readers never depend on a worker's local cache."""
+
+    key = models.CharField(max_length=120, unique=True)
+    payload = models.JSONField()
+    updated_at = models.DateTimeField()
+    expires_at = models.DateTimeField(db_index=True)
+
+
+class SquadRefresh(models.Model):
+    team = models.ForeignKey(Team, on_delete=models.CASCADE)
+    season = models.CharField(max_length=7)
+    gameweek = models.PositiveSmallIntegerField()
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["team", "season", "gameweek"], name="squad_refresh_identity"
             )
         ]

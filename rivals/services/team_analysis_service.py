@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 class TeamAnalysisService:
     """
-    Synchronous analysis service that uses the existing FplApiService (requests-based).
+    Analysis of published FPL snapshots; explicit API injection supports worker use.
     Methods:
       - refresh_data()  -> preload bootstrap & fixtures
       - analyze_team(fpl_team_id, include_team_obj=None) -> Dict analysis result
@@ -28,7 +28,7 @@ class TeamAnalysisService:
     """
 
     def __init__(self, api: Optional[FplApiService] = None):
-        self.api = api or FplApiService()
+        self.api = api or FplApiService(snapshot_only=True)
         self.bootstrap: Optional[Dict[str, Any]] = None
         self.elements: List[Dict[str, Any]] = []
         self.teams: Dict[int, Dict[str, Any]] = {}

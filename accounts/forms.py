@@ -42,9 +42,26 @@ class SignUpForm(UserCreationForm):
         return email
 
     def clean_fpl_id(self):
-        fpl_id = self.cleaned_data.get("fpl_id")
-        if not fpl_id:
-            raise ValidationError("FPL Team ID is required.")
+        fpl_id = self.cleaned_data["fpl_id"]
+        api = FplApiService()
+        api.TIMEOUT = 5
+        api.MAX_ATTEMPTS = 1
+        try:
+            data = api.fetch_team_basic_info(fpl_id)
+        except requests.RequestException:
+            data = None
+        if (
+            not isinstance(data, dict)
+            or str(data.get("id")) != str(fpl_id)
+            or any(
+                not isinstance(data.get(key), str)
+                for key in ("name", "player_first_name", "player_last_name")
+            )
+        ):
+            raise ValidationError(
+                "Could not validate that FPL team. Please check the ID and try again."
+            )
+        self.fpl_data = data
         return fpl_id
 
     def save(self, commit=True):
@@ -54,12 +71,7 @@ class SignUpForm(UserCreationForm):
         user.fpl_id = self.cleaned_data["fpl_id"]
 
         if commit:
-            # Validate FPL ID and fetch basic info
-            fpl_api_service = FplApiService()
-            basic_info = fpl_api_service.fetch_team_basic_info(user.fpl_id)
-
-            if not basic_info:
-                raise ValidationError("Invalid FPL Team ID. Please try again.")
+            basic_info = self.fpl_data
 
             # Set basic user info from FPL
             user.team_name = basic_info["name"]
@@ -179,13 +191,15 @@ class UpdateFplIdForm(forms.Form):
             raise forms.ValidationError("FPL Team ID is required.")
 
         fpl_api = FplApiService()
+        fpl_api.TIMEOUT = 5
+        fpl_api.MAX_ATTEMPTS = 1
         try:
             data = fpl_api.fetch_team_basic_info(fpl_id)
         except requests.RequestException:
             raise forms.ValidationError(
                 "Could not reach the FPL service. Please try again in a moment."
             )
-        if not data or str(data.get("id")) != str(fpl_id):
+        if not isinstance(data, dict) or str(data.get("id")) != str(fpl_id):
             raise forms.ValidationError(
                 "Could not find an FPL team with that ID. Please double-check it."
             )

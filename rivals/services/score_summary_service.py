@@ -33,7 +33,7 @@ class ScoreSummaryService:
         if not cache.add(f"{self.key}_attempt", True, self.RETRY_SECONDS):
             return snapshot
 
-        api = FplApiService()
+        api = FplApiService(snapshot_only=True)
         api.TIMEOUT = 5
         bootstrap = api.fetch_bootstrap_static()
         if not bootstrap or not bootstrap.get("events"):

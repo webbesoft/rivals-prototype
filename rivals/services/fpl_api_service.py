@@ -1,4 +1,5 @@
 import logging
+import re
 import time
 
 import requests
@@ -21,12 +22,80 @@ class FplApiService:
     FIXTURES_CACHE_KEY = "fpl_fixtures_data"
     FIXTURES_CACHE_TIMEOUT = 300  # 5 minutes
 
+    def __init__(self, *, snapshot_only=False):
+        self.snapshot_only = snapshot_only
+        self.snapshots = {}
+
+    def _snapshot_key(self, url):
+        from .gameweek_context_service import GameweekContextService
+
+        if url == f"{self.BASE_URL}/bootstrap-static/":
+            return "bootstrap"
+        if url == f"{self.BASE_URL}/fixtures/":
+            return "fixtures"
+        bootstrap = getattr(self, "_global_snapshots", {}).get("bootstrap")
+        season = (
+            GameweekContextService.derive(bootstrap.get("events", []))["season"]
+            if self.snapshot_only and bootstrap
+            else GameweekContextService.cached()["season"]
+        )
+        entry = re.fullmatch(
+            re.escape(self.BASE_URL) + r"/entry/(\d+)/(history/)?", url
+        )
+        if entry and season:
+            return f"{'history' if entry[2] else 'profile'}:{season}:{entry[1]}"
+        picks = re.fullmatch(
+            re.escape(self.BASE_URL) + r"/entry/(\d+)/event/(\d+)/picks/", url
+        )
+        if picks and season:
+            return f"picks:{season}:{picks[1]}:{picks[2]}"
+        live = re.fullmatch(re.escape(self.BASE_URL) + r"/event/(\d+)/live/", url)
+        return f"live:{season}:{live[1]}" if live and season else None
+
+    def _read_snapshot(self, key):
+        from .fpl_snapshot_service import read_snapshot, request_snapshot
+
+        if key in ("bootstrap", "fixtures"):
+            if not hasattr(self, "_global_snapshots"):
+                from django.utils import timezone
+
+                from rivals.models import FplSnapshot
+
+                self._global_snapshots = dict(
+                    FplSnapshot.objects.filter(
+                        key__in=["bootstrap", "fixtures"], expires_at__gt=timezone.now()
+                    ).values_list("key", "payload")
+                )
+            data = self._global_snapshots.get(key)
+        else:
+            data = read_snapshot(key)
+        if data is None:
+            request_snapshot(key)
+        return data
+
     def make_request(self, url: str) -> dict | None:
+        if self.snapshot_only:
+            key = self._snapshot_key(url)
+            return self._read_snapshot(key) if key else None
         for attempt in range(1, self.MAX_ATTEMPTS + 1):
             try:
                 response = requests.get(url, headers=self.HEADERS, timeout=self.TIMEOUT)
                 response.raise_for_status()
-                return response.json()
+                data = response.json()
+                # Publication happens only after the worker rechecks its lease.
+                if url.endswith(
+                    (
+                        "/bootstrap-static/",
+                        "/fixtures/",
+                        "/picks/",
+                        "/live/",
+                        "/history/",
+                    )
+                ) or re.fullmatch(re.escape(self.BASE_URL) + r"/entry/\d+/", url):
+                    key = self._snapshot_key(url)
+                    if key:
+                        self.snapshots[key] = data
+                return data
             except requests.RequestException as exc:
                 retryable = isinstance(
                     exc, (requests.ConnectionError, requests.Timeout)
@@ -52,6 +121,8 @@ class FplApiService:
 
     def fetch_bootstrap_static(self, force_refresh: bool = False) -> dict | None:
         """Fetch bootstrap-static with caching to prevent duplicate high-volume calls."""
+        if self.snapshot_only:
+            return self._read_snapshot("bootstrap")
         if not force_refresh:
             cached = cache.get(self.BOOTSTRAP_CACHE_KEY)
             if cached:
@@ -120,6 +191,8 @@ class FplApiService:
         )
 
     def fetch_gameweek_live(self, gameweek, season):
+        if self.snapshot_only:
+            return self._read_snapshot(f"live:{season}:{gameweek}")
         key = f"fpl_live_{season}_{gameweek}"
         cached = cache.get(key)
         if cached is not None:
@@ -143,7 +216,7 @@ class FplApiService:
         The season is built from the deadline year of the first event.
         Caches aggressively to avoid live HTTP calls on every page load.
         """
-        if not force_refresh:
+        if not force_refresh and not self.snapshot_only:
             cached_season = cache.get(self.SEASON_CACHE_KEY)
             if cached_season:
                 return cached_season
@@ -176,6 +249,8 @@ class FplApiService:
 
     def fetch_fixtures_data(self, force_refresh: bool = False):
         """Fetch fixtures data with caching."""
+        if self.snapshot_only:
+            return self._read_snapshot("fixtures")
         if not force_refresh:
             cached = cache.get(self.FIXTURES_CACHE_KEY)
             if cached:

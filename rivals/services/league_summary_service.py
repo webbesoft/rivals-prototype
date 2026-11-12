@@ -81,14 +81,46 @@ def save_page(league, season, number, data):
 def requested_page(league, season, number):
     from rivals.services.refresh_service import enqueue_refresh
 
-    page, _ = LeagueStandingsPage.objects.get_or_create(
-        mini_league=league, season=season, number=number
-    )
     if number == 1:
+        page, _ = LeagueStandingsPage.objects.get_or_create(
+            mini_league=league, season=season, number=number
+        )
         enqueue_refresh("league", league.pk)
-    else:
-        enqueue_refresh("league_page", page.pk)
-    return page
+        return page
+
+    from rivals.models import SyncState
+
+    from .gameweek_context_service import GameweekContextService
+    from .refresh_service import _skip_refresh
+
+    page = LeagueStandingsPage.objects.filter(
+        mini_league=league, season=season, number=number
+    ).first()
+    context = GameweekContextService.cached()
+    now = timezone.now()
+    if page:
+        state = SyncState.objects.filter(key=f"league_page:{page.pk}").first()
+        if state and _skip_refresh(state, "league_page", context, now, False):
+            return page
+    with transaction.atomic():
+        MiniLeague.objects.select_for_update().get(pk=league.pk)
+        active = SyncState.objects.filter(
+            kind="league_page",
+            lease_until__gt=now,
+            object_id__in=LeagueStandingsPage.objects.filter(
+                mini_league=league, season=season
+            ).values("pk"),
+        ).values_list("pk", flat=True)[:6]
+        if len(list(active)) >= 6:
+            # A transient waiting page does not allocate storage or another job.
+            return page or LeagueStandingsPage(
+                mini_league=league, season=season, number=number
+            )
+        page, _ = LeagueStandingsPage.objects.get_or_create(
+            mini_league=league, season=season, number=number
+        )
+        enqueue_refresh("league_page", page.pk, context=context)
+        return page
 
 
 def large_league_context(user, league, context, params):
@@ -150,7 +182,7 @@ def large_league_context(user, league, context, params):
     by_id = {
         row["entry"]: {**row, "page_number": page.number}
         for page in pages
-        for row in page.rows
+        for row in page.rows[:100]
     }
     rows = sorted(
         by_id.values(), key=lambda row: (row["rank"], -row["total"], row["entry"])

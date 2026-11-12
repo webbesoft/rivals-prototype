@@ -189,7 +189,7 @@ def test_inactive_league_denied_consistently(client, manager, disabled):
         enqueue.assert_not_called()
     assert client.get(reverse("api:league_detail", args=[league.pk])).status_code == 403
     assert client.post(reverse("api:league_sync", args=[league.pk])).status_code == 403
-    assert client.get(reverse("api:leagues")).json() == []
+    assert client.get(reverse("api:leagues")).json()["results"] == []
 
 
 def test_login_limit_shared_by_browser_api_and_process_cache(client, manager):

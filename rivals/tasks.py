@@ -3,6 +3,7 @@ import socket
 
 from background_task import background
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 
 from rivals.models import MiniLeague, SyncState, Team, TrackedTeam, UserMiniLeague
@@ -10,6 +11,15 @@ from rivals.services.fpl_api_service import FplApiService
 from rivals.services.gameweek_context_service import GameweekContextService
 
 logger = logging.getLogger(__name__)
+
+
+def check_refresh_owner(state):
+    if (
+        not SyncState.objects.select_for_update()
+        .filter(pk=state.pk, generation=state.generation, status="running")
+        .exists()
+    ):
+        raise RuntimeError("Refresh lease superseded")
 
 
 @background(schedule=0)
@@ -65,25 +75,36 @@ def refresh_resource(key, generation):
     payload.setdefault(
         "stamp", f'{context.get("season")}:{context.get("scoring_gameweek")}'
     )
-    SyncState.objects.filter(pk=state.pk, generation=generation).update(
-        status="ok",
-        last_success_at=timezone.now(),
-        failures=0,
-        error="",
-        next_attempt_at=None,
-        lease_until=None,
-        payload=payload,
-    )
+    from rivals.services.fpl_snapshot_service import publish_snapshots
+
+    with transaction.atomic():
+        owner = (
+            SyncState.objects.select_for_update()
+            .filter(pk=state.pk, generation=generation, status="running")
+            .first()
+        )
+        if not owner:
+            return
+        publish_snapshots(payload.pop("_snapshots", {}))
+        SyncState.objects.filter(pk=state.pk, generation=generation).update(
+            status="ok",
+            last_success_at=timezone.now(),
+            failures=0,
+            error="",
+            next_attempt_at=None,
+            lease_until=None,
+            payload=payload,
+        )
 
 
 def ingest(state):
     api = FplApiService()
     api.TIMEOUT = 5
     if state.kind == "context":
-        bootstrap = api.fetch_bootstrap_static()
+        bootstrap = api.fetch_bootstrap_static(force_refresh=True)
         if not bootstrap or not bootstrap.get("events"):
             raise RuntimeError("FPL events unavailable")
-        fixtures = api.fetch_fixtures_data()
+        fixtures = api.fetch_fixtures_data(force_refresh=True)
         if fixtures is None:
             raise RuntimeError("FPL fixtures unavailable")
         context = GameweekContextService.derive(bootstrap["events"], fixtures)
@@ -92,7 +113,11 @@ def ingest(state):
         from django.core.cache import cache
 
         cache.set(api.SEASON_CACHE_KEY, context["season"], api.SEASON_CACHE_TIMEOUT)
-        return {"events": bootstrap["events"], "fixtures": fixtures}
+        return {
+            "events": bootstrap["events"],
+            "fixtures": fixtures,
+            "_snapshots": {"bootstrap": bootstrap, "fixtures": fixtures},
+        }
     context = GameweekContextService.cached()
     if context["stale"] or not context["season"]:
         raise RuntimeError("Fresh season context required before ingestion")
@@ -103,16 +128,33 @@ def ingest(state):
     if state.kind == "players":
         from rivals.services.player_sync_service import PlayerSyncService
 
-        result = PlayerSyncService(api).sync_all_players()
+        result = PlayerSyncService(
+            api, publication_guard=lambda: check_refresh_owner(state)
+        ).sync_all_players()
         if not result["success"]:
             raise RuntimeError("Player import failed")
         from rivals.services.transfer_player_association_service import (
             TransferPlayerAssociationService,
         )
 
-        TransferPlayerAssociationService().associate_all_transfers(
-            season=context["season"]
+        associated = TransferPlayerAssociationService().associate_all_transfers(
+            season=context["season"],
+            after_pk=state.payload.get("association_cursor", 0),
         )
+        return {"association_cursor": associated["next_cursor"]}
+    elif state.kind == "squad":
+        from rivals.models import SquadRefresh
+        from rivals.services.squad_history_service import SquadHistoryService
+
+        target = SquadRefresh.objects.select_related("team").get(pk=state.object_id)
+        if target.season != context["season"]:
+            return {}
+
+        rows, notice = SquadHistoryService(
+            target.team, api, publication_guard=lambda: check_refresh_owner(state)
+        ).load(target.season, target.gameweek)
+        if len(rows) != 15 or notice:
+            raise RuntimeError("Complete squad scores unavailable")
     elif state.kind == "league_page":
         from rivals.models import LeagueStandingsPage
         from rivals.services.league_summary_service import save_page
@@ -166,6 +208,12 @@ def ingest(state):
             if data is None:
                 raise RuntimeError("Transfers unavailable")
         with transaction.atomic():
+            if (
+                not SyncState.objects.select_for_update()
+                .filter(pk=state.pk, generation=state.generation, status="running")
+                .exists()
+            ):
+                raise RuntimeError("Team refresh lease superseded")
             service.detect_and_handle_season_transition(live_season=context["season"])
             if state.kind == "profile":
                 success = service.sync_basic_info(data=data)
@@ -179,6 +227,7 @@ def ingest(state):
                 raise RuntimeError("Team import failed")
         if state.kind == "profile" and isinstance(data.get("leagues"), dict):
             from django.contrib.auth import get_user_model
+
             from rivals.services.league_membership_service import reconcile_memberships
 
             for user in (
@@ -190,7 +239,17 @@ def ingest(state):
 
             save_profile_ranks(team, data, context)
 
-    return {}
+    return {
+        "_snapshots": (
+            {
+                key: value
+                for key, value in getattr(api, "snapshots", {}).items()
+                if key not in ("bootstrap", "fixtures")
+            }
+            if isinstance(getattr(api, "snapshots", {}), dict)
+            else {}
+        )
+    }
 
 
 @background(schedule=0)
@@ -200,13 +259,13 @@ def refresh_tick():
 
     from rivals.services.refresh_service import enqueue_refresh, enqueue_team
 
+    previous = SyncState.objects.filter(key="worker").first()
+    cursors = dict(previous.payload) if previous else {}
     SyncState.objects.update_or_create(
         key="worker",
         defaults={
             "kind": "worker",
-            "payload": {
-                "worker_id": socket.gethostname(),
-            },
+            "payload": {**cursors, "worker_id": socket.gethostname()},
             "status": "ok",
             "last_success_at": timezone.now(),
         },
@@ -220,32 +279,47 @@ def refresh_tick():
         return
     enqueue_refresh("players", context=context)
     enqueue_refresh("decisions", context=context)
-    team_ids = set(
-        get_user_model()
-        .objects.filter(is_active=True, team__active=True)
-        .values_list("team_id", flat=True)
-    )
-    team_ids.update(
-        TrackedTeam.objects.filter(
-            user__is_active=True, team__active=True, active=True
-        ).values_list("team_id", flat=True)
-    )
-    for team_id in sorted(team_ids):
-        enqueue_team(team_id, context=context)
-    league_ids = (
-        UserMiniLeague.objects.filter(
-            active=True, mini_league__active=True, user__is_active=True
+    team_ids = list(
+        Team.objects.filter(active=True, pk__gt=cursors.get("team_cursor", 0))
+        .filter(
+            Q(pk__in=get_user_model().objects.filter(is_active=True).values("team_id"))
+            | Q(
+                pk__in=TrackedTeam.objects.filter(
+                    user__is_active=True, active=True
+                ).values("team_id")
+            )
         )
-        .values_list("mini_league_id", flat=True)
-        .distinct()
+        .order_by("pk")
+        .values_list("pk", flat=True)[:101]
     )
-    for league_id in league_ids:
+    for team_id in team_ids[:100]:
+        enqueue_team(team_id, context=context)
+    league_ids = list(
+        MiniLeague.objects.filter(
+            active=True,
+            pk__gt=cursors.get("league_cursor", 0),
+            pk__in=UserMiniLeague.objects.filter(
+                active=True, user__is_active=True
+            ).values("mini_league_id"),
+        )
+        .order_by("pk")
+        .values_list("pk", flat=True)[:101]
+    )
+    for league_id in league_ids[:100]:
         enqueue_refresh("league", league_id, context=context)
+    cursors.update(
+        {
+            "worker_id": socket.gethostname(),
+            "team_cursor": team_ids[99] if len(team_ids) > 100 else 0,
+            "league_cursor": league_ids[99] if len(league_ids) > 100 else 0,
+        }
+    )
+    SyncState.objects.filter(key="worker").update(payload=cursors)
 
 
 # Register reference-only Gemini work with the existing task worker.
 from rivals.services.ai_briefing_service import prepare_briefing  # noqa: E402, F401
-from rivals.services.deadline_digest_service import (
-    generate_digest,
+from rivals.services.deadline_digest_service import (  # noqa: E402, F401
     deliver_digest,
-)  # noqa: E402, F401
+    generate_digest,
+)

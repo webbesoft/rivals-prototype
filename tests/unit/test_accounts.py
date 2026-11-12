@@ -29,6 +29,7 @@ class TestAuthViews:
     @patch("accounts.tasks.init_user_data_task")
     def test_signup_view(self, mock_init_task, mock_fetch_team):
         mock_fetch_team.return_value = {
+            "id": 12345,
             "name": "FC Test",
             "player_first_name": "New",
             "player_last_name": "User",

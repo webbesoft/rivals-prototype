@@ -35,7 +35,17 @@ class Command(BaseCommand):
         self.stdout.write("\nUpdating transfer associations...")
 
         transfer_service = TransferPlayerAssociationService()
-        transfer_result = transfer_service.associate_all_transfers()
+        transfer_result = {"associated_count": 0, "unmatched_count": 0}
+        cursor = 0
+        while True:
+            batch = transfer_service.associate_all_transfers(
+                season=service.season, after_pk=cursor
+            )
+            for key in ("associated_count", "unmatched_count"):
+                transfer_result[key] += batch[key]
+            cursor = batch["next_cursor"]
+            if not cursor:
+                break
 
         self.stdout.write(
             self.style.SUCCESS(

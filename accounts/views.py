@@ -210,7 +210,7 @@ def resend_verification_email(request):
 @login_required
 def profile_view(request):
     """Display the user's profile and FPL settings."""
-    from rivals.services.fpl_api_service import FplApiService
+    from rivals.services.gameweek_context_service import GameweekContextService
 
     form = UpdateFplIdForm(initial={"fpl_id": request.user.fpl_id})
 
@@ -218,7 +218,7 @@ def profile_view(request):
     new_season_available = False
     if request.user.team and request.user.team.current_season:
         try:
-            live_season = FplApiService().fetch_current_season()
+            live_season = GameweekContextService.cached()["season"]
             if live_season and live_season != request.user.team.current_season:
                 new_season_available = True
         except Exception:

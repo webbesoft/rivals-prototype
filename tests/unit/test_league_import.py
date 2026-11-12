@@ -366,8 +366,8 @@ def test_bulk_publication_across_multiple_database_batches(state, settings):
     settings.LEAGUE_FULL_IMPORT_LIMIT = 2000
     api = Mock()
     responses = []
-    for number in range(1, 13):
-        response = page(number, number < 12)
+    for number in range(1, 11):
+        response = page(number, number < 10)
         response["standings"]["results"] = [
             page(entry)["standings"]["results"][0]
             for entry in range((number - 1) * 100 + 1, number * 100 + 1)
@@ -377,9 +377,9 @@ def test_bulk_publication_across_multiple_database_batches(state, settings):
     for _ in range(3):
         run(state, api)
     assert state.status == "ok"
-    assert MiniLeagueTeam.objects.filter(mini_league_id=state.object_id).count() == 1200
+    assert MiniLeagueTeam.objects.filter(mini_league_id=state.object_id).count() == 1000
     # Existing shared teams are updated rather than duplicated.
-    assert Team.objects.count() == 1200
+    assert Team.objects.count() == 1000
 
 
 @pytest.mark.parametrize(

@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.core.paginator import Paginator
 from rest_framework import serializers
 
 from rivals.models import (
@@ -116,6 +117,28 @@ class MiniLeagueDetailSerializer(MiniLeagueSerializer):
     standings = serializers.SerializerMethodField()
     partial = serializers.BooleanField(source="uses_summary", read_only=True)
 
+    def _page(self, league):
+        request = self.context.get("request")
+        return Paginator(
+            league.mini_league_teams.select_related("team").order_by(
+                "current_rank", "pk"
+            ),
+            100,
+        ).get_page(request.query_params.get("page") if request else 1)
+
+    pagination = serializers.SerializerMethodField()
+
+    def get_pagination(self, league):
+        if league.uses_summary:
+            return None
+        page = self._page(league)
+        return {
+            "count": page.paginator.count,
+            "page": page.number,
+            "pages": page.paginator.num_pages,
+            "has_next": page.has_next(),
+        }
+
     def get_standings(self, league):
         if league.uses_summary:
             from rivals.models import LeagueStandingsPage
@@ -126,13 +149,15 @@ class MiniLeagueDetailSerializer(MiniLeagueSerializer):
                 season=GameweekContextService.cached()["season"],
                 number=1,
             ).first()
-            return page.rows if page else []
-        return MiniLeagueTeamSerializer(
-            league.mini_league_teams.select_related("team"), many=True
-        ).data
+            return page.rows[:100] if page else []
+        return MiniLeagueTeamSerializer(self._page(league).object_list, many=True).data
 
     class Meta(MiniLeagueSerializer.Meta):
-        fields = MiniLeagueSerializer.Meta.fields + ["standings", "partial"]
+        fields = MiniLeagueSerializer.Meta.fields + [
+            "standings",
+            "partial",
+            "pagination",
+        ]
 
 
 class GameweekDataSerializer(serializers.ModelSerializer):
@@ -141,6 +166,7 @@ class GameweekDataSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "gameweek",
+            "season",
             "points",
             "total_points",
             "bench_points",
@@ -160,6 +186,7 @@ class PlayerSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "fpl_id",
+            "season",
             "web_name",
             "first_name",
             "second_name",
@@ -185,6 +212,9 @@ class TransferSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "gameweek",
+            "season",
+            "player_in_fpl_id",
+            "player_out_fpl_id",
             "player_in_display_name",
             "player_out_display_name",
             "player_in_cost",
@@ -229,12 +259,18 @@ class SquadHistorySerializer(serializers.ModelSerializer):
 
 
 class PlannedTransferSerializer(serializers.ModelSerializer):
+    gameweek = serializers.IntegerField(min_value=1, max_value=38)
+
     player_out_name = serializers.CharField(
         source="player_out.web_name", read_only=True
     )
     player_in_name = serializers.CharField(source="player_in.web_name", read_only=True)
-    player_out_team = serializers.CharField(source="player_out.team", read_only=True)
-    player_in_team = serializers.CharField(source="player_in.team", read_only=True)
+    player_out_team = serializers.IntegerField(
+        source="player_out.team_id", read_only=True
+    )
+    player_in_team = serializers.IntegerField(
+        source="player_in.team_id", read_only=True
+    )
     player_in_cost = serializers.FloatField(source="player_in.now_cost", read_only=True)
     player_out_cost = serializers.FloatField(
         source="player_out.now_cost", read_only=True
@@ -260,7 +296,13 @@ class PlannedTransferSerializer(serializers.ModelSerializer):
 
 
 class TransferPlanSerializer(serializers.ModelSerializer):
-    transfers = PlannedTransferSerializer(many=True, read_only=True)
+    transfers = serializers.SerializerMethodField()
+
+    def get_transfers(self, plan):
+        return PlannedTransferSerializer(
+            plan.transfers.select_related("player_in", "player_out").all()[:76],
+            many=True,
+        ).data
 
     class Meta:
         model = TransferPlan

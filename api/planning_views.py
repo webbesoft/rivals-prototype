@@ -1,6 +1,7 @@
 import logging
 import math
 
+from django.db import transaction
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, status, views
 from rest_framework.exceptions import ValidationError
@@ -9,6 +10,7 @@ from rest_framework.response import Response
 from rivals.models import PlannedTransfer, TransferPlan
 from rivals.services.decision_engine import DecisionEngine, DecisionUnavailable
 
+from .pagination import BoundedPagination
 from .permissions import IsVerified
 from .serializers import PlannedTransferSerializer, TransferPlanSerializer
 
@@ -19,6 +21,7 @@ class TransferPlanListCreateView(generics.ListCreateAPIView):
     """List create transfer plans for the authenticated user"""
 
     serializer_class = TransferPlanSerializer
+    pagination_class = BoundedPagination
     permission_classes = [IsVerified]
 
     def get_queryset(self):
@@ -36,6 +39,7 @@ class TransferPlanDetailView(generics.RetrieveUpdateDestroyAPIView):
     """Retrieve, update, or delete a specific transfer plan"""
 
     serializer_class = TransferPlanSerializer
+    pagination_class = BoundedPagination
     permission_classes = [IsVerified]
 
     def get_queryset(self):
@@ -51,7 +55,28 @@ class PlannedTransferCreateView(generics.CreateAPIView):
     def perform_create(self, serializer):
         plan_id = self.kwargs.get("plan_id")
         plan = get_object_or_404(TransferPlan, id=plan_id, user=self.request.user)
-        serializer.save(plan=plan)
+        for field in ("player_in", "player_out"):
+            player = serializer.validated_data.get(field)
+            if player and (not plan.season or player.season != plan.season):
+                raise ValidationError(
+                    {field: "Choose a player from the plan's season."}
+                )
+        with transaction.atomic():
+            plan = TransferPlan.objects.select_for_update().get(pk=plan.pk)
+            if plan.transfers.count() >= 76:
+                raise ValidationError(
+                    "A plan supports up to two transfers per gameweek across 38 gameweeks."
+                )
+            if (
+                plan.transfers.filter(
+                    gameweek=serializer.validated_data["gameweek"]
+                ).count()
+                >= 2
+            ):
+                raise ValidationError(
+                    "A plan supports up to two transfers per gameweek."
+                )
+            serializer.save(plan=plan)
 
 
 class PlannedTransferDeleteView(generics.DestroyAPIView):
@@ -98,11 +123,17 @@ class ProjectionsView(views.APIView):
                     return Response(
                         {"error": "Create a plan for the current season."}, status=400
                     )
-                transfers = list(plan.transfers.all())
+                transfers = list(
+                    plan.transfers.select_related("player_in", "player_out").all()[:3]
+                )
+                if len(transfers) > 2:
+                    raise ValueError("Choose a plan with up to two transfers.")
                 if any(
                     move.gameweek != engine.context["decision_gameweek"]
                     or not move.player_in_id
                     or not move.player_out_id
+                    or move.player_in.season != engine.context["season"]
+                    or move.player_out.season != engine.context["season"]
                     for move in transfers
                 ):
                     return Response(

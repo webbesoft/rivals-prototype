@@ -21,6 +21,7 @@ class TeamSyncService:
         self.team = team
         self.fpl_api_service = FplApiService()
         self._history_data: dict | None = None
+        self.publication_guard = None
         self._picks_cache = {}
         self._player_names_cache: dict[int, str | None] = {}
 
@@ -247,8 +248,10 @@ class TeamSyncService:
                 (
                     transfer.gameweek,
                     tt.isoformat() if tt else "",
-                    element_id(transfer.player_in, transfer.player_in_name),
-                    element_id(transfer.player_out, transfer.player_out_name),
+                    transfer.player_in_fpl_id
+                    or element_id(transfer.player_in, transfer.player_in_name),
+                    transfer.player_out_fpl_id
+                    or element_id(transfer.player_out, transfer.player_out_name),
                 )
             )
 
@@ -270,7 +273,10 @@ class TeamSyncService:
             return True
 
         players_by_fpl_id = {
-            p.fpl_id: p for p in Player.objects.filter(fpl_id__in=needed_elements)
+            p.fpl_id: p
+            for p in Player.objects.filter(
+                season=current_season, fpl_id__in=needed_elements
+            )
         }
 
         # If any player elements are missing from DB, trigger quick player sync
@@ -282,7 +288,9 @@ class TeamSyncService:
                 PlayerSyncService(self.fpl_api_service).sync_all_players()
                 players_by_fpl_id = {
                     p.fpl_id: p
-                    for p in Player.objects.filter(fpl_id__in=needed_elements)
+                    for p in Player.objects.filter(
+                        season=current_season, fpl_id__in=needed_elements
+                    )
                 }
             except Exception as player_err:
                 logger.warning(f"Failed to auto-sync missing players: {player_err}")
@@ -307,6 +315,8 @@ class TeamSyncService:
                         if player_out
                         else f"Player #{t['element_out']}"
                     ),
+                    player_in_fpl_id=t["element_in"],
+                    player_out_fpl_id=t["element_out"],
                     player_in=player_in,
                     player_out=player_out,
                     player_in_cost=t.get("element_in_cost"),
@@ -408,7 +418,7 @@ class TeamSyncService:
             elements = {
                 p.fpl_id: vars(p)
                 for p in Player.objects.filter(
-                    fpl_id__in=[pick["element"] for pick in rows]
+                    season=season, fpl_id__in=[pick["element"] for pick in rows]
                 )
             }
         records = []
@@ -443,12 +453,37 @@ class TeamSyncService:
                 )
             )
         with transaction.atomic():
+            if self.publication_guard:
+                self.publication_guard()
+            existing = {row.player_fpl_id: row for row in squad}
+            metadata = (
+                "player_name",
+                "element_type",
+                "player_cost",
+                "form",
+                "expected_goals",
+                "expected_assists",
+                "selected_by_percent",
+                "total_points_at_time",
+                "club_name",
+                "club_short_name",
+            )
+            for record in records:
+                previous = existing.get(record.player_fpl_id)
+                if previous:
+                    for field in metadata:
+                        setattr(record, field, getattr(previous, field))
+                    if previous.points_final:
+                        record.points_final = True
+                        record.gameweek_points = previous.gameweek_points
             squad.delete()
             SquadHistory.objects.bulk_create(records)
         return True
 
     def get_player_name(self, fpl_id: int) -> str | None:
         if fpl_id not in self._player_names_cache:
-            player = Player.objects.filter(fpl_id=fpl_id).first()
+            player = Player.objects.filter(
+                season=self.team.current_season, fpl_id=fpl_id
+            ).first()
             self._player_names_cache[fpl_id] = player.web_name if player else None
         return self._player_names_cache[fpl_id]

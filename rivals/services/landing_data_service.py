@@ -14,7 +14,7 @@ class LandingDataService:
     """Service to aggregate public FPL data for the landing page."""
 
     def __init__(self):
-        self.fpl_api = FplApiService()
+        self.fpl_api = FplApiService(snapshot_only=True)
         self.cache_timeout = 900  # 15 minutes
 
     def get_current_gameweek(self) -> int:

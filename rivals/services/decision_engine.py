@@ -47,7 +47,7 @@ class DecisionEngine:
         self.fresh_squad = fresh_squad
         self.user = user
         self.team = user.team
-        self.api = api or FplApiService()
+        self.api = api or FplApiService(snapshot_only=True)
         self.api.TIMEOUT = 4
         self._evaluations = {}
 
