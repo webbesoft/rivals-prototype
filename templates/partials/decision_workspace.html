@@ -7,6 +7,7 @@
 {% include "partials/planner_pitch.html" %}
 {% endif %}
 {% include "partials/decision_summary.html" %}
+{% include "partials/chip_advice.html" %}
 {% if ai_enabled %}<div data-remote-panel><div id="gemini-briefing" hx-get="{% url 'rivals:decisions.ai' %}?fingerprint={{ report.fingerprint|urlencode }}" hx-trigger="load" hx-swap="outerHTML" hx-request='{"timeout":10000}'></div></div>{% endif %}
 {% endif %}
 {% if results_only %}

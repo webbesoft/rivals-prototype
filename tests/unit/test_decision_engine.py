@@ -1466,3 +1466,85 @@ def test_free_hit_squad_reverts_to_permanent_players_for_next_plan(manager, api)
     engine = DecisionEngine(manager, api).load()
     assert 8 in engine.public_ids and 18 not in engine.public_ids
     assert engine.inputs()["bank"] == 10
+
+
+@pytest.mark.django_db
+def test_chip_advice_shows_extra_captain_points_and_best_future_week(manager, api):
+    from rivals.services.chip_advice_service import chip_advice
+
+    engine = DecisionEngine(manager, api).load()
+    engine.prepare(confirmed(engine))
+    engine.projections[8].update({11: 12, 12: 18, 13: 9})
+    advice = chip_advice(engine, engine.evaluate(engine.ids))[0]
+    assert advice["chip"] == "Triple Captain"
+    assert advice["status"] == "Plan ahead"
+    assert advice["gameweek"] == 12
+    assert "54.0 with Triple Captain" in advice["detail"]
+    assert "extra 18.0 over normal captaincy" in advice["detail"]
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("risky", [False, True])
+def test_triple_captain_requires_secure_minutes_and_availability(manager, api, risky):
+    from rivals.services.chip_advice_service import chip_advice
+
+    engine = DecisionEngine(manager, api).load()
+    engine.prepare(confirmed(engine))
+    engine.projections[8][11] = 15
+    if risky:
+        engine.players[8]["chance_of_playing_next_round"] = 75
+    advice = chip_advice(engine, engine.evaluate(engine.ids))[0]
+    assert advice["status"] == ("Hold for now" if risky else "Consider now")
+
+
+@pytest.mark.django_db
+def test_bench_boost_requires_four_reliable_players_and_counts_only_bench(manager, api):
+    from rivals.services.chip_advice_service import chip_advice
+
+    engine = DecisionEngine(manager, api).load()
+    engine.prepare(confirmed(engine))
+    for pid in engine.ids:
+        engine.projections[pid] = {week: 5 for week in engine.weeks}
+    advice = chip_advice(engine, engine.evaluate(engine.ids))[1]
+    assert advice["status"] == "Consider now"
+    assert "totals 20.0 points" in advice["detail"]
+    # Two risky goalkeepers guarantee one risky substitute in every legal XI.
+    for pid in (1, 2):
+        engine.players[pid]["status"] = "d"
+    advice = chip_advice(engine, engine.evaluate(engine.ids))[1]
+    assert advice["status"] == "Hold for now"
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("recovers", [True, False])
+def test_free_hit_distinguishes_temporary_and_persistent_shortages(
+    manager, api, recovers
+):
+    from rivals.services.chip_advice_service import chip_advice
+
+    engine = DecisionEngine(manager, api).load()
+    engine.prepare(confirmed(engine))
+    for pid in engine.ids:
+        engine.projections[pid][11] = 0
+        if not recovers:
+            for week in engine.weeks:
+                engine.projections[pid][week] = 0
+    baseline = engine.evaluate(engine.ids)
+    advice = chip_advice(engine, baseline)
+    assert advice[2]["status"] == ("Review now" if recovers else "Hold for now")
+    assert advice[3]["status"] == ("Hold for now" if recovers else "Review now")
+
+
+@pytest.mark.django_db
+def test_report_renders_chip_advice_and_passes_it_to_ai_evidence(manager, api):
+    from rivals.services.ai_briefing_service import evidence_for
+
+    engine = DecisionEngine(manager, api).load()
+    report = engine.report(confirmed(engine))
+    assert len(report["chip_advice"]) == 4
+    html = render_to_string("partials/decision_workspace.html", {"report": report})
+    assert "Chip advice" in html and "Triple Captain" in html
+    assert "only if you still have the chip available" in html
+    assert "not included in its totals" in html
+    evidence = evidence_for(report)
+    assert len([item for item in evidence if item["id"].startswith("chip_")]) == 4

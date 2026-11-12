@@ -10,6 +10,7 @@ from django.core.cache import cache
 from django.utils import timezone
 
 from rivals.models import MiniLeagueTeam, TeamPlanningInput
+from rivals.services.chip_advice_service import chip_advice
 from rivals.services.fpl_api_service import FplApiService
 from rivals.services.gameweek_context_service import GameweekContextService
 from rivals.services.planning_defaults_service import PlanningDefaults
@@ -40,7 +41,7 @@ def digest(value):
 
 
 class DecisionEngine:
-    VERSION = "decision-v2"
+    VERSION = "decision-v3-chips"
 
     def __init__(self, user, api=None, *, fresh_squad=False):
         self.fresh_squad = fresh_squad
@@ -852,6 +853,7 @@ class DecisionEngine:
             "manual": manual_option,
             "alternatives": alternatives[:5],
             "risks": risks[:5],
+            "chip_advice": chip_advice(self, baseline),
             "rival": rival,
             "captain": (
                 self.name(first["captain"])

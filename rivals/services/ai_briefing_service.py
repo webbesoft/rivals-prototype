@@ -30,6 +30,15 @@ def evidence_for(report):
         title = "Keep your squad for now"
         detail = "No available route clearly beats holding after estimated transfer costs. Keep your options open for later news."
     evidence = [{"id": "route", "title": title, "detail": detail}]
+    for advice in report.get("chip_advice", []):
+        evidence.append(
+            {
+                "id": "chip_" + advice["chip"].lower().replace(" ", "_"),
+                "title": f'{advice["chip"]}: {advice["status"]} · GW{advice["gameweek"]}',
+                "detail": advice["detail"]
+                + " Only if the chip is still available; check its expiry in FPL. Only one chip can be used per gameweek. These estimates assume the unchanged squad and are separate from transfer gains.",
+            }
+        )
     if report["captain"]:
         evidence.append(
             {

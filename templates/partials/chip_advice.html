@@ -1,0 +1,16 @@
+{% if report.chip_advice %}
+<section class="app-panel border border-gray-200 bg-white p-5 mb-6" aria-labelledby="chip-advice-heading">
+  <h2 id="chip-advice-heading" class="text-lg font-bold mb-3">Chip advice</h2>
+  <p class="text-sm text-gray-600 mb-4">Based on your current squad if you hold, across the next {{ report.horizon }} gameweeks. Advice applies only if you still have the chip available. Check your chips and any expiry deadline in FPL; only one chip can be used in a gameweek.</p>
+  <div class="space-y-4">
+    {% for advice in report.chip_advice %}
+    <article>
+      <h3 class="font-bold">{{ advice.chip }} · {{ advice.status }} <span class="text-sm text-gray-600">· GW{{ advice.gameweek }}</span></h3>
+      <p class="text-sm mt-1">{{ advice.detail }}</p>
+    </article>
+    {% endfor %}
+  </div>
+  <p class="text-xs text-gray-500 mt-4">These are planning signals, not guaranteed returns. Future fixtures and availability can change. Chip gains are separate from the transfer comparison and are not included in its totals.</p>
+  <details class="text-sm text-gray-600 mt-3"><summary class="cursor-pointer">How chip opportunities are flagged</summary><p class="mt-2">Triple Captain: at least 10 projected player points, with full reported availability and no flagged minutes risk. Bench Boost: at least 15 bench points, with fixtures and the same checks for all four substitutes. Free Hit: at least three zero-projection XI slots, falling to at most one the following week. Wildcard: at least four squad concerns persisting across two or more forecast gameweeks. These thresholds are planning heuristics. The best week shown is within this window; later opportunities may be better.</p></details>
+</section>
+{% endif %}
