@@ -100,6 +100,25 @@ Validation: 31 new delivery/provider tests pass. The complete workspace suite pa
 
 Apply migration `0017` and restart the existing FPL worker. SMTP/SITE_URL and the shared encryption keyring must be configured; users supply their own Gemini key. No production deployment, real Google charge, inbox delivery or cross-client email visual test is claimed. See [deadline briefing delivery and operations](deadline-briefings.md) for exact timing, retries, consent and smoke checks.
 
+## Epoch 7 — Authentication and access controls (implemented)
+
+Security remediation is delivered in separate, tested epochs with a feedback checkpoint after each. This epoch addresses the authentication and access boundaries from the security review; the remaining work below is planned, not implemented by this epoch.
+
+- API login requires verified email. All protected API views use the same verification permission, including previously issued tokens and existing sessions after verification is revoked. Browser login only redirects to the current host and retains a local destination through the login form.
+- Tracking, untracking, logout and league creation require POST. Existing forms retain CSRF protection. Browser and API league reads/refreshes share one rule: both the league and the manager's membership must be active. Tracking limits share one transactional service, allow idempotent requests, and reactivate existing inactive records without counting inactive rivals against the allowance.
+- Browser and API entry points share database-backed limits for login, signup, verification resends, password-reset requests, explicit refreshes, profile updates and manual league additions. Counters survive process/cache changes, store keyed hashes instead of raw email/IP addresses, expire automatically, and return HTTP 429 with Retry-After. These limits complement CSRF and upstream/edge protections.
+- Login permits 60 attempts per client IP and 10 per normalized email per five minutes. Signup permits five per IP/hour; verification resends allow one per email/minute and five/hour, plus 20 per IP/hour. Explicit refreshes share ten requests per manager/minute across browser/API resources. On-demand score, lineup, comparison and planner computations share 30 requests per manager/minute, including GET requests. Reset requests permit ten per IP and three per email/hour; profile changes permit five per manager/five minutes and league additions ten/hour. Ordinary dashboard and squad shell page loads do not consume these limits.
+
+Apply `core.0001_initial` before serving the new request handlers. The limiter uses `REMOTE_ADDR`; configure the application server to accept forwarded client addresses only from the trusted reverse proxy. Client-supplied forwarding headers are never trusted by application code. SQLite's immediate transactions serialize reservations; row locks provide the corresponding boundary on databases that support them. Keep edge connection/request limits in place for traffic that should be rejected before reaching Django.
+
+Validation: 33 new security regression cases pass. The isolated epoch passes all 422 Python tests; the workspace including concurrent league-summary work passes 432 Python tests at this checkpoint. All six JavaScript tests, Django system checks and application migration consistency checks pass. A file-backed SQLite concurrency check accepted exactly three of 20 simultaneous reservations across eight connections, rejected the other 17 and reported no lock failures. Existing API ownership tests explicitly verify their actors so they continue exercising ownership rather than stopping at the new verification boundary. No production deployment or live traffic test is included.
+
+### Remaining security remediation epochs (planned)
+
+- **Epoch 8 — Deployment safeguards:** fail closed on unsafe production configuration; inject canonical email/site settings; run the complete Python/JavaScript suites in the release gate; pin and verify downloaded build tools; address migration ordering.
+- **Epoch 9 — Account and league lifecycle reliability:** make team changes atomic and stale jobs revocable; complete password recovery with uniform responses; repair missing routes/templates; validate manual league imports before persistence.
+- **Epoch 10 — Bounded ingestion and maintainable snapshots:** coordinate with the ongoing league-summary work to bound ingestion/publication and paginate reads; reduce synchronous HTTP and establish shared snapshot/cache behavior; preserve historical player identity across seasons. Review the audit against the final combined implementation before closing the remediation work.
+
 ## Product ideas to prioritise through use
 
 1. A “do this before the deadline” checklist, limited to the three highest-impact decisions, with expandable evidence.

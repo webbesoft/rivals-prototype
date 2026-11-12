@@ -15,12 +15,14 @@ class ApiViewsTestCase(APITestCase):
             email="user1@example.com",
             username="user1@example.com",
             password="password123",
+            is_verified=True,
             fpl_id="12345",
         )
         self.user2 = User.objects.create_user(
             email="user2@example.com",
             username="user2@example.com",
             password="password123",
+            is_verified=True,
         )
 
         # Create Teams

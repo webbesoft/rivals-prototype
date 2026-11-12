@@ -538,6 +538,8 @@ def test_league_pagination_reports_why_standings_are_incomplete(failure):
 @pytest.mark.django_db
 def test_api_sync_acceptance_and_access_controls(manager, stored_context):
     user, rival = manager
+    user.is_verified = True
+    user.save(update_fields=["is_verified"])
     league = MiniLeague.objects.create(fpl_league_id="88", name="My league")
     subscription = UserMiniLeague.objects.create(user=user, mini_league=league)
     client = Client()

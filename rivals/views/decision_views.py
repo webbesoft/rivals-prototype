@@ -16,6 +16,7 @@ from django.views.decorators.http import require_GET, require_POST
 from django.views.decorators.gzip import gzip_page
 
 from rivals.forms import DecisionInputForm
+from core.rate_limits import rate_limit
 from rivals.services.planner_presentation import planner_pitch_weeks
 from rivals.services.ai_credentials import configured
 from rivals.models import DecisionRecord, Team, TeamPlanningInput
@@ -91,6 +92,7 @@ def planner(request):
 @login_required
 @require_GET
 @never_cache
+@rate_limit("analysis", methods=("GET",))
 def summary(request):
     try:
         report = DecisionEngine(request.user).report()
@@ -119,6 +121,7 @@ def summary(request):
 @never_cache
 @require_GET
 @gzip_page
+@rate_limit("analysis", methods=("GET",))
 def preview(request):
     try:
         report = DecisionEngine(request.user).load().preview()
@@ -183,6 +186,7 @@ def rival_search(request):
 @login_required
 @never_cache
 @gzip_page
+@rate_limit("analysis", methods=("GET", "POST"))
 def workspace(request):
     if request.method not in ("GET", "POST"):
         return HttpResponseBadRequest("Use the transfer planner to review your squad.")

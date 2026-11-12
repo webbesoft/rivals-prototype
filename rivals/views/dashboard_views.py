@@ -9,6 +9,7 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 
 from rivals.models import GameweekData, Transfer
+from core.rate_limits import rate_limit
 from rivals.services.gameweek_context_service import GameweekContextService
 from rivals.services.refresh_service import (
     enqueue_refresh,
@@ -132,6 +133,7 @@ def dashboard(request):
 
 @login_required
 @require_POST
+@rate_limit("refresh")
 def dashboard_sync_rivals(request):
     for team_id in request.user.tracked_teams.filter(active=True).values_list(
         "team_id", flat=True

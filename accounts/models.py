@@ -36,7 +36,10 @@ class User(AbstractUser):
         Checks if the user can add another mini-league (limit of 10).
         """
         MINI_LEAGUE_LIMIT = 10
-        return self.mini_leagues.count() < MINI_LEAGUE_LIMIT
+        return (
+            self.customminileagues.filter(active=True, mini_league__active=True).count()
+            < MINI_LEAGUE_LIMIT
+        )
 
     @property
     def can_track_team(self) -> bool:
@@ -44,7 +47,7 @@ class User(AbstractUser):
         Checks if the user can track another team (limit of 10).
         """
         TRACKED_TEAM_LIMIT = 10
-        return self.tracked_teams.count() < TRACKED_TEAM_LIMIT
+        return self.tracked_teams.filter(active=True).count() < TRACKED_TEAM_LIMIT
 
     def admin_leagues(self):
         """

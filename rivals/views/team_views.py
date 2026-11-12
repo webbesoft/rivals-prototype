@@ -8,7 +8,9 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_http_methods, require_POST
 
 from rivals.forms import PlanningInputForm
+from core.rate_limits import rate_limit
 from rivals.models import Player, Team, TeamPlanningInput
+from rivals.services.access_service import TrackingLimitReached, track_team
 from rivals.services.gameweek_context_service import GameweekContextService
 from rivals.services.projection_service import ProjectionService
 from rivals.services.refresh_service import enqueue_team, refresh_status
@@ -21,6 +23,7 @@ from rivals.services.team_sync_service import TeamSyncService
 @login_required
 @require_http_methods(["GET"])
 @never_cache
+@rate_limit("analysis", methods=("GET",))
 def team_score(request, team_id):
     team = get_object_or_404(Team, id=team_id)
     return render(
@@ -74,6 +77,9 @@ def team_show(request, team_id=None, section="squad"):
         {
             **refresh_status(request.user),
             "team": team,
+            "is_team_tracked": request.user.tracked_teams.filter(
+                team=team, active=True
+            ).exists(),
             "team_section": section,
             "team_section_title": next(
                 label for key, label, _ in sections if key == section
@@ -94,16 +100,16 @@ def team_show(request, team_id=None, section="squad"):
 
 
 @login_required
+@require_POST
+@rate_limit("refresh")
 def team_track(request, team_id):
     team = get_object_or_404(Team, id=team_id)
 
-    if not request.user.can_track_team:
-        messages.error(
-            request, "Free plan allows tracking 1 team only. Upgrade to premium."
-        )
-        return redirect("pricing")
-
-    request.user.tracked_teams.get_or_create(team=team)
+    try:
+        track_team(request.user, team)
+    except TrackingLimitReached as error:
+        messages.error(request, str(error))
+        return redirect("rivals:teams.show", team_id=team.id)
 
     enqueue_team(team.id, force=True)
     messages.success(request, "Team is now being tracked.")
@@ -112,6 +118,7 @@ def team_track(request, team_id):
 
 
 @login_required
+@require_POST
 def team_untrack(request, team_id):
     team = get_object_or_404(Team, id=team_id)
     request.user.tracked_teams.filter(team=team).delete()
@@ -122,6 +129,7 @@ def team_untrack(request, team_id):
 
 @login_required
 @require_POST
+@rate_limit("refresh")
 def team_sync(request, team_id):
     team = get_object_or_404(Team, id=team_id)
     if (
@@ -229,6 +237,7 @@ def planning_input(request, team):
 @login_required
 @require_http_methods(["GET"])
 @never_cache
+@rate_limit("analysis", methods=("GET",))
 def get_squad_history(request, team_id, gameweek):
     team = get_object_or_404(Team, id=team_id)
     service = SquadHistoryService(team)
@@ -274,6 +283,7 @@ def get_squad_history(request, team_id, gameweek):
 @login_required
 @require_http_methods(["GET"])
 @never_cache
+@rate_limit("analysis", methods=("GET",))
 def team_lineup(request, team_id):
     team = get_object_or_404(Team, id=team_id)
     service = SquadHistoryService(team)
@@ -344,6 +354,7 @@ def team_lineup(request, team_id):
 @require_http_methods(["GET", "POST"])
 @login_required
 @never_cache
+@rate_limit("analysis", methods=("GET", "POST"))
 def team_analysis(request, team_id):
     team = get_object_or_404(Team, id=team_id)
     if request.user.team_id != team.id:
@@ -411,6 +422,7 @@ def team_analysis(request, team_id):
 
 @require_http_methods(["GET"])
 @login_required
+@rate_limit("analysis", methods=("GET",))
 def team_quick_compare(request, team_id):
     """Quick comparison panel for inline display."""
     rival_team = get_object_or_404(Team, id=team_id)
@@ -450,6 +462,7 @@ def team_quick_compare(request, team_id):
 
 
 @login_required
+@rate_limit("analysis", methods=("GET",))
 def team_compare(request, team_id):
     """Full dedicated comparison page."""
     rival_team = get_object_or_404(Team, id=team_id)

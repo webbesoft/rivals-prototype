@@ -3,12 +3,14 @@ import logging
 from django.contrib.auth import authenticate, get_user_model
 from rest_framework import status
 from rest_framework.authtoken.models import Token
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from rivals.models import MiniLeague, Team
+from rivals.services.access_service import accessible_leagues, track_team, TrackingLimitReached
 
+from .permissions import IsVerified
 from .serializers import (
     GameweekDataSerializer,
     MiniLeagueDetailSerializer,
@@ -29,6 +31,7 @@ class LoginView(APIView):
     Login endpoint that returns an auth token.
     """
 
+    rate_limit_action = "login"
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -49,6 +52,12 @@ class LoginView(APIView):
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
+        if not user.is_verified:
+            return Response(
+                {"error": "Verify your email before logging in."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         token, _ = Token.objects.get_or_create(user=user)
 
         return Response(
@@ -64,6 +73,7 @@ class SignUpView(APIView):
     Signup endpoint that creates a new user account.
     """
 
+    rate_limit_action = "signup"
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -121,7 +131,7 @@ class MeView(APIView):
     Returns the current authenticated user's profile.
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsVerified]
 
     def get(self, request):
         return Response(UserSerializer(request.user).data)
@@ -132,7 +142,7 @@ class DashboardView(APIView):
     Returns dashboard data for the authenticated user.
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsVerified]
 
     def get(self, request):
         user = request.user
@@ -172,10 +182,10 @@ class LeaguesView(APIView):
     Returns the list of mini-leagues for the authenticated user.
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsVerified]
 
     def get(self, request):
-        leagues = request.user.mini_leagues.all()
+        leagues = accessible_leagues(request.user)
         serializer = MiniLeagueSerializer(leagues, many=True)
         return Response(serializer.data)
 
@@ -185,7 +195,7 @@ class LeagueDetailView(APIView):
     Returns details and standings for a specific mini-league.
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsVerified]
 
     def get(self, request, league_id):
         try:
@@ -199,9 +209,7 @@ class LeagueDetailView(APIView):
             )
 
         # Check if user has access to this league
-        if not request.user.customminileagues.filter(
-            mini_league_id=league_id, active=True
-        ).exists():
+        if not accessible_leagues(request.user).filter(pk=league_id).exists():
             return Response(
                 {"error": "You do not have access to this league."},
                 status=status.HTTP_403_FORBIDDEN,
@@ -216,7 +224,8 @@ class LeagueSyncView(APIView):
     Triggers a sync of mini-league data from FPL API.
     """
 
-    permission_classes = [IsAuthenticated]
+    rate_limit_action = "refresh"
+    permission_classes = [IsVerified]
 
     def post(self, request, league_id):
         try:
@@ -228,9 +237,7 @@ class LeagueSyncView(APIView):
             )
 
         # Check if user has access to this league
-        if not request.user.customminileagues.filter(
-            mini_league_id=league_id, active=True
-        ).exists():
+        if not accessible_leagues(request.user).filter(pk=league_id).exists():
             return Response(
                 {"error": "You do not have access to this league."},
                 status=status.HTTP_403_FORBIDDEN,
@@ -254,7 +261,7 @@ class TeamDetailView(APIView):
     Returns details for a specific team.
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsVerified]
 
     def get(self, request, team_id):
         try:
@@ -274,7 +281,7 @@ class TeamGameweekHistoryView(APIView):
     Returns gameweek history for a specific team.
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsVerified]
 
     def get(self, request, team_id):
         try:
@@ -295,7 +302,7 @@ class TeamTransfersView(APIView):
     Returns transfers for a specific team.
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsVerified]
 
     def get(self, request, team_id):
         try:
@@ -316,7 +323,7 @@ class TeamSquadView(APIView):
     Returns squad for a specific team and gameweek.
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsVerified]
 
     def get(self, request, team_id):
         try:
@@ -354,10 +361,10 @@ class TrackedTeamsView(APIView):
     Returns list of teams tracked by the authenticated user.
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsVerified]
 
     def get(self, request):
-        tracked = request.user.tracked_teams.select_related("team").all()
+        tracked = request.user.tracked_teams.filter(active=True).select_related("team")
         teams = [t.team for t in tracked]
         serializer = TeamSerializer(teams, many=True)
         return Response(serializer.data)
@@ -368,7 +375,8 @@ class TeamSyncView(APIView):
     Triggers a sync of team data from FPL API.
     """
 
-    permission_classes = [IsAuthenticated]
+    rate_limit_action = "refresh"
+    permission_classes = [IsVerified]
 
     def post(self, request, team_id):
         try:
@@ -406,7 +414,8 @@ class TeamTrackView(APIView):
     POST to track, DELETE to untrack.
     """
 
-    permission_classes = [IsAuthenticated]
+    rate_limit_action = "refresh"
+    permission_classes = [IsVerified]
 
     def post(self, request, team_id):
         try:
@@ -417,14 +426,10 @@ class TeamTrackView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        # Check if user can track more teams
-        if not request.user.can_track_team:
-            return Response(
-                {"error": "You have reached your tracking limit. Upgrade to premium."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-
-        request.user.tracked_teams.get_or_create(team=team)
+        try:
+            track_team(request.user, team)
+        except TrackingLimitReached as error:
+            return Response({"error": str(error)}, status=status.HTTP_403_FORBIDDEN)
 
         from rivals.services.refresh_service import enqueue_team
 

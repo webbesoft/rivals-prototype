@@ -1041,6 +1041,8 @@ def test_partial_results_and_unknown_hits_never_invent_net_outcomes(manager, api
 
 @pytest.mark.django_db
 def test_plan_api_applies_owned_plan_and_checks_season_and_ownership(manager, api):
+    manager.is_verified = True
+    manager.save(update_fields=["is_verified"])
     outgoing = Player.objects.create(fpl_id=8, web_name="Out", element_type=3)
     incoming = Player.objects.create(fpl_id=18, web_name="In", element_type=3)
     plan = TransferPlan.objects.create(
@@ -1062,6 +1064,7 @@ def test_plan_api_applies_owned_plan_and_checks_season_and_ownership(manager, ap
         plan.save()
         assert client.get(url, {"plan_id": plan.pk}).status_code == 400
     other = get_user_model().objects.create_user(
+        is_verified=True,
         username="other",
         email="other@example.com",
         password="test123456",
@@ -1073,6 +1076,8 @@ def test_plan_api_applies_owned_plan_and_checks_season_and_ownership(manager, ap
 
 @pytest.mark.django_db
 def test_api_cannot_create_a_plan_for_someone_elses_team(manager, api):
+    manager.is_verified = True
+    manager.save(update_fields=["is_verified"])
     other_team = Team.objects.create(fpl_team_id="999", team_name="Other")
     client = Client()
     client.force_login(manager)

@@ -384,6 +384,8 @@ def test_lineup_outage_and_invalid_selection_offer_retry_without_exception_detai
 
 @pytest.mark.django_db
 def test_json_squad_endpoints_are_season_scoped(manager, api):
+    manager.is_verified = True
+    manager.save(update_fields=["is_verified"])
     import_rows(manager.team, api)
     import_rows(manager.team, api, season="2025/26")
     client = Client()

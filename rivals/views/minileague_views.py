@@ -1,9 +1,12 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from rivals.models import MiniLeague
+from core.rate_limits import rate_limit
+from rivals.services.access_service import accessible_leagues
 from rivals.services.fpl_api_service import FplApiService
 from rivals.services.mini_league_sync_service import MiniLeagueSyncService
 from rivals.services.projection_service import ProjectionService
@@ -12,7 +15,7 @@ from rivals.services.refresh_service import enqueue_refresh, refresh_status
 
 @login_required
 def mini_league_index(request):
-    mini_leagues = request.user.mini_leagues.prefetch_related("teams").all()
+    mini_leagues = accessible_leagues(request.user).prefetch_related("teams")
     return render(request, "mini_leagues/index.html", {"mini_leagues": mini_leagues})
 
 
@@ -20,8 +23,8 @@ def mini_league_index(request):
 def mini_league_show(request, mini_league_id):
     mini_league = get_object_or_404(MiniLeague, id=mini_league_id)
 
-    if not request.user.customminileagues.filter(mini_league=mini_league).exists():
-        return render(request, "404.html", status=404)
+    if not accessible_leagues(request.user).filter(pk=mini_league.pk).exists():
+        raise Http404
 
     enqueue_refresh("league", mini_league.id)
     standings = mini_league.mini_league_teams.select_related("team").order_by(
@@ -78,6 +81,8 @@ def mini_league_create(request):
 
 
 @login_required
+@require_POST
+@rate_limit("league_add")
 def mini_league_store(request):
     if not request.user.can_add_mini_league:
         messages.error(
@@ -117,12 +122,11 @@ def mini_league_store(request):
 
 @login_required
 @require_POST
+@rate_limit("refresh")
 def mini_league_sync(request, mini_league_id):
     mini_league = get_object_or_404(MiniLeague, id=mini_league_id)
-    if not request.user.customminileagues.filter(
-        mini_league=mini_league, active=True
-    ).exists():
-        return render(request, "404.html", status=404)
+    if not accessible_leagues(request.user).filter(pk=mini_league.pk).exists():
+        raise Http404
     enqueue_refresh("league", mini_league.id, force=True)
     messages.info(request, "Standings update requested.")
     return redirect("rivals:minileagues.show", mini_league_id=mini_league.id)

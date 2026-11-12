@@ -7,7 +7,14 @@ from django.core.mail import send_mail
 from django.shortcuts import redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils.encoding import force_bytes, force_str
-from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
+from django.utils.http import (
+    url_has_allowed_host_and_scheme,
+    urlsafe_base64_decode,
+    urlsafe_base64_encode,
+)
+from django.views.decorators.http import require_POST
+
+from core.rate_limits import rate_limit
 
 from .forms import LoginForm, PasswordResetForm, SignUpForm, UpdateFplIdForm
 from .tasks import send_verification_email_task
@@ -15,6 +22,7 @@ from .tasks import send_verification_email_task
 User = get_user_model()
 
 
+@rate_limit("signup")
 def signup_view(request):
     if request.user.is_authenticated:
         return redirect("rivals:dashboard")
@@ -36,6 +44,7 @@ def signup_view(request):
     return render(request, "accounts/signup.html", {"form": form})
 
 
+@rate_limit("login", identity_field="username")
 def login_view(request):
     if request.user.is_authenticated:
         return redirect("rivals:dashboard")
@@ -54,22 +63,34 @@ def login_view(request):
                 return redirect("accounts:verification_pending")
             login(request, user)
 
-            next_url = request.GET.get("next", "rivals:dashboard")
+            next_url = request.POST.get("next") or request.GET.get("next", "")
+            if not url_has_allowed_host_and_scheme(
+                next_url,
+                allowed_hosts={request.get_host()},
+                require_https=request.is_secure(),
+            ):
+                next_url = reverse("rivals:dashboard")
             messages.success(request, f"Welcome back, {user.manager_name}!")
             return redirect(next_url)
     else:
         form = LoginForm()
 
-    return render(request, "accounts/login.html", {"form": form})
+    return render(
+        request,
+        "accounts/login.html",
+        {"form": form, "next": request.POST.get("next") or request.GET.get("next", "")},
+    )
 
 
 @login_required
+@require_POST
 def logout_view(request):
     logout(request)
     messages.success(request, "You have been logged out successfully.")
     return redirect("core:index")
 
 
+@rate_limit("password_reset", identity_field="email")
 def password_reset_view(request):
     if request.method == "POST":
         form = PasswordResetForm(request.POST)
@@ -137,6 +158,7 @@ def verification_pending_view(request):
     return render(request, "accounts/verification_pending.html", {"email": email})
 
 
+@rate_limit("resend", session_field="pending_verification_email")
 def resend_verification_email(request):
     """
     Resend verification email to the user.
@@ -210,6 +232,7 @@ def profile_view(request):
 
 
 @login_required
+@rate_limit("profile_update")
 def update_fpl_id_view(request):
     """Handle FPL ID update form submission."""
     import json

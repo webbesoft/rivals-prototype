@@ -4,12 +4,12 @@ import math
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, status, views
 from rest_framework.exceptions import ValidationError
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from rivals.models import PlannedTransfer, TransferPlan
 from rivals.services.decision_engine import DecisionEngine, DecisionUnavailable
 
+from .permissions import IsVerified
 from .serializers import PlannedTransferSerializer, TransferPlanSerializer
 
 logger = logging.getLogger(__name__)
@@ -19,7 +19,7 @@ class TransferPlanListCreateView(generics.ListCreateAPIView):
     """List create transfer plans for the authenticated user"""
 
     serializer_class = TransferPlanSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsVerified]
 
     def get_queryset(self):
         return TransferPlan.objects.filter(user=self.request.user)
@@ -36,7 +36,7 @@ class TransferPlanDetailView(generics.RetrieveUpdateDestroyAPIView):
     """Retrieve, update, or delete a specific transfer plan"""
 
     serializer_class = TransferPlanSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsVerified]
 
     def get_queryset(self):
         return TransferPlan.objects.filter(user=self.request.user)
@@ -46,7 +46,7 @@ class PlannedTransferCreateView(generics.CreateAPIView):
     """Add a transfer to a plan"""
 
     serializer_class = PlannedTransferSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsVerified]
 
     def perform_create(self, serializer):
         plan_id = self.kwargs.get("plan_id")
@@ -58,7 +58,7 @@ class PlannedTransferDeleteView(generics.DestroyAPIView):
     """Remove a transfer from a plan"""
 
     queryset = PlannedTransfer.objects.all()
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsVerified]
 
     def get_queryset(self):
         # Ensure user owns the plan
@@ -68,7 +68,9 @@ class PlannedTransferDeleteView(generics.DestroyAPIView):
 class ProjectionsView(views.APIView):
     """Evaluate the manager's current squad, applying an owned, current-season plan."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsVerified]
+    rate_limit_action = "analysis"
+    rate_limit_methods = ("GET",)
 
     def get(self, request, team_id):
         if request.user.team_id != team_id:
@@ -124,7 +126,9 @@ class ProjectionsView(views.APIView):
 
 
 class SuggestionsView(views.APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsVerified]
+    rate_limit_action = "analysis"
+    rate_limit_methods = ("GET",)
 
     def get(self, request):
         try:
