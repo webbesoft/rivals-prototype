@@ -35,6 +35,7 @@ from tests.unit.test_decision_engine import NOW, api, manager
 @pytest.fixture(autouse=True)
 def isolated(settings):
     cache.clear()
+    settings.AI_GENERATION_ENABLED = True
     settings.EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
     settings.SITE_URL = "https://rivalspy.example"
     settings.AI_CREDENTIAL_KEYS = ""

@@ -43,6 +43,7 @@ KEY = "AIza_Secret_User_Key_1234567890"
 
 @pytest.fixture(autouse=True)
 def isolated(settings):
+    settings.AI_GENERATION_ENABLED = True
     settings.AI_CREDENTIAL_KEYS = json.dumps({"v1": Fernet.generate_key().decode()})
     settings.AI_CREDENTIAL_ACTIVE_KEY = "v1"
     with (
