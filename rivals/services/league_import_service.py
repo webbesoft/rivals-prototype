@@ -36,6 +36,7 @@ class LeagueImportService:
             if run and (
                 run.stamp != self.stamp
                 or timezone.now() - run.created_at > self.MAX_AGE
+                or run.league_info.get("_rivals_pagination", {}).get("restart", False)
             ):
                 run.delete()
                 run = None
@@ -162,14 +163,17 @@ class LeagueImportService:
             metadata["round"] += 1
             exhausted = metadata["round"] >= self.REPAIR_ROUNDS
             if exhausted:
-                metadata["round"] = 0
+                # The original slot count may no longer reflect membership.
+                # Retrying only these boundaries can never repair that snapshot.
+                # Keep it until the next attempt, then collect from page one.
+                metadata["restart"] = True
             with transaction.atomic():
                 self._check_owner()
                 run.save(update_fields=["league_info"])
             if exhausted:
                 raise RuntimeError(
                     f"Standings reconciliation found {unique_count} of "
-                    f"{metadata['expected']} teams; saved pages retained for retry"
+                    f"{metadata['expected']} teams; restarting import after backoff"
                 )
         return False
 

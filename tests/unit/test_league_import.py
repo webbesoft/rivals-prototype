@@ -169,7 +169,8 @@ def test_duplicate_boundary_is_reconciled_before_publication(state):
     assert members.get(team__fpl_team_id="1").total_points == 101
 
 
-def test_unresolved_duplicates_retain_checkpoint_and_back_off(state):
+@pytest.mark.parametrize("membership_shrank", [False, True])
+def test_unresolved_duplicates_restart_after_backoff(state, membership_shrank):
     api = Mock()
     api.fetch_mini_league_page.side_effect = [page(1), page(2, False, entry=1)]
     previous = state.last_success_at
@@ -183,7 +184,31 @@ def test_unresolved_duplicates_retain_checkpoint_and_back_off(state):
     checkpoint = LeagueImport.objects.get()
     assert checkpoint.pages.count() == 2
     assert checkpoint.league_info["_rivals_pagination"]["pending"] == [1, 2]
+    assert checkpoint.league_info["_rivals_pagination"]["restart"] is True
+    assert checkpoint.league_info["_rivals_pagination"]["round"] == 3
     assert not enqueue_refresh("league", state.object_id, force=True, context=CONTEXT)
+
+    SyncState.objects.filter(pk=state.pk).update(
+        next_attempt_at=timezone.now() - timezone.timedelta(seconds=1)
+    )
+    assert enqueue_refresh("league", state.object_id, context=CONTEXT)
+    api.fetch_mini_league_page.reset_mock()
+    # A fresh snapshot either recovers the missing team or reflects a smaller
+    # league. It must not inherit the previous snapshot's expected slot count.
+    api.fetch_mini_league_page.side_effect = (
+        [page(1, False)] if membership_shrank else [page(1), page(2, False)]
+    )
+    run(state, api)
+    assert state.status == "ok" and state.failures == 0
+    assert state.last_success_at > previous
+    assert [c.args[1] for c in api.fetch_mini_league_page.call_args_list] == (
+        [1] if membership_shrank else [1, 2]
+    )
+    assert not LeagueImport.objects.exists()
+    members = MiniLeagueTeam.objects.filter(mini_league_id=state.object_id)
+    assert set(members.values_list("team__fpl_team_id", flat=True)) == (
+        {"1"} if membership_shrank else {"1", "2"}
+    )
 
 
 def test_repair_outage_resumes_at_failed_boundary_page(state):
