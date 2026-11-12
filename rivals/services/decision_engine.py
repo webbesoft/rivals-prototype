@@ -41,7 +41,7 @@ def digest(value):
 
 
 class DecisionEngine:
-    VERSION = "decision-v3-chips"
+    VERSION = "decision-v4-chip-refresh"
 
     def __init__(self, user, api=None, *, fresh_squad=False):
         self.fresh_squad = fresh_squad

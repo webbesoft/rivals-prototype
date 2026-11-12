@@ -36,6 +36,7 @@ def evidence_for(report):
                 "id": "chip_" + advice["chip"].lower().replace(" ", "_"),
                 "title": f'{advice["chip"]}: {advice["status"]} · GW{advice["gameweek"]}',
                 "detail": advice["detail"]
+                + f' This chip set expires at the GW{advice["expiry_gameweek"]} deadline. First-half chips do not carry over; a fresh set arrives in GW20.'
                 + " Only if the chip is still available; check its expiry in FPL. Only one chip can be used per gameweek. These estimates assume the unchanged squad and are separate from transfer gains.",
             }
         )

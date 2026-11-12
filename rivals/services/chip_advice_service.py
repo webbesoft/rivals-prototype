@@ -31,6 +31,11 @@ def chip_advice(engine, baseline):
             }
         )
     current = weeks[0]["week"]
+    expiry = 19 if current <= 19 else 38
+    forecast_weeks = weeks
+    # Each half has its own chips. A stronger GW20 opportunity cannot justify
+    # saving a first-half chip past its last usable deadline in GW19.
+    weeks = [w for w in weeks if w["week"] <= expiry]
     advice = []
     # Compare reliable captain options first; an injured star must not hide a
     # slightly lower, fit player's strong chip opportunity in another week.
@@ -98,7 +103,10 @@ def chip_advice(engine, baseline):
         }
     )
     disruption = max(weeks, key=lambda w: w["missing"])
-    following = next((w for w in weeks if w["week"] == disruption["week"] + 1), None)
+    # Recovery after the refresh still matters for a one-week Free Hit.
+    following = next(
+        (w for w in forecast_weeks if w["week"] == disruption["week"] + 1), None
+    )
     temporary = (
         disruption["missing"] >= 3
         and following is not None
@@ -127,10 +135,11 @@ def chip_advice(engine, baseline):
         pid
         for pid in engine.ids
         if all(
-            not reliable(pid) or engine.projections[pid][w["week"]] <= 0 for w in weeks
+            not reliable(pid) or engine.projections[pid][w["week"]] <= 0
+            for w in forecast_weeks
         )
     ]
-    rebuild = len(weeks) >= 2 and len(persistent) >= 4
+    rebuild = len(forecast_weeks) >= 2 and len(persistent) >= 4
     advice.append(
         {
             "chip": "Wildcard",
@@ -147,4 +156,20 @@ def chip_advice(engine, baseline):
             ),
         }
     )
+    for item in advice:
+        item["expiry_gameweek"] = expiry
+        item["deadlines_remaining"] = expiry - current + 1
+        if current == expiry:
+            if item["status"] == "Hold for now":
+                item["status"] = "Review before expiry"
+            item["detail"] += (
+                f" GW{expiry} is the final chance to use this chip set. "
+                "If several chips remain, prioritise one: only one can be played this gameweek."
+            )
+        elif expiry - current < 4:
+            item["detail"] += (
+                f" Only {expiry - current + 1} deadlines remain to use this chip set, "
+                f"including GW{current}; unused chips expire at the GW{expiry} deadline. "
+                "Allow a separate gameweek for each remaining chip."
+            )
     return advice

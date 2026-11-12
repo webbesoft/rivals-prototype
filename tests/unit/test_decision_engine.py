@@ -1548,3 +1548,44 @@ def test_report_renders_chip_advice_and_passes_it_to_ai_evidence(manager, api):
     assert "not included in its totals" in html
     evidence = evidence_for(report)
     assert len([item for item in evidence if item["id"].startswith("chip_")]) == 4
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("current,expiry", [(18, 19), (19, 19), (20, 38), (38, 38)])
+def test_chip_opportunities_respect_refresh_and_expiry(manager, api, current, expiry):
+    from rivals.services.chip_advice_service import chip_advice
+
+    engine = DecisionEngine(manager, api).load()
+    engine.prepare(confirmed(engine))
+    mapping = {week: current + index for index, week in enumerate(engine.weeks)}
+    engine.weeks = list(mapping.values())
+    for pid in engine.ids:
+        engine.projections[pid] = {
+            mapping[week]: points for week, points in engine.projections[pid].items()
+        }
+        for fixture in engine.player_fixtures[pid]:
+            fixture["gameweek"] = mapping[fixture["gameweek"]]
+        # Much stronger later weeks must not lure chips into the next half.
+        engine.projections[pid] = {
+            week: 3 + (week - current) * 20 for week in engine.weeks
+        }
+    advice = chip_advice(engine, engine.evaluate(engine.ids))
+    assert all(current <= item["gameweek"] <= expiry for item in advice)
+    assert all(item["expiry_gameweek"] == expiry for item in advice)
+    assert all(item["deadlines_remaining"] == expiry - current + 1 for item in advice)
+    if current == expiry:
+        assert all(item["status"] != "Hold for now" for item in advice)
+        assert all("final chance" in item["detail"] for item in advice)
+        assert all("prioritise one" in item["detail"] for item in advice)
+    if current == 18:
+        assert advice[0]["gameweek"] == 19
+        assert advice[1]["gameweek"] == 19
+        assert all("Only 2 deadlines" in item["detail"] for item in advice)
+    if current == 20:
+        assert advice[0]["gameweek"] == 22
+        assert all("final chance" not in item["detail"] for item in advice)
+    html = render_to_string(
+        "partials/chip_advice.html", {"report": {"chip_advice": advice, "horizon": 3}}
+    )
+    assert "a fresh set is available from GW20" in html
+    assert "Unused chips do not carry over" in html
