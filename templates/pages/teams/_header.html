@@ -38,6 +38,8 @@
           <a href="{% url 'rivals:teams.show' team.id %}#squad-briefing" class="px-4 py-2 bg-pitch text-white text-xs font-bold uppercase">Squad briefing</a>
           {% elif user.team and team_section == 'squad' %}
           <button
+            type="button"
+            data-loading-label="Comparing teams…"
             hx-get="{% url 'rivals:teams.compare.quick' team.id %}"
             hx-target="#rival-comparison-container"
             hx-request='{"timeout":22000}'
@@ -49,6 +51,7 @@
           </button>
           <a
             href="{% url 'rivals:teams.compare' team.id %}"
+            data-loading-label="Comparing teams…"
             class="px-3 py-2 text-text-main border border-gray-300 tabular-nums text-xs font-bold uppercase tracking-wide hover:border-gray-500 transition-colors"
           >
             Full Comparison →
@@ -71,7 +74,6 @@
               action="{% url 'rivals:teams.track' team.id %}"
               method="POST"
               class="inline-block"
-              onsubmit="this.querySelector('button').disabled=true; this.querySelector('button').innerText='Tracking...';"
             >
               {% csrf_token %}
               <button
@@ -84,7 +86,8 @@
             {% endif %}
           {% endif %}
 
-          <form action="{% url 'rivals:teams.sync' team.id %}" method="POST" class="inline-block">
+          {% if user.team_id == team.id or is_team_tracked %}
+          <form action="{% url 'rivals:teams.sync' team.id %}" method="POST" class="inline-block" data-loading-label="Requesting team update…">
             {% csrf_token %}
             <button
               type="submit"
@@ -94,6 +97,7 @@
               Sync Data
             </button>
           </form>
+          {% endif %}
         </div>
       </div>
 

@@ -2,7 +2,9 @@
 <div class="px-5 py-3 border-b border-gray-200 flex flex-wrap justify-between gap-2 text-xs tabular-nums">
   <h2 class="app-score-heading app-section-title font-bold uppercase tracking-wider text-pitch">{% if score_summary.gameweek %}Gameweek {{ score_summary.gameweek }}{% else %}Gameweek score{% endif %}</h2>
   <span data-score-status role="status" class="text-gray-500">
-    {% if score_summary.unavailable %}Latest scores are temporarily unavailable.{% if score_summary.updated_at %} Last checked {{ score_summary.updated_at|timesince }} ago.{% endif %}
+    {% if score_summary.unavailable and score_summary.updated_at %}Showing saved scores from {{ score_summary.updated_at|timesince }} ago. Latest update pending.
+    {% elif score_summary.refreshing %}Scores are being updated. Please check again shortly.
+    {% elif score_summary.unavailable %}Latest scores are temporarily unavailable.
     {% elif score_summary.stale %}Scores may be out of date. Last checked {{ score_summary.updated_at|timesince }} ago.
     {% elif score_summary.updated_at %}Checked {{ score_summary.updated_at|timesince }} ago · {% if score_summary.finished %}Gameweek finished{% else %}Provisional scores{% endif %}
     {% else %}Loading scores…{% endif %}

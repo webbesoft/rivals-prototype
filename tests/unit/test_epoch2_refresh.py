@@ -386,9 +386,10 @@ def test_refresh_controls_require_post_and_team_authorization(manager, stored_co
     client.force_login(user)
     assert client.get(reverse("rivals:rivals.sync")).status_code == 405
     assert client.get(reverse("rivals:teams.sync", args=[rival.pk])).status_code == 405
-    assert (
-        client.post(reverse("rivals:teams.sync", args=[outsider.pk])).status_code == 403
-    )
+    response = client.post(reverse("rivals:teams.sync", args=[outsider.pk]))
+    assert response.status_code == 302
+    assert response.url == reverse("rivals:teams.show", args=[outsider.pk])
+    assert not SyncState.objects.filter(object_id=outsider.pk).exists()
     with patch(
         "requests.get", side_effect=AssertionError("Refresh controls must queue")
     ):

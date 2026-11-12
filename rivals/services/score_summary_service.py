@@ -31,7 +31,7 @@ class ScoreSummaryService:
             return snapshot
         # Atomic cooldown limits concurrent requests and retries during outages.
         if not cache.add(f"{self.key}_attempt", True, self.RETRY_SECONDS):
-            return snapshot
+            return self._unavailable(snapshot)
 
         api = FplApiService(snapshot_only=True)
         api.TIMEOUT = 5
@@ -42,6 +42,14 @@ class ScoreSummaryService:
         if not entry:
             return self._unavailable(snapshot)
 
+        summary = self._summary(bootstrap, entry, timezone.now())
+        if summary is None:
+            return self._unavailable(snapshot)
+        cache.set(self.key, summary, self.RETAIN_SECONDS)
+        return summary
+
+    @staticmethod
+    def _summary(bootstrap, entry, updated_at):
         # Pair the entry's score with its own event, including during rollovers.
         event_id = entry.get("current_event")
         event = next(
@@ -49,7 +57,7 @@ class ScoreSummaryService:
             None,
         )
         if event_id is not None and event is None:
-            return self._unavailable(snapshot)
+            return None
         points = entry.get("summary_event_points") if event else None
         average = event.get("average_entry_score") if event else None
         summary = {
@@ -62,15 +70,42 @@ class ScoreSummaryService:
             "total_points": entry.get("summary_overall_points"),
             "overall_rank": entry.get("summary_overall_rank"),
             "finished": bool(event and event.get("finished")),
-            "updated_at": timezone.now(),
+            "updated_at": updated_at,
             "stale": False,
             "unavailable": False,
         }
-        cache.set(self.key, summary, self.RETAIN_SECONDS)
         return summary
 
-    @staticmethod
-    def _unavailable(snapshot):
+    def _saved_summary(self):
+        """Keep worker publications useful across web restarts and cache misses."""
+        from rivals.models import FplSnapshot
+        from rivals.services.fpl_snapshot_service import request_snapshot
+        from rivals.services.gameweek_context_service import GameweekContextService
+
+        cutoff = timezone.now() - timezone.timedelta(seconds=self.RETAIN_SECONDS)
+        bootstrap = FplSnapshot.objects.filter(
+            key="bootstrap", updated_at__gte=cutoff
+        ).first()
+        if not bootstrap or not bootstrap.payload.get("events"):
+            return None
+        season = GameweekContextService.derive(bootstrap.payload["events"])["season"]
+        current_season = GameweekContextService.cached()["season"]
+        if not season or (current_season and season != current_season):
+            return None
+        key = f"profile:{season}:{self.team.fpl_team_id}"
+        entry = FplSnapshot.objects.filter(key=key, updated_at__gte=cutoff).first()
+        if not entry or entry.expires_at <= timezone.now():
+            request_snapshot(key)
+        if not entry or not entry.payload:
+            return None
+        return self._summary(
+            bootstrap.payload,
+            entry.payload,
+            min(bootstrap.updated_at, entry.updated_at),
+        )
+
+    def _unavailable(self, snapshot):
+        snapshot = snapshot or self._saved_summary()
         if snapshot:
             return {**snapshot, "stale": True, "unavailable": True}
-        return {"unavailable": True, "stale": True}
+        return {"unavailable": True, "stale": True, "refreshing": True}

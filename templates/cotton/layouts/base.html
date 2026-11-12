@@ -57,10 +57,12 @@
   <link rel="stylesheet" href="{% static 'css/matchday.css' %}" />
   {% if landing %}<link rel="stylesheet" href="{% static 'css/landing.css' %}" />{% else %}<link rel="stylesheet" href="{% static 'css/rivalry.css' %}" />{% endif %}
   <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.7/dist/htmx.min.js"></script>
+  <script src="{% static 'js/request-feedback.js' %}" defer></script>
   {% block extra_head %}{% endblock %}
 </head>
 
 <body class="{% if not landing %}matchday-app {% endif %}antialiased bg-surface-alt text-text-main font-sans selection:bg-accent selection:text-pitch">
+  <div class="app-request-status" data-request-status role="status" aria-live="polite" aria-atomic="true" hidden></div>
   {% block extra_scripts %}{% endblock %}
 
   <a class="app-skip-link" href="#main-content">Skip to content</a>

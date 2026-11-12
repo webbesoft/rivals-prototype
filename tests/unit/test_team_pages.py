@@ -4,7 +4,7 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 
-from rivals.models import Team
+from rivals.models import Team, TrackedTeam
 
 
 @pytest.fixture
@@ -92,3 +92,32 @@ def test_teams_index_opens_own_squad(client, team_pages):
     response = client.get(reverse("rivals:teams.index"))
     assert response.status_code == 302
     assert response.url == reverse("rivals:teams.show", args=[team.pk])
+
+
+@pytest.mark.django_db
+def test_rival_sync_requires_tracking_and_denial_stays_in_the_site(client, team_pages):
+    own_team, _ = team_pages
+    user = get_user_model().objects.get(team=own_team)
+    rival = Team.objects.create(fpl_team_id="48292", team_name="Rival United")
+    sync_url = reverse("rivals:teams.sync", args=[rival.pk])
+    show_url = reverse("rivals:teams.show", args=[rival.pk])
+    html = client.get(show_url).content.decode()
+    assert sync_url not in html
+    assert "+ Track Rival" in html
+
+    with patch("rivals.views.team_views.enqueue_team") as enqueue:
+        response = client.post(sync_url, follow=True)
+        enqueue.assert_called_once_with(rival.pk)  # Viewing the redirect only.
+    assert response.status_code == 200
+    assert response.headers["Content-Type"].startswith("text/html")
+    assert "Track this rival first to request updates." in response.content.decode()
+
+    tracking = TrackedTeam.objects.create(user=user, team=rival)
+    assert sync_url in client.get(show_url).content.decode()
+    tracking.active = False
+    tracking.save(update_fields=["active"])
+    assert sync_url not in client.get(show_url).content.decode()
+    assert (
+        reverse("rivals:teams.sync", args=[own_team.pk])
+        in client.get(reverse("rivals:teams.show", args=[own_team.pk])).content.decode()
+    )

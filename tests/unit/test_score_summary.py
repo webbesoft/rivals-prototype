@@ -7,8 +7,10 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import User
-from rivals.models import Team
+from rivals.models import FplSnapshot, SyncState, Team
 from rivals.services.score_summary_service import ScoreSummaryService
+
+pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture(autouse=True)
@@ -99,6 +101,101 @@ def test_unknown_event_does_not_pair_score_with_wrong_average(api):
     api.fetch_team_basic_info.return_value["current_event"] = 11
     assert service().refresh()["unavailable"]
     assert service().cached() is None
+
+
+@pytest.fixture
+def published_scores():
+    from tests.unit.test_epoch3_squads import EVENTS, NOW
+
+    events = [{**event, "average_entry_score": 40} for event in EVENTS]
+    team = Team.objects.create(fpl_team_id="12345", team_name="Test FC")
+    with patch("django.utils.timezone.now", return_value=NOW):
+        SyncState.objects.create(
+            key="context",
+            kind="context",
+            last_success_at=NOW,
+            payload={"events": events, "fixtures": []},
+        )
+        FplSnapshot.objects.create(
+            key="bootstrap",
+            payload={"events": events},
+            updated_at=NOW - timezone.timedelta(minutes=20),
+            expires_at=NOW - timezone.timedelta(minutes=5),
+        )
+        FplSnapshot.objects.create(
+            key="profile:2026/27:12345",
+            payload={
+                "current_event": 10,
+                "summary_event_points": 62,
+                "summary_overall_points": 600,
+                "summary_overall_rank": 12000,
+            },
+            updated_at=NOW - timezone.timedelta(hours=2),
+            expires_at=NOW - timezone.timedelta(hours=1),
+        )
+        with patch(
+            "requests.get", side_effect=AssertionError("Score reads must not call FPL")
+        ):
+            yield team
+
+
+def test_expired_publications_preserve_scores_after_process_cache_loss(
+    published_scores,
+):
+    team = published_scores
+    source = FplSnapshot.objects.get(key="profile:2026/27:12345")
+    summary = ScoreSummaryService(team).refresh()
+    assert summary["points"] == 62
+    assert summary["average"] == 40
+    assert summary["difference"] == 22
+    assert summary["total_points"] == 600
+    assert summary["stale"] and summary["unavailable"]
+    assert summary["updated_at"] == source.updated_at
+    assert SyncState.objects.get(key="context").status == "queued"
+    assert SyncState.objects.get(key=f"profile:{team.pk}").status == "queued"
+    assert ScoreSummaryService(team).refresh()["points"] == 62
+
+
+def test_expired_scores_render_as_saved_and_recover_when_worker_publishes(
+    published_scores,
+):
+    from rivals.services.fpl_snapshot_service import publish_snapshots
+
+    team = published_scores
+    client = Client()
+    user = User.objects.create_user(username="score", email="score@example.com")
+    client.force_login(user)
+    url = reverse("rivals:teams.score", args=[team.pk])
+    html = client.get(url).content.decode()
+    assert "Showing saved scores" in html
+    assert "Latest scores are temporarily unavailable" not in html
+    assert ">62</p>" in html
+
+    publications = {row.key: row.payload for row in FplSnapshot.objects.all()}
+    publications["profile:2026/27:12345"]["summary_event_points"] = 65
+    publish_snapshots(publications)
+    cache.clear()
+    html = client.get(url).content.decode()
+    assert ">65</p>" in html
+    assert "Latest update pending" not in html
+
+
+@pytest.mark.parametrize("invalid", ["season", "event", "too_old"])
+def test_saved_scores_do_not_mix_seasons_or_events_or_retain_forever(
+    published_scores, invalid
+):
+    source = FplSnapshot.objects.get(key="profile:2026/27:12345")
+    if invalid == "season":
+        source.key = "profile:2025/26:12345"
+    elif invalid == "event":
+        source.payload["current_event"] = 38
+    else:
+        source.updated_at = timezone.now() - timezone.timedelta(days=8)
+    source.save()
+    summary = ScoreSummaryService(published_scores).refresh()
+    assert summary["unavailable"]
+    assert summary["refreshing"]
+    assert "points" not in summary
 
 
 @pytest.mark.django_db

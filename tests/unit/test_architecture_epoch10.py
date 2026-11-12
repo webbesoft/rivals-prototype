@@ -34,6 +34,7 @@ from rivals.services.fpl_snapshot_service import publish_snapshots, read_snapsho
 from rivals.services.league_import_service import LeagueImportService
 from rivals.services.player_sync_service import PlayerSyncService
 from rivals.services.squad_history_service import SquadHistoryService
+from rivals.services.team_analysis_service import TeamAnalysisService
 from rivals.services.transfer_player_association_service import (
     TransferPlayerAssociationService,
 )
@@ -42,6 +43,96 @@ from tests.unit.test_epoch3_squads import EVENTS, NOW, api, import_rows, manager
 from tests.unit.test_league_import import page
 
 pytestmark = pytest.mark.django_db
+
+
+@pytest.mark.parametrize("route", ["rivals:teams.sync", "api:team_sync"])
+def test_manual_sync_refreshes_lineup_even_when_recently_synced(client, manager, route):
+    authenticate(client, manager)
+    target = SquadRefresh.objects.create(
+        team=manager.team, season="2026/27", gameweek=10
+    )
+    state = SyncState.objects.create(
+        key=f"squad:{target.pk}",
+        kind="squad",
+        object_id=target.pk,
+        status="ok",
+        last_success_at=NOW,
+        payload={"stamp": "2026/27:10"},
+    )
+
+    response = client.post(reverse(route, args=[manager.team_id]))
+
+    assert response.status_code in (202, 302)
+    state.refresh_from_db()
+    assert state.status == "queued"
+    assert state.generation == 1
+    assert (
+        SyncState.objects.filter(
+            kind__in=["profile", "history", "transfers"], status="queued"
+        ).count()
+        == 3
+    )
+
+
+@pytest.mark.parametrize("method", ["compare_teams", "quick_compare"])
+@pytest.mark.parametrize("expired_snapshot", [False, True])
+def test_comparisons_reuse_saved_lineups_after_picks_snapshot_expires(
+    manager, api, method, expired_snapshot
+):
+    rival = Team.objects.create(fpl_team_id="102", team_name="Rival XI")
+    for team in (manager.team, rival):
+        import_rows(team, api)
+    snapshots = {
+        "bootstrap": api.fetch_bootstrap_static.return_value,
+        "fixtures": api.fetch_fixtures_data.return_value,
+    }
+    if expired_snapshot:
+        for entry in (101, 102):
+            snapshots[f"picks:2026/27:{entry}:10"] = api.fetch_team_picks.return_value
+    publish_snapshots(snapshots)
+    FplSnapshot.objects.filter(key__startswith="picks:").update(expires_at=NOW)
+
+    service = TeamAnalysisService()
+    result = getattr(service, method)(101, 102)
+
+    assert "error" not in result
+    assert result["current_gameweek"] == 10
+    assert result["captaincy"]["mine"]["name"] == "Player 1"
+    assert result["captaincy"]["rival"]["name"] == "Player 1"
+    if method == "compare_teams":
+        assert result["head_to_head_advantages"]["bank_balance"] is None
+    assert (
+        service._comparison_picks(101, 10)["picks"]
+        == api.fetch_team_picks.return_value["picks"]
+    )
+    assert SyncState.objects.filter(kind="squad", status="queued").count() == 2
+
+
+@pytest.mark.parametrize("method", ["compare_teams", "quick_compare"])
+@pytest.mark.parametrize("unavailable", ["season", "gameweek", "incomplete"])
+def test_comparisons_never_substitute_wrong_or_incomplete_lineups(
+    manager, api, method, unavailable
+):
+    rival = Team.objects.create(fpl_team_id="102", team_name="Rival XI")
+    import_rows(manager.team, api)
+    import_rows(
+        rival,
+        api,
+        season="2025/26" if unavailable == "season" else "2026/27",
+        gameweek=9 if unavailable == "gameweek" else 10,
+    )
+    if unavailable == "incomplete":
+        rival.squad_histories.filter(position=15).delete()
+    publish_snapshots(
+        {"bootstrap": api.fetch_bootstrap_static.return_value, "fixtures": []}
+    )
+
+    result = getattr(TeamAnalysisService(), method)(101, 102)
+
+    assert (
+        result["error"] == "Team lineups are being refreshed. Please try again shortly."
+    )
+    assert SyncState.objects.filter(kind="squad", status="queued").count() == 2
 
 
 @pytest.fixture(autouse=True)

@@ -81,6 +81,44 @@ class TeamAnalysisService:
                 raise RuntimeError("Unable to load FPL bootstrap/fixtures data")
 
     # ---------- Utility helpers ----------
+    def _comparison_picks(self, fpl_team_id, gameweek):
+        picks = self.api.fetch_team_picks(fpl_team_id, gameweek)
+        if picks:
+            return picks
+
+        # Transport snapshots expire independently of the persisted lineup.
+        # Never substitute a previous event or season's squad for this event.
+        season = GameweekContextService.derive(self.events)["season"]
+        if not season:
+            return None
+        team = Team.objects.filter(fpl_team_id=str(fpl_team_id)).first()
+        if not team:
+            return None
+        rows = list(
+            team.squad_histories.filter(season=season, gameweek=gameweek).order_by(
+                "position"
+            )
+        )
+        if len(rows) != 15:
+            return None
+        history = team.gameweek_data.filter(season=season, gameweek=gameweek).first()
+        return {
+            "picks": [
+                {
+                    "element": row.player_fpl_id,
+                    "position": row.position,
+                    "multiplier": row.multiplier,
+                    "is_captain": row.is_captain,
+                    "is_vice_captain": row.is_vice_captain,
+                }
+                for row in rows
+            ],
+            "entry_history": {
+                "bank": history.bank if history else None,
+                "value": sum(row.player_cost for row in rows),
+            },
+        }
+
     def _safe_float(self, value, default=0.0) -> float:
         try:
             return float(value) if value is not None else default
@@ -520,9 +558,10 @@ class TeamAnalysisService:
                 else "theirs"
             ),
             "bank_balance": (
-                "mine"
-                if my_summary.get("bank", 0) > rival_summary.get("bank", 0)
-                else "theirs"
+                ("mine" if my_summary["bank"] > rival_summary["bank"] else "theirs")
+                if my_summary.get("bank") is not None
+                and rival_summary.get("bank") is not None
+                else None
             ),
             "upcoming_fixtures": (
                 "mine"
@@ -951,11 +990,13 @@ class TeamAnalysisService:
             gw = self.current_gw
             if not gw:
                 return {"error": "Lineups are not available for comparison yet."}
-            my_picks = self.api.fetch_team_picks(my_fpl_team_id, gw)
-            rival_picks = self.api.fetch_team_picks(rival_fpl_team_id, gw)
+            my_picks = self._comparison_picks(my_fpl_team_id, gw)
+            rival_picks = self._comparison_picks(rival_fpl_team_id, gw)
 
             if not my_picks or not rival_picks:
-                return {"error": "Team picks not found"}
+                return {
+                    "error": "Team lineups are being refreshed. Please try again shortly."
+                }
 
             my_squad = my_picks.get("picks", [])
             rival_squad = rival_picks.get("picks", [])
@@ -1067,11 +1108,13 @@ class TeamAnalysisService:
             gw = self.current_gw
             if not gw:
                 return {"error": "Lineups are not available for comparison yet."}
-            my_picks = self.api.fetch_team_picks(my_fpl_team_id, gw)
-            rival_picks = self.api.fetch_team_picks(rival_fpl_team_id, gw)
+            my_picks = self._comparison_picks(my_fpl_team_id, gw)
+            rival_picks = self._comparison_picks(rival_fpl_team_id, gw)
 
             if not my_picks or not rival_picks:
-                return {"error": "Team picks not found"}
+                return {
+                    "error": "Team lineups are being refreshed. Please try again shortly."
+                }
 
             my_info = self.api.fetch_team_basic_info(my_fpl_team_id) or {}
             rival_info = self.api.fetch_team_basic_info(rival_fpl_team_id) or {}

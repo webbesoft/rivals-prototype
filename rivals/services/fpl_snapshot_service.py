@@ -35,7 +35,7 @@ def publish_snapshots(snapshots):
     FplSnapshot.objects.filter(pk__in=expired).delete()
 
 
-def enqueue_squad(team, season, gameweek):
+def enqueue_squad(team, season, gameweek, *, force=False):
     from .gameweek_context_service import GameweekContextService
     from .refresh_service import enqueue_refresh
 
@@ -52,7 +52,7 @@ def enqueue_squad(team, season, gameweek):
     target, _ = SquadRefresh.objects.get_or_create(
         team=team, season=season, gameweek=gameweek
     )
-    return enqueue_refresh("squad", target.pk, context=context)
+    return enqueue_refresh("squad", target.pk, context=context, force=force)
 
 
 def request_snapshot(key):

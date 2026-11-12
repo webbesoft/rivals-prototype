@@ -655,3 +655,24 @@
   .journal-choice label { flex-basis: 100%; }
   .journal-choice select { flex: 1; min-width: 0; }
 }
+.app-request-status {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  z-index: 1000; max-width: calc(100vw - 32px); padding: 12px 18px;
+  border-radius: 6px; background: #0f4f2f; color: #fff;
+  box-shadow: 0 4px 18px #0003; font-size: 13px; font-weight: 700;
+  pointer-events: none;
+}
+.app-request-status[hidden] { display: none; }
+.app-request-pending { cursor: wait !important; opacity: .7; }
+.app-request-pending::after, .app-request-status::before {
+  content: ''; display: inline-block; width: 1em; height: 1em;
+  border: 2px solid currentColor; border-right-color: transparent;
+  border-radius: 50%; vertical-align: -.12em;
+  animation: app-request-spin .75s linear infinite;
+}
+.app-request-pending::after { margin-left: .5em; }
+.app-request-status::before { margin-right: .6em; }
+@keyframes app-request-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .app-request-pending::after, .app-request-status::before { animation: none; }
+}

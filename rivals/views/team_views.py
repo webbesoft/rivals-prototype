@@ -136,9 +136,8 @@ def team_sync(request, team_id):
         request.user.team_id != team.id
         and not request.user.tracked_teams.filter(team=team, active=True).exists()
     ):
-        return JsonResponse(
-            {"error": "Track this team before requesting a refresh."}, status=403
-        )
+        messages.warning(request, "Track this rival first to request updates.")
+        return redirect("rivals:teams.show", team_id=team.id)
     enqueue_team(team.id, force=True)
     messages.info(
         request,

@@ -84,6 +84,12 @@ def enqueue_refresh(kind, object_id=None, force=False, context=None):
 def enqueue_team(team_id, force=False, context=None):
     for kind in ("profile", "history", "transfers"):
         enqueue_refresh(kind, team_id, force=force, context=context)
+    if force:
+        from .fpl_snapshot_service import enqueue_squad
+
+        context = context if context is not None else GameweekContextService.cached()
+        team = Team.objects.get(pk=team_id)
+        enqueue_squad(team, context["season"], context["scoring_gameweek"], force=True)
 
 
 def enqueue_user(user, force=False):
