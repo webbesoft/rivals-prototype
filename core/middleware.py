@@ -1,6 +1,19 @@
 import re
 from django.http import HttpResponse
 
+
+class HealthCheckMiddleware:
+    """Answer Kamal's container-ID probes before host-dependent middleware."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if request.path_info == "/health" and request.method in {"GET", "HEAD"}:
+            return HttpResponse("OK", content_type="text/plain")
+        return self.get_response(request)
+
+
 SUSPICIOUS_PATH_PATTERN = re.compile(
     r"(\.env|\.git|\.aws|\.DS_Store|wp-admin|wp-content|wp-includes|phpmyadmin|\.php|\.aspx?|\.cgi|\.bak$|\.save$)",
     re.IGNORECASE,

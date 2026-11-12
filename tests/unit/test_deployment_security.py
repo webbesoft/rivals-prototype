@@ -197,25 +197,27 @@ def runtime_environment(production):
 
 
 @pytest.mark.parametrize("hostname", ["3d7af4ec6640", "a1b2c3d4e5f6"])
-def test_container_healthcheck_hostname_is_allowed(production, hostname):
+def test_container_healthcheck_bypasses_host_validation_only_for_health(
+    production, hostname
+):
     script = """
 import socket
 import dotenv
 dotenv.load_dotenv = lambda: False
-socket.gethostname = lambda: HOSTNAME
+socket.gethostname = lambda: '130.162.214.17-e14d246d5696'
+import django
+django.setup()
 from django.conf import settings
-from django.core.exceptions import DisallowedHost
-from django.test import RequestFactory
+from django.test import Client
 
 assert 'rivals.example' in settings.ALLOWED_HOSTS
-request = RequestFactory().get('/health', HTTP_HOST=HOSTNAME + ':8000')
-assert request.get_host() == HOSTNAME + ':8000'
-try:
-    RequestFactory().get('/health', HTTP_HOST='untrusted.example').get_host()
-except DisallowedHost:
-    pass
-else:
-    raise AssertionError('Untrusted hosts must still be rejected')
+assert HOSTNAME not in settings.ALLOWED_HOSTS
+client = Client()
+for method in (client.get, client.head):
+    assert method('/health', HTTP_HOST=HOSTNAME + ':8000').status_code == 200
+for path in ('/', '/health/', '/health/other'):
+    assert client.get(path, HTTP_HOST=HOSTNAME + ':8000').status_code == 400
+assert client.post('/health', HTTP_HOST=HOSTNAME + ':8000').status_code == 400
 """.replace("HOSTNAME", repr(hostname))
     env = runtime_environment(production)
     env["DJANGO_SETTINGS_MODULE"] = "rivalspy.settings"
