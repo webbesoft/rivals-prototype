@@ -462,6 +462,7 @@ def team_quick_compare(request, team_id):
 
 
 @login_required
+@require_http_methods(["GET"])
 @rate_limit("analysis", methods=("GET",))
 def team_compare(request, team_id):
     """Full dedicated comparison page."""

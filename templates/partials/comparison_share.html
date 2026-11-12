@@ -7,7 +7,7 @@
     data-rival-manager="{{ rival_team.manager_name|default:rival_team.team_name }}"
     data-my-points="{{ my_points|default_if_none:''|unlocalize }}"
     data-rival-points="{{ rival_points|default_if_none:''|unlocalize }}"
-    data-score-source="{% if comparison.season_totals %}FPL entry totals{% else %}Latest stored totals{% endif %}"
+    data-score-source="{% if comparison.season_totals.mine != None and comparison.season_totals.rival != None and comparison.season_totals %}FPL entry totals{% else %}Latest available totals{% endif %}"
     data-gameweek="{{ comparison.current_gameweek|default_if_none:'' }}"
     data-timestamp="{{ comparison.analysis_timestamp|default:'Not available' }}"
     data-my-captain="{{ comparison.captaincy.mine.name|default:'Not available' }}"

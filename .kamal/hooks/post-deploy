@@ -1,27 +1,13 @@
 #!/bin/bash
 # Post-deploy hook for Kamal
-# Runs migrations and syncs players after container is deployed
+# The web startup command applies migrations before receiving traffic.
 
-set -e
+set -euo pipefail
 
 echo "🔧 Running post-deploy tasks..."
 
-# Get the container name/ID from Kamal
-# Kamal sets KAMAL_VERSION and other env vars
-CONTAINER_NAME="rivals-web"
-
-# Run deployment tasks inside the container
-# Using kamal app exec to run commands in the deployed container
-kamal app exec --roles web "uv run python manage.py migrate --noinput" || {
-    echo "❌ Migration failed!"
-    exit 1
-}
-
-echo "✅ Migrations completed"
-
 # Player refreshes are now recurring background work. Verify that the job role started.
-kamal app exec --roles web "uv run python manage.py check_fpl_worker" || {
-    echo "⚠️ FPL worker has not reported a heartbeat yet. Check the job role logs."
-}
+kamal app exec --reuse --primary --roles job --version "${KAMAL_VERSION:?Kamal must provide the deployed version}" \
+    "python manage.py check_fpl_worker --wait 60 --local-progress"
 
 echo "✅ Post-deploy tasks completed!"

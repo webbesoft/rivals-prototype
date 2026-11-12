@@ -448,3 +448,84 @@ def test_leader_gaps_only_compare_matching_season_totals(manager):
     league.start_event = 5
     result = large_league_context(user, league, CONTEXT, {"section": "table"})
     assert result["gap_to_leader"] is None and not result["can_compare_points"]
+
+
+def test_new_first_page_excludes_older_pages_and_newest_duplicate_wins(manager):
+    user, league = manager
+    save_page(league, CONTEXT["season"], 2, page(2, entry=123))
+    first = save_page(league, CONTEXT["season"], 1, page(1, entry=123))
+    first.page_size = 50
+    first.save()
+    result = large_league_context(
+        user, league, CONTEXT, {"section": "table", "standings_page": "2"}
+    )
+    assert result["visible_rows"] == []
+    assert result["waiting"]
+    # Page 2 is newer than page 3, despite having a lower page number.
+    save_page(league, CONTEXT["season"], 3, page(3, entry=123))
+    newest = save_page(league, CONTEXT["season"], 2, page(2, entry=123))
+    result = large_league_context(user, league, CONTEXT, {"standings_page": "2"})
+    assert result["visible_rows"][0]["rank"] == newest.rows[0]["rank"]
+
+
+def test_summary_serializer_and_json_renderer_expose_published_rows(manager):
+    from api.serializers import MiniLeagueDetailSerializer
+    from rest_framework.renderers import JSONRenderer
+
+    user, league = manager
+    save_page(league, CONTEXT["season"], 1, page())
+    client = Client()
+    client.force_login(user)
+    with patch(
+        "rivals.services.gameweek_context_service.GameweekContextService.cached",
+        return_value=CONTEXT,
+    ):
+        assert (
+            MiniLeagueDetailSerializer(league).data["standings"]
+            == page()["standings"]["results"]
+        )
+        response = client.get(
+            reverse("api:league_detail", args=[league.pk]),
+            {"section": "table"},
+            HTTP_ACCEPT="application/json",
+        )
+    assert response.status_code == 200
+    assert JSONRenderer().render(response.data)
+    assert response.json()["leaders"] == page()["standings"]["results"]
+
+
+def test_summary_mode_clears_when_membership_size_qualifies_for_full_import(manager):
+    from rivals.services.league_membership_service import reconcile_memberships
+
+    user, league = manager
+    league.summary_only = True
+    league.save()
+    data = profile(user)
+    data["leagues"]["classic"][0]["rank_count"] = 20
+    reconcile_memberships(user, data)
+    league.refresh_from_db()
+    assert not league.summary_only
+    assert not league.uses_summary
+
+
+def test_api_dashboard_keeps_better_full_rank_and_counts_only_active_tracking(manager):
+    user, league = manager
+    full = MiniLeague.objects.create(
+        fpl_league_id="99", name="Small league", rank_count=10
+    )
+    MiniLeagueTeam.objects.create(
+        mini_league=full, team=user.team, current_rank=1, total_points=500
+    )
+    save_profile_ranks(user.team, profile(user, rank=20), CONTEXT)
+    rival = Team.objects.create(fpl_team_id="987", team_name="Inactive rival")
+    TrackedTeam.objects.create(user=user, team=rival, active=False)
+    client = Client()
+    client.force_login(user)
+    with patch(
+        "rivals.services.gameweek_context_service.GameweekContextService.cached",
+        return_value=CONTEXT,
+    ):
+        result = client.get(reverse("api:dashboard")).json()
+    assert result["best_league_rank"] == 1
+    assert result["best_league_name"] == full.name
+    assert result["tracked_teams_count"] == 0

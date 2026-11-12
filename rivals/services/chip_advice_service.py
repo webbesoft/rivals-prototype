@@ -21,6 +21,7 @@ def chip_advice(engine, baseline):
         weeks.append(
             {
                 "week": week,
+                "xi": lineup["xi"],
                 "captain": lineup["captain"],
                 "captain_points": engine.projections[lineup["captain"]][week],
                 "bench": bench,
@@ -39,7 +40,17 @@ def chip_advice(engine, baseline):
     advice = []
     # Compare reliable captain options first; an injured star must not hide a
     # slightly lower, fit player's strong chip opportunity in another week.
-    captains = [w for w in weeks if reliable(w["captain"])]
+    captains = [
+        {
+            **w,
+            "captain": pid,
+            "captain_points": engine.projections[pid][w["week"]],
+            "baseline_captain_points": w["captain_points"],
+        }
+        for w in weeks
+        for pid in w["xi"]
+        if reliable(pid)
+    ]
     tc = max(captains or weeks, key=lambda w: w["captain_points"])
     strong_tc = tc["captain_points"] >= 10 and reliable(tc["captain"])
     player = engine.name(tc["captain"])
@@ -61,7 +72,7 @@ def chip_advice(engine, baseline):
                 f"{player} projects {tc['captain_points']:.1f} points against "
                 f"{', '.join(fixtures) or 'no scheduled opponent'}: "
                 f"{3 * tc['captain_points']:.1f} with Triple Captain, "
-                f"an extra {tc['captain_points']:.1f} over normal captaincy. "
+                f"an extra {2 * tc['captain_points'] - tc.get('baseline_captain_points', tc['captain_points']):.1f} over baseline captaincy. "
                 + (
                     "This is a strong opportunity in your current squad's forecast. "
                     if strong_tc
@@ -102,7 +113,16 @@ def chip_advice(engine, baseline):
             ),
         }
     )
-    disruption = max(weeks, key=lambda w: w["missing"])
+    qualifying = [
+        w
+        for w in weeks
+        if w["missing"] >= 3
+        and any(
+            following["week"] == w["week"] + 1 and following["missing"] <= 1
+            for following in forecast_weeks
+        )
+    ]
+    disruption = max(qualifying or weeks, key=lambda w: w["missing"])
     # Recovery after the refresh still matters for a one-week Free Hit.
     following = next(
         (w for w in forecast_weeks if w["week"] == disruption["week"] + 1), None

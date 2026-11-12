@@ -56,7 +56,7 @@ def enqueue_refresh(kind, object_id=None, force=False, context=None):
     if existing and _skip_refresh(existing, kind, context, now, force):
         return False
     with transaction.atomic():
-        state, _ = SyncState.objects.get_or_create(
+        state, _ = SyncState.objects.select_for_update().get_or_create(
             key=key, defaults={"kind": kind, "object_id": object_id}
         )
         if _skip_refresh(state, kind, context, now, force):

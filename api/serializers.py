@@ -118,7 +118,15 @@ class MiniLeagueDetailSerializer(MiniLeagueSerializer):
 
     def get_standings(self, league):
         if league.uses_summary:
-            return []
+            from rivals.models import LeagueStandingsPage
+            from rivals.services.gameweek_context_service import GameweekContextService
+
+            page = LeagueStandingsPage.objects.filter(
+                mini_league=league,
+                season=GameweekContextService.cached()["season"],
+                number=1,
+            ).first()
+            return page.rows if page else []
         return MiniLeagueTeamSerializer(
             league.mini_league_teams.select_related("team"), many=True
         ).data

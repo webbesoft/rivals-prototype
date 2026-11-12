@@ -1480,7 +1480,7 @@ def test_chip_advice_shows_extra_captain_points_and_best_future_week(manager, ap
     assert advice["status"] == "Plan ahead"
     assert advice["gameweek"] == 12
     assert "54.0 with Triple Captain" in advice["detail"]
-    assert "extra 18.0 over normal captaincy" in advice["detail"]
+    assert "extra 18.0 over baseline captaincy" in advice["detail"]
 
 
 @pytest.mark.django_db
@@ -1563,8 +1563,13 @@ def test_chip_opportunities_respect_refresh_and_expiry(manager, api, current, ex
         engine.projections[pid] = {
             mapping[week]: points for week, points in engine.projections[pid].items()
         }
-        for fixture in engine.player_fixtures[pid]:
-            fixture["gameweek"] = mapping[fixture["gameweek"]]
+        engine.player_fixtures[pid] = [
+            {
+                **fixture,
+                "gameweek": mapping.get(fixture["gameweek"], fixture["gameweek"]),
+            }
+            for fixture in engine.player_fixtures[pid]
+        ]
         # Much stronger later weeks must not lure chips into the next half.
         engine.projections[pid] = {
             week: 3 + (week - current) * 20 for week in engine.weeks

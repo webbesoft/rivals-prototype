@@ -784,7 +784,9 @@ class TeamAnalysisService:
         self, squad_picks: List[Dict[str, Any]]
     ) -> Optional[Dict[str, Any]]:
         """Get projected captain points for next GW."""
-        captain_suggestions = self.get_captain_suggestions(squad_picks, limit=1)
+        captain_suggestions = self.get_captain_suggestions(
+            [pick for pick in squad_picks if pick.get("is_captain")], limit=1
+        )
         if captain_suggestions:
             captain = captain_suggestions[0]
             return {
@@ -805,7 +807,7 @@ class TeamAnalysisService:
         )
         points_list = list(recent_gws)
         if not points_list:
-            return {"average": 0.0, "trend": "neutral", "points": []}
+            return {"average": None, "trend": None, "points": []}
 
         avg = sum(points_list) / len(points_list)
         if len(points_list) >= 2:
@@ -996,14 +998,19 @@ class TeamAnalysisService:
             my_momentum = (
                 self.calculate_momentum(my_team_model)
                 if my_team_model
-                else {"average": 0.0, "trend": "neutral"}
+                else {"average": None, "trend": None}
             )
             rival_momentum = (
                 self.calculate_momentum(rival_team_model)
                 if rival_team_model
-                else {"average": 0.0, "trend": "neutral"}
+                else {"average": None, "trend": None}
             )
-            momentum_diff = my_momentum["average"] - rival_momentum["average"]
+            momentum_diff = (
+                my_momentum["average"] - rival_momentum["average"]
+                if my_momentum["average"] is not None
+                and rival_momentum["average"] is not None
+                else None
+            )
 
             # Available free transfers are private team information.
             my_free_transfers = None
@@ -1029,7 +1036,9 @@ class TeamAnalysisService:
                 "momentum": {
                     "mine": my_momentum,
                     "rival": rival_momentum,
-                    "difference": round(momentum_diff, 1),
+                    "difference": (
+                        round(momentum_diff, 1) if momentum_diff is not None else None
+                    ),
                 },
                 "transfers": {
                     "mine_free": my_free_transfers,
@@ -1113,12 +1122,12 @@ class TeamAnalysisService:
             my_momentum = (
                 self.calculate_momentum(my_model)
                 if my_model
-                else {"average": 0.0, "trend": "neutral"}
+                else {"average": None, "trend": None}
             )
             rival_momentum = (
                 self.calculate_momentum(rival_model)
                 if rival_model
-                else {"average": 0.0, "trend": "neutral"}
+                else {"average": None, "trend": None}
             )
 
             # Get fixture schedules (squad aggregate)

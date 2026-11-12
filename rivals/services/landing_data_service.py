@@ -37,7 +37,7 @@ class LandingDataService:
         cache_key = "landing_best_xi_expected_v2"
         cached = cache.get(cache_key)
         if cached is not None:
-            return cached
+            return None if cached is False else cached
 
         bootstrap = self.fpl_api.fetch_bootstrap_static()
         if not bootstrap:
@@ -106,6 +106,7 @@ class LandingDataService:
             return None
         shape, (points, ids) = max(legal, key=lambda item: item[1][0])
         if points <= 0:
+            cache.set(cache_key, False, self.cache_timeout)
             return None
         selected = [players[player_id] for player_id in ids]
         rows = []

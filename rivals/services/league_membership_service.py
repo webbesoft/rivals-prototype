@@ -1,5 +1,6 @@
 """Reconcile FPL account memberships without deleting league history."""
 
+from django.conf import settings
 from django.db import transaction
 
 from rivals.models import MiniLeague, UserMiniLeague
@@ -63,7 +64,15 @@ def reconcile_memberships(user, profile, *, retire_legacy=True):
                     "league_type": row["league_type"],
                     "scoring_type": row.get("scoring", "c"),
                     **(
-                        {"rank_count": row["rank_count"]}
+                        {
+                            "rank_count": row["rank_count"],
+                            **(
+                                {"summary_only": False}
+                                if row["rank_count"]
+                                <= settings.LEAGUE_FULL_IMPORT_LIMIT
+                                else {}
+                            ),
+                        }
                         if type(row.get("rank_count")) is int and row["rank_count"] > 0
                         else {}
                     ),

@@ -26,9 +26,13 @@ class LeagueImportService:
         self.stamp = f'{context["season"]}:{context["scoring_gameweek"]}'
 
     def _check_owner(self):
-        if not SyncState.objects.filter(
-            pk=self.state.pk, generation=self.state.generation, status="running"
-        ).exists():
+        if (
+            not SyncState.objects.select_for_update()
+            .filter(
+                pk=self.state.pk, generation=self.state.generation, status="running"
+            )
+            .first()
+        ):
             raise RuntimeError("League import lease superseded")
 
     def run_batch(self):

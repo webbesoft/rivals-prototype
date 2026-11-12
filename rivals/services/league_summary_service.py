@@ -134,6 +134,18 @@ def large_league_context(user, league, context, params):
             numbers = [n for n in numbers if n <= maximum]
     pages = [first if n == 1 else requested_page(league, season, n) for n in numbers]
     displayed_pages = {page.number: page for page in [first, *pages]}.values()
+    # A refreshed first page starts a new publication window. Retain stale pages
+    # in storage, but never mix them into that window. Within it, newest wins.
+    requested_pages = pages
+    pages = sorted(
+        [
+            page
+            for page in pages
+            if page.updated_at
+            and (first.updated_at is None or page.updated_at >= first.updated_at)
+        ],
+        key=lambda page: page.updated_at,
+    )
     # Duplicate entries are possible across moving/tied upstream boundaries.
     by_id = {
         row["entry"]: {**row, "page_number": page.number}
@@ -185,9 +197,15 @@ def large_league_context(user, league, context, params):
         "standings_page": number,
         "previous_page": max(1, number - 1),
         "next_page": number + 1,
-        "has_next": any(page.number >= number and page.has_next for page in pages),
+        "has_next": any(
+            page.number >= number and page.has_next for page in requested_pages
+        ),
         "found_user": found,
-        "waiting": any(page.updated_at is None for page in displayed_pages),
+        "waiting": any(
+            page.updated_at is None
+            or (first.updated_at and page.updated_at < first.updated_at)
+            for page in displayed_pages
+        ),
         "pages_updated_at": min(
             (page.updated_at for page in displayed_pages if page.updated_at),
             default=None,

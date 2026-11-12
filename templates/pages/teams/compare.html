@@ -7,7 +7,7 @@
   <header class="rv-page-heading"><div><p class="rv-eyebrow">The matchup / Published squads{% if comparison.current_gameweek %} / GW{{ comparison.current_gameweek }}{% endif %}</p><h1>Read the rivalry.</h1></div><div class="rv-page-actions"><a href="{% url 'rivals:teams.show' rival_team.id %}">Rival squad ↗</a><a href="{% url 'rivals:teams.show' my_team.id %}">My squad ↗</a></div></header>
 
   {% if comparison.season_totals %}
-    {% include "partials/comparison_scoreboard.html" with my_points=comparison.season_totals.mine rival_points=comparison.season_totals.rival %}
+    {% include "partials/comparison_scoreboard.html" with my_points=comparison.season_totals.mine|default_if_none:my_team.current_total_points rival_points=comparison.season_totals.rival|default_if_none:rival_team.current_total_points %}
   {% else %}
     {% include "partials/comparison_scoreboard.html" with my_points=my_team.current_total_points rival_points=rival_team.current_total_points %}
   {% endif %}
@@ -19,11 +19,11 @@
   </section>
 
   <section id="captain-matchup" class="rv-section" aria-labelledby="captain-heading">
-    <header class="rv-section-heading"><div><p class="rv-eyebrow">01 / The armband</p><h2 id="captain-heading">The captain choices.</h2></div><p>From the published squads.<br>Player estimates before the captain multiplier.</p></header>
+    <header class="rv-section-heading"><div><p class="rv-eyebrow">01 / The armband</p><h2 id="captain-heading">The captain choices.</h2></div><p>From the published squads.<br>Estimates include the 2× captain multiplier.</p></header>
     <div class="rv-captain-duel">
-      <article><span class="rv-eyebrow">Your captain</span>{% if comparison.captaincy.mine %}<h3>{{ comparison.captaincy.mine.name }} <span class="rv-armband" aria-label="Captain">C</span></h3><p><strong>{{ comparison.captaincy.mine.expected_points|floatformat:1 }}</strong> estimated player pts</p>{% else %}<h3>Not available</h3><p>No captain available in the published squad.</p>{% endif %}</article>
+      <article><span class="rv-eyebrow">Your captain</span>{% if comparison.captaincy.mine %}<h3>{{ comparison.captaincy.mine.name }} <span class="rv-armband" aria-label="Captain">C</span></h3><p><strong>{{ comparison.captaincy.mine.expected_points|floatformat:1 }}</strong> estimated captain pts</p>{% else %}<h3>Not available</h3><p>No captain available in the published squad.</p>{% endif %}</article>
       <div class="rv-duel-divider" aria-hidden="true">v</div>
-      <article><span class="rv-eyebrow">Rival captain</span>{% if comparison.captaincy.rival %}<h3>{{ comparison.captaincy.rival.name }} <span class="rv-armband" aria-label="Captain">C</span></h3><p><strong>{{ comparison.captaincy.rival.expected_points|floatformat:1 }}</strong> estimated player pts</p>{% else %}<h3>Not available</h3><p>No captain available in the published squad.</p>{% endif %}</article>
+      <article><span class="rv-eyebrow">Rival captain</span>{% if comparison.captaincy.rival %}<h3>{{ comparison.captaincy.rival.name }} <span class="rv-armband" aria-label="Captain">C</span></h3><p><strong>{{ comparison.captaincy.rival.expected_points|floatformat:1 }}</strong> estimated captain pts</p>{% else %}<h3>Not available</h3><p>No captain available in the published squad.</p>{% endif %}</article>
     </div>
   </section>
 

@@ -1,4 +1,5 @@
 import logging
+import socket
 
 from background_task import background
 from django.db import transaction
@@ -123,9 +124,11 @@ def ingest(state):
             return {}
         data = api.fetch_mini_league_page(page.mini_league.fpl_league_id, page.number)
         with transaction.atomic():
-            if not SyncState.objects.filter(
-                pk=state.pk, generation=state.generation, status="running"
-            ).exists():
+            if (
+                not SyncState.objects.select_for_update()
+                .filter(pk=state.pk, generation=state.generation, status="running")
+                .first()
+            ):
                 raise RuntimeError("Standings page lease superseded")
             save_page(page.mini_league, page.season, page.number, data)
     elif state.kind == "league":
@@ -201,6 +204,9 @@ def refresh_tick():
         key="worker",
         defaults={
             "kind": "worker",
+            "payload": {
+                "worker_id": socket.gethostname(),
+            },
             "status": "ok",
             "last_success_at": timezone.now(),
         },

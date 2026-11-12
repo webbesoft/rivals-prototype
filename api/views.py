@@ -158,7 +158,7 @@ class DashboardView(APIView):
             "user": UserSerializer(user).data,
             "team": TeamSerializer(team).data if team else None,
             "leagues_count": user.mini_leagues.count(),
-            "tracked_teams_count": user.tracked_teams.count(),
+            "tracked_teams_count": user.tracked_teams.filter(active=True).count(),
         }
 
         # Calculate best league position
@@ -191,7 +191,10 @@ class DashboardView(APIView):
                     .order_by("-gameweek", "current_rank")
                     .first()
                 )
-                if published:
+                if published and (
+                    best_standing is None
+                    or published.current_rank < best_standing.current_rank
+                ):
                     best_standing = published
 
                 if best_standing:

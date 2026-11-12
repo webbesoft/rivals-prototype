@@ -1,26 +1,27 @@
 #!/bin/bash
+# Local release gate: run the complete suites before Kamal boots new containers.
+set -euo pipefail
 
-# Pre-deploy hook for Kamal
-# Runs unit tests using uv before deployment proceeds
+command -v uv >/dev/null || { echo "uv is required for deployment checks." >&2; exit 1; }
+command -v node >/dev/null || { echo "Node.js is required for the JavaScript release checks." >&2; exit 1; }
 
-set -eu
+uv python install "$(cat .python-version)"
 
-# Kamal runs this hook on the deployment host, before containers start.
-PYTHON_VERSION=$(cat .python-version)
-echo "🐍 Preparing Python ${PYTHON_VERSION} for pre-deploy tests..."
-if ! uv python install "$PYTHON_VERSION"; then
-    echo "❌ Could not prepare Python ${PYTHON_VERSION}. No tests were run." >&2
-    echo "Update uv (Homebrew: brew upgrade uv; standalone: uv self update), then retry deployment." >&2
-    exit 1
-fi
+# Resolve env.clear, secret aliases, and web/job host overrides with Kamal 2.12.0.
+ruby .kamal/check-production.rb
 
-echo "🧪 Running pre-deploy tests..."
+# Tests never need production credentials or remote telemetry/email delivery.
+export DEBUG=True
+export SECRET_KEY=local-release-tests-only-57a624b380fe49f8b23dca6072d9e4a5
+export SENTRY_DSN=
+export EMAIL_BACKEND=django.core.mail.backends.locmem.EmailBackend
+export BACKGROUND_TASK_RUN_ASYNC=False
+unset PYTEST_ADDOPTS
 
-# Run tests using uv
-if uv run python manage.py test; then
-    echo "✅ Tests passed! Proceeding with deployment."
-    exit 0
-else
-    echo "❌ Tests failed! Aborting deployment."
-    exit 1
-fi
+uv run --locked python -m pytest -q -o addopts=
+node --test tests/js/*.test.cjs
+uv run --locked python manage.py check
+# Application-owned migrations only; third-party packages maintain their own.
+uv run --locked python manage.py makemigrations --check --dry-run accounts api core rivals
+
+echo "Release checks passed."

@@ -3,6 +3,9 @@
 # Name of your application. Used to uniquely configure containers.
 service: rivalspy
 
+# Allow configuration checks and migrations to finish before routing new traffic.
+deploy_timeout: 120
+
 # Name of the container image.
 image: webbesoft/rivalspy
 
@@ -53,6 +56,7 @@ builder:
 env:
   clear:
     DEBUG: False
+    TRUSTED_PROXY_HOST: kamal-proxy
   secret:
     - ALLOWED_HOSTS
     - CSRF_TRUSTED_ORIGINS
@@ -67,6 +71,8 @@ env:
     - EMAIL_HOST_PASSWORD
     - EMAIL_USE_TLS
     - EMAIL_USE_SSL
+    - DEFAULT_FROM_EMAIL
+    - SITE_URL
     - PORT
     - SENTRY_DSN
     - SENTRY_TRACES_SAMPLE_RATE

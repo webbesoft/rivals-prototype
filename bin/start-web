@@ -1,0 +1,16 @@
+#!/bin/sh
+# Migrations must succeed before the web process can listen or pass health checks.
+set -eu
+
+python manage.py check_production_config
+python manage.py migrate --noinput
+# Resolve only the named proxy on Kamal's private Docker network. Fail closed
+# if a configured proxy cannot be resolved; never trust arbitrary forwarded IPs.
+proxy_ips=127.0.0.1
+if [ -n "${TRUSTED_PROXY_HOST:-}" ]; then
+  proxy_ips=$(getent ahostsv4 "$TRUSTED_PROXY_HOST" | awk '{print $1}' | sort -u | paste -sd, -)
+  [ -n "$proxy_ips" ] || { echo "Cannot resolve trusted proxy" >&2; exit 1; }
+fi
+exec python -m uvicorn rivalspy.asgi:application \
+  --proxy-headers --forwarded-allow-ips "$proxy_ips" \
+  --host 0.0.0.0 --port "${PORT:-8000}" --workers 1

@@ -56,14 +56,19 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv("SECRET_KEY", "secret-key-should-be-changed")
-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "False").lower() in ("1", "true", "yes")
+TESTING = "test" in sys.argv or "pytest" in sys.modules
+
+# Default web/worker startup rejects this development fallback via check_production_config.
+SECRET_KEY = os.getenv("SECRET_KEY", "secret-key-should-be-changed")
 
 ALLOWED_HOSTS = [
-    host.strip() for host in os.getenv("ALLOWED_HOSTS", "*").split(",") if host.strip()
+    host.strip()
+    for host in os.getenv(
+        "ALLOWED_HOSTS", "localhost,127.0.0.1,[::1]" if DEBUG else ""
+    ).split(",")
+    if host.strip()
 ]
 
 CSRF_TRUSTED_ORIGINS = [
@@ -210,8 +215,6 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-
-TESTING = "test" in sys.argv or "pytest" in sys.modules
 
 # Enable Whitenoise compression and caching
 STORAGES = {

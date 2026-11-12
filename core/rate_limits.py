@@ -58,7 +58,18 @@ def reserve_request(request, action, *, identity=""):
             if counter.expires_at <= now:
                 counter.attempts = 0
                 counter.expires_at = now + timedelta(seconds=seconds)
-            counters.append((counter, maximum))
+            if subject == "ip":
+                retry = (
+                    math.ceil((counter.expires_at - now).total_seconds())
+                    if counter.attempts >= maximum
+                    else 0
+                )
+                counter.attempts = min(counter.attempts + 1, maximum)
+                counter.save(update_fields=["attempts", "expires_at"])
+                if retry:
+                    return max(0, retry)
+            else:
+                counters.append((counter, maximum))
         retry = max(
             (
                 math.ceil((counter.expires_at - now).total_seconds())

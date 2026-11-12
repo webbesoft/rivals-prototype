@@ -55,7 +55,7 @@ def test_comparison_renders_fetched_entry_totals_instead_of_stale_profiles():
     assert "Season points / FPL entry totals" in html
     assert 'data-my-points="704"' in html
     assert 'data-rival-points="690"' in html
-    assert 'js/comparison-share.js' in html
+    assert "js/comparison-share.js" in html
 
 
 def test_zero_entry_total_does_not_fall_back_to_stored_points():
@@ -77,11 +77,57 @@ def test_zero_entry_total_does_not_fall_back_to_stored_points():
         (None, None),
     ],
 )
-def test_missing_entry_totals_do_not_invent_a_points_gap(my_entry, rival_entry):
+def test_missing_entry_totals_fall_back_independently_to_stored_points(
+    my_entry, rival_entry
+):
     comparison = comparison_from_entries(my_entry, rival_entry)
     html = render_scoreboard(comparison)
-    assert "Totals not available" in html
-    assert "pts ahead" not in html and "pts behind" not in html
-    assert "394" not in html and "679" not in html
-    my_points = comparison["season_totals"]["mine"]
-    assert f'data-my-points="{my_points if my_points is not None else ""}"' in html
+    mine = comparison["season_totals"]["mine"]
+    rival = comparison["season_totals"]["rival"]
+    assert f'data-my-points="{394 if mine is None else mine}"' in html
+    assert f'data-rival-points="{679 if rival is None else rival}"' in html
+    assert "Latest stored total" in html
+    assert "Totals not available" not in html
+
+
+def test_captain_projection_uses_published_captain_only():
+    service = TeamAnalysisService(api=Mock())
+    service.get_captain_suggestions = Mock(
+        return_value=[
+            {
+                "name": "Published captain",
+                "team": "FC",
+                "expected_points_next_gw": 4.5,
+                "form": 4,
+            }
+        ]
+    )
+    captain = {"element": 1, "is_captain": True}
+    result = service.get_captain_projection(
+        [captain, {"element": 2, "is_captain": False}]
+    )
+    service.get_captain_suggestions.assert_called_once_with([captain], limit=1)
+    assert result["expected_points"] == 9
+
+
+def test_missing_and_zero_momentum_render_differently_in_page_and_share():
+    for average, rendered in [(None, "—"), (0.0, "0.0")]:
+        html = render_scoreboard(
+            {"momentum": {"mine": {"average": average}, "rival": {"average": average}}}
+        )
+        assert f'data-my-form="{rendered}"' in html
+        assert f"{rendered} <small>pts/GW</small>" in html
+
+
+def test_momentum_missing_history_is_distinct_from_zero_points():
+    service = TeamAnalysisService(api=Mock())
+    # MagicMock supplies queryset slicing while retaining the result contract.
+    from unittest.mock import MagicMock
+
+    history = MagicMock()
+    rows = history.filter.return_value.order_by.return_value.__getitem__.return_value
+    rows.values_list.return_value = []
+    team = SimpleNamespace(gameweek_data=history, current_season="2026/27")
+    assert service.calculate_momentum(team)["average"] is None
+    rows.values_list.return_value = [0, 0]
+    assert service.calculate_momentum(team)["average"] == 0.0
