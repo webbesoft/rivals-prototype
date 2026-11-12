@@ -1,4 +1,5 @@
 import logging
+import time
 
 import requests
 from django.core.cache import cache
@@ -10,6 +11,9 @@ class FplApiService:
     BASE_URL = "https://fantasy.premierleague.com/api"
     HEADERS = {"User-Agent": "RivalSpy"}
     TIMEOUT = 30
+    MAX_ATTEMPTS = 3
+    RETRY_BACKOFF = 1
+    RETRY_STATUS_CODES = {500, 502, 503, 504}
     BOOTSTRAP_CACHE_KEY = "fpl_bootstrap_static"
     BOOTSTRAP_CACHE_TIMEOUT = 300  # 5 minutes
     SEASON_CACHE_KEY = "fpl_current_season"
@@ -18,13 +22,33 @@ class FplApiService:
     FIXTURES_CACHE_TIMEOUT = 300  # 5 minutes
 
     def make_request(self, url: str) -> dict | None:
-        try:
-            response = requests.get(url, headers=self.HEADERS, timeout=self.TIMEOUT)
-            response.raise_for_status()
-            return response.json()
-        except requests.RequestException as e:
-            logger.error(f"FPL API Exception: {e}")
-            return None
+        for attempt in range(1, self.MAX_ATTEMPTS + 1):
+            try:
+                response = requests.get(url, headers=self.HEADERS, timeout=self.TIMEOUT)
+                response.raise_for_status()
+                return response.json()
+            except requests.RequestException as exc:
+                retryable = isinstance(
+                    exc, (requests.ConnectionError, requests.Timeout)
+                ) or (
+                    isinstance(exc, requests.HTTPError)
+                    and exc.response is not None
+                    and exc.response.status_code in self.RETRY_STATUS_CODES
+                )
+                if not retryable or attempt == self.MAX_ATTEMPTS:
+                    logger.error("FPL API Exception: %s", exc)
+                    return None
+                delay = self.RETRY_BACKOFF * 2 ** (attempt - 1)
+                logger.warning(
+                    "FPL API request failed for %s (attempt %s/%s); "
+                    "retrying in %ss: %s",
+                    url,
+                    attempt,
+                    self.MAX_ATTEMPTS,
+                    delay,
+                    exc,
+                )
+                time.sleep(delay)
 
     def fetch_bootstrap_static(self, force_refresh: bool = False) -> dict | None:
         """Fetch bootstrap-static with caching to prevent duplicate high-volume calls."""
