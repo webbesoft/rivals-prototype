@@ -24,6 +24,7 @@
         </div>
         <button type="submit" class="app-primary-button">Log in <span aria-hidden="true">↗</span></button>
       </form>
+      <p class="app-auth-switch"><a href="{% url 'accounts:password_reset' %}">Forgot your password?</a></p>
       <p class="app-auth-switch">New to the league? <a href="{% url 'accounts:signup' %}">Create an account</a></p>
     </section>
   </div>

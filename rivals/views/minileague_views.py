@@ -4,14 +4,12 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
-from rivals.models import MiniLeague
 from core.rate_limits import rate_limit
+from rivals.models import MiniLeague
 from rivals.services.access_service import accessible_leagues
-from rivals.services.fpl_api_service import FplApiService
-from rivals.services.mini_league_sync_service import MiniLeagueSyncService
+from rivals.services.gameweek_context_service import GameweekContextService
 from rivals.services.projection_service import ProjectionService
 from rivals.services.refresh_service import enqueue_refresh, refresh_status
-from rivals.services.gameweek_context_service import GameweekContextService
 
 
 @login_required
@@ -102,40 +100,45 @@ def mini_league_create(request):
 @require_POST
 @rate_limit("league_add")
 def mini_league_store(request):
-    if not request.user.can_add_mini_league:
-        messages.error(
-            request, "Free plan allows only 1 mini-league. Upgrade to premium."
-        )
-        return redirect("pricing")
+    from django.contrib.auth import get_user_model
+    from django.db import transaction
 
-    fpl_league_id = request.POST.get("fpl_league_id", "").strip()
-    if not fpl_league_id:
-        messages.error(request, "Mini-league ID is required.")
+    from rivals.models import UserMiniLeague
+    from rivals.services.manual_league_service import validated_league
+
+    try:
+        fpl_id, name = validated_league(request.POST.get("fpl_league_id", ""))
+    except ValueError as error:
+        messages.error(request, str(error))
         return redirect("rivals:minileagues.create")
 
-    mini_league, created = MiniLeague.objects.get_or_create(fpl_league_id=fpl_league_id)
-
-    if created:
-        fpl_api = FplApiService()
-        league_data = fpl_api.fetch_mini_league_page(fpl_league_id, 1)
-
-        if not league_data:
-            messages.error(
-                request, "Invalid mini-league code. Please check and try again."
+    try:
+        with transaction.atomic():
+            user = get_user_model().objects.select_for_update().get(pk=request.user.pk)
+            existing = accessible_leagues(user).filter(fpl_league_id=fpl_id).exists()
+            if not existing and not user.can_add_mini_league:
+                raise ValueError("You can add up to 10 mini-leagues.")
+            mini_league, _ = MiniLeague.objects.update_or_create(
+                fpl_league_id=fpl_id, defaults={"name": name, "active": True}
             )
-            return redirect("rivals:minileagues.create")
+            UserMiniLeague.objects.update_or_create(
+                user=user,
+                mini_league=mini_league,
+                defaults={"source": "manual", "active": True},
+            )
+            enqueue_refresh("league", mini_league.pk)
+    except ValueError as error:
+        messages.error(request, str(error))
+        return redirect("rivals:minileagues.create")
+    except Exception:
+        import logging
 
-        mini_league.name = league_data["league"]["name"]
-        mini_league.save()
+        logging.getLogger(__name__).exception("Manual league import failed")
+        messages.error(request, "Could not add the league. Please try again.")
+        return redirect("rivals:minileagues.create")
 
-        enqueue_refresh("league", mini_league.id)
-
-    request.user.customminileagues.update_or_create(
-        mini_league=mini_league, defaults={"source": "manual", "active": True}
-    )
     messages.success(request, "Mini-league added successfully!")
-
-    return redirect("rivals:minileagues.show", mini_league_id=mini_league.id)
+    return redirect("rivals:minileagues.show", mini_league_id=mini_league.pk)
 
 
 @login_required
@@ -156,8 +159,9 @@ def mini_league_sync(request, mini_league_id):
 @require_POST
 def mini_league_track(request, mini_league_id, page_number, entry_id):
     from django.db import transaction
+
     from rivals.models import LeagueStandingsPage, Team
-    from rivals.services.access_service import track_team, TrackingLimitReached
+    from rivals.services.access_service import TrackingLimitReached, track_team
     from rivals.services.refresh_service import enqueue_team
 
     league = get_object_or_404(accessible_leagues(request.user), pk=mini_league_id)

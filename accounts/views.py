@@ -1,16 +1,14 @@
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import authenticate, get_user_model, login, logout
+from django.contrib.auth import get_user_model, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.tokens import default_token_generator
-from django.core.mail import send_mail
 from django.shortcuts import redirect, render
-from django.urls import reverse, reverse_lazy
-from django.utils.encoding import force_bytes, force_str
+from django.urls import reverse
+from django.utils.encoding import force_str
 from django.utils.http import (
     url_has_allowed_host_and_scheme,
     urlsafe_base64_decode,
-    urlsafe_base64_encode,
 )
 from django.views.decorators.http import require_POST
 
@@ -95,25 +93,30 @@ def password_reset_view(request):
     if request.method == "POST":
         form = PasswordResetForm(request.POST)
         if form.is_valid():
-            email = form.cleaned_data["email"]
+            import logging
+            from urllib.parse import urlsplit
+
+            from .tokens import password_reset_token_generator
+
+            origin = urlsplit(settings.SITE_URL)
             try:
-                user = User.objects.get(email=email)
-                # Generate reset token
-                token = default_token_generator.make_token(user)
-                uid = urlsafe_base64_encode(force_bytes(user.pk))
-
-                # Send reset email (using Celery task)
-                reset_url = request.build_absolute_uri(
-                    f"/accounts/reset-password/{uid}/{token}/"
+                form.save(
+                    domain_override=origin.netloc,
+                    use_https=origin.scheme == "https",
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    email_template_name="accounts/emails/password_reset.txt",
+                    subject_template_name="accounts/emails/password_reset_subject.txt",
+                    token_generator=password_reset_token_generator,
                 )
-                # send_password_reset_email.delay(user.id, reset_url)
-
-                messages.success(
-                    request, "Password reset instructions have been sent to your email."
+            except Exception:
+                logging.getLogger(__name__).exception(
+                    "Password reset email delivery failed"
                 )
-                return redirect("accounts:login")
-            except User.DoesNotExist:
-                messages.error(request, "No user found with this email address.")
+            messages.success(
+                request,
+                "If an eligible account exists, password reset instructions will be sent to that email address.",
+            )
+            return redirect("accounts:login")
     else:
         form = PasswordResetForm()
 
@@ -236,6 +239,7 @@ def profile_view(request):
 def update_fpl_id_view(request):
     """Handle FPL ID update form submission."""
     import json
+
     from .tasks import init_user_data_task
 
     if request.method != "POST":
@@ -243,77 +247,43 @@ def update_fpl_id_view(request):
 
     form = UpdateFplIdForm(request.POST)
     if form.is_valid():
-        new_fpl_id = str(form.cleaned_data["fpl_id"])
-        fpl_data = form.fpl_data  # already fetched in clean_fpl_id
+        from django.db import transaction
 
-        # Preserve prior profile state to restore on failure
-        old_fpl_id = request.user.fpl_id
-        old_team_name = request.user.team_name
-        old_manager_name = request.user.manager_name
-        old_team = request.user.team
-
-        # Prepare new manager info
-        new_team_name = fpl_data.get("name", "")
-        new_manager_name = (
-            fpl_data.get("player_first_name", "")
-            + " "
-            + fpl_data.get("player_last_name", "")
-        ).strip()
-
-        basic_info_json = json.dumps(fpl_data)
-        is_async = getattr(
-            __import__("django.conf", fromlist=["settings"]).settings,
-            "BACKGROUND_TASK_RUN_ASYNC",
-            False,
-        )
-
-        if is_async:
-            # Async path: update profile, clear existing team linkage so stale data
-            # is not shown before the task completes, and queue the task.
-            request.user.fpl_id = new_fpl_id
-            request.user.team_name = new_team_name
-            request.user.manager_name = new_manager_name
-            request.user.team = None
-            request.user.save(
-                update_fields=["fpl_id", "team_name", "manager_name", "team"]
-            )
-            init_user_data_task(request.user.id, basic_info_json)
-            messages.success(
-                request,
-                f'FPL team update to "{new_team_name}" scheduled! Your leagues and stats are being refreshed.',
-            )
-            return redirect("rivals:dashboard")
-
-        # Synchronous path: run initialization first, then update profile fields only on success
+        fpl_data = form.fpl_data
         try:
-            request.user.fpl_id = new_fpl_id
-            request.user.team_name = new_team_name
-            request.user.manager_name = new_manager_name
-            request.user.save(update_fields=["fpl_id", "team_name", "manager_name"])
-
-            init_user_data_task.now(request.user.id, basic_info_json)
-            request.user.refresh_from_db()
-
+            # The snapshot is already fetched. No HTTP runs inside this transaction.
+            with transaction.atomic():
+                user = User.objects.select_for_update().get(pk=request.user.pk)
+                if user.fpl_revision != request.user.fpl_revision:
+                    raise ValueError("A newer team update has already completed")
+                user.fpl_id = str(form.cleaned_data["fpl_id"])
+                user.team_name = fpl_data.get("name", "")
+                user.manager_name = (
+                    fpl_data.get("player_first_name", "")
+                    + " "
+                    + fpl_data.get("player_last_name", "")
+                ).strip()
+                user.fpl_revision += 1
+                user.save(
+                    update_fields=[
+                        "fpl_id",
+                        "team_name",
+                        "manager_name",
+                        "fpl_revision",
+                    ]
+                )
+                init_user_data_task.now(
+                    user.pk, json.dumps(fpl_data), user.fpl_revision
+                )
             messages.success(
-                request,
-                f'FPL team updated to "{new_team_name}" successfully! '
-                "Your leagues and stats are being refreshed.",
+                request, "FPL team updated. Your leagues and stats are being refreshed."
             )
             return redirect("rivals:dashboard")
-        except Exception as e:
+        except Exception:
             import logging
 
-            logging.getLogger(__name__).error(
-                f"Failed to reinitialise user {request.user.id} after FPL ID update: {e}",
-                exc_info=True,
-            )
-            # Restore prior profile fields and linkage on failure
-            request.user.fpl_id = old_fpl_id
-            request.user.team_name = old_team_name
-            request.user.manager_name = old_manager_name
-            request.user.team = old_team
-            request.user.save(
-                update_fields=["fpl_id", "team_name", "manager_name", "team"]
+            logging.getLogger(__name__).exception(
+                "FPL team switch failed for user %s", request.user.pk
             )
             messages.error(
                 request,

@@ -1,0 +1,9 @@
+<c-layouts.base title="Add a mini-league - RivalSpy"><section class="app-panel app-auth-card">
+<h1 class="app-section-title">Add a mini-league</h1>
+{% include 'partials/account_messages.html' %}
+<p>Enter the classic league ID from its standings URL on the FPL website. You can follow up to 10 leagues.</p>
+<form method="post" action="{% url 'rivals:minileagues.store' %}" class="app-form">{% csrf_token %}
+<label for="fpl_league_id">FPL mini-league ID</label><input id="fpl_league_id" name="fpl_league_id" type="number" min="1" max="2147483647" required>
+<button class="app-primary-button" type="submit">Add league</button></form>
+<p><a href="{% url 'rivals:minileagues.index' %}">Back to your leagues</a></p>
+</section></c-layouts.base>

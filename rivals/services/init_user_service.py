@@ -13,13 +13,19 @@ class InitUserService:
     def __init__(self, user):
         self.user = user
 
-    def save_user_info(self, basic_info: dict) -> bool:
-        if not basic_info or "leagues" not in basic_info:
-            return False
-
+    def save_user_info(self, basic_info: dict, *, expected_revision=None) -> bool:
         try:
-            account_leagues(basic_info)
             with transaction.atomic():
+                self.user = (
+                    type(self.user).objects.select_for_update().get(pk=self.user.pk)
+                )
+                if expected_revision is not None and (
+                    self.user.fpl_revision != expected_revision
+                    or str(basic_info.get("id")) != str(self.user.fpl_id)
+                ):
+                    # An older initialization job is successfully revoked.
+                    return True
+                account_leagues(basic_info)
                 user_team = self._create_user_team(basic_info)
 
                 if not user_team:
@@ -27,11 +33,10 @@ class InitUserService:
 
                 reconcile_memberships(self.user, basic_info)
 
-            # Queue bounded worker tasks; never fetch league pages while holding
-            # the initialization transaction's SQLite write lock.
-            from .refresh_service import enqueue_user
+                # Queue database work atomically; workers perform the HTTP requests.
+                from .refresh_service import enqueue_user
 
-            enqueue_user(self.user)
+                enqueue_user(self.user)
 
             return True
 

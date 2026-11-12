@@ -1,11 +1,32 @@
-from django.contrib import admin
-from django.urls import path
+from django.contrib.auth.views import (
+    PasswordResetCompleteView,
+    PasswordResetConfirmView,
+)
+from django.urls import path, reverse_lazy
 
 from accounts import ai_views, digest_views, views
+
+from .tokens import password_reset_token_generator
 
 app_name = "accounts"
 
 urlpatterns = [
+    path(
+        "reset-password/<uidb64>/<token>/",
+        PasswordResetConfirmView.as_view(
+            template_name="accounts/password_reset_confirm.html",
+            token_generator=password_reset_token_generator,
+            success_url=reverse_lazy("accounts:password_reset_complete"),
+        ),
+        name="password_reset_confirm",
+    ),
+    path(
+        "password-reset/complete/",
+        PasswordResetCompleteView.as_view(
+            template_name="accounts/password_reset_complete.html",
+        ),
+        name="password_reset_complete",
+    ),
     path("digests/", digest_views.digest_settings, name="digests"),
     path(
         "digests/<uuid:digest_id>/", digest_views.digest_detail, name="digests.detail"

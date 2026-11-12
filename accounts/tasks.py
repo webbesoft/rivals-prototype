@@ -5,12 +5,10 @@ from background_task import background
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
-from django.core.mail import send_mail
 from django.urls import reverse
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 
-from rivals.services.fpl_api_service import FplApiService
 from rivals.services.init_user_service import InitUserService
 
 User = get_user_model()
@@ -18,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 @background(schedule=0)
-def init_user_data_task(user_id, basic_info_json):
+def init_user_data_task(user_id, basic_info_json, expected_revision=0):
     """
     Background task to initialize user data (fetch and sync FPL leagues).
     This runs asynchronously to avoid blocking the signup flow.
@@ -28,12 +26,14 @@ def init_user_data_task(user_id, basic_info_json):
         basic_info = json.loads(basic_info_json)
 
         user_init_service = InitUserService(user)
-        success = user_init_service.save_user_info(basic_info=basic_info)
+        success = user_init_service.save_user_info(
+            basic_info=basic_info, expected_revision=expected_revision
+        )
 
         if success:
             logger.info(f"Successfully initialized user data for user {user_id}")
         else:
-            logger.warning(f"Failed to initialize user data for user {user_id}")
+            raise RuntimeError("FPL account initialization failed")
 
     except User.DoesNotExist:
         logger.error(f"User {user_id} not found for init_user_data_task")
@@ -41,6 +41,7 @@ def init_user_data_task(user_id, basic_info_json):
         logger.error(
             f"Error in init_user_data_task for user {user_id}: {e}", exc_info=True
         )
+        raise
 
 
 @background(schedule=0)

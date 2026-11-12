@@ -1,0 +1,6 @@
+<c-layouts.base title="Mini-leagues - RivalSpy"><section class="app-panel">
+<p class="app-kicker">The race for first</p><h1 class="app-page-title">Your mini-leagues</h1>
+{% include 'partials/account_messages.html' %}
+<p><a class="app-primary-button" href="{% url 'rivals:minileagues.create' %}">Add a mini-league</a></p>
+<ul>{% for league in mini_leagues %}<li><a href="{% url 'rivals:minileagues.show' league.id %}">{{ league.name }}</a></li>{% empty %}<li>No leagues yet. Add a classic league using its FPL ID.</li>{% endfor %}</ul>
+</section></c-layouts.base>

@@ -1,24 +1,27 @@
+import requests
 from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
+from django.contrib.auth.forms import (
+    AuthenticationForm,
+)
+from django.contrib.auth.forms import PasswordResetForm as DjangoPasswordResetForm
+from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.tokens import default_token_generator
 from django.core.exceptions import ValidationError
-from django.core.mail import send_mail
 from django.urls import reverse
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 
-import requests
-
 from rivals.services.fpl_api_service import FplApiService
-from rivals.services.init_user_service import InitUserService
 
 User = get_user_model()
 
 
 class SignUpForm(UserCreationForm):
     fpl_id = forms.IntegerField(
+        min_value=1,
+        max_value=2147483647,
         required=True,
         widget=forms.TextInput(attrs={"placeholder": "e.g. 1234567"}),
         help_text="Your Fantasy Premier League team ID",
@@ -70,10 +73,11 @@ class SignUpForm(UserCreationForm):
             user.save()
 
             # Send verification email immediately
-            import logging
             import json
-            from .tasks import init_user_data_task
+            import logging
+
             from .emails import EmailService
+            from .tasks import init_user_data_task
 
             logger = logging.getLogger(__name__)
 
@@ -135,7 +139,7 @@ class LoginForm(AuthenticationForm):
     )
 
 
-class PasswordResetForm(forms.Form):
+class PasswordResetForm(DjangoPasswordResetForm):
     email = forms.EmailField(
         widget=forms.EmailInput(
             attrs={
@@ -153,6 +157,8 @@ class UpdateFplIdForm(forms.Form):
     """
 
     fpl_id = forms.IntegerField(
+        min_value=1,
+        max_value=2147483647,
         label="FPL Team ID",
         widget=forms.TextInput(
             attrs={"placeholder": "e.g. 1234567", "id": "id_fpl_id_update"}
@@ -179,7 +185,7 @@ class UpdateFplIdForm(forms.Form):
             raise forms.ValidationError(
                 "Could not reach the FPL service. Please try again in a moment."
             )
-        if not data:
+        if not data or str(data.get("id")) != str(fpl_id):
             raise forms.ValidationError(
                 "Could not find an FPL team with that ID. Please double-check it."
             )

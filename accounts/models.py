@@ -7,6 +7,7 @@ from rivals.models import MiniLeague, Team
 # Create your models here.
 class User(AbstractUser):
     fpl_id = models.CharField(max_length=30, null=True)
+    fpl_revision = models.PositiveBigIntegerField(default=0)
     email = models.EmailField(unique=True)
     manager_name = models.CharField(max_length=100, null=True)
     team_name = models.CharField(max_length=30, null=True)
