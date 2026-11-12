@@ -2,6 +2,7 @@ import time
 
 from background_task.models import Task
 from django.core.management import call_command
+from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.db import connection, transaction
 from django.db.migrations.executor import MigrationExecutor
@@ -19,7 +20,9 @@ class Command(BaseCommand):
         parser.add_argument("--wait-for-migrations", type=int, default=0)
 
     def handle(self, *args, **options):
-        # Kamal starts the job role before its post-deploy migration hook.
+        if not settings.DEBUG and not settings.TESTING:
+            call_command("check_production_config")
+        # Standalone workers and rolling restarts may encounter pending migrations.
         deadline = time.monotonic() + options["wait_for_migrations"]
         while True:
             executor = MigrationExecutor(connection)

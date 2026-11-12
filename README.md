@@ -16,6 +16,10 @@ The architecture is based on my Django starter, with a separate `accounts` app f
 - TailwindCSS via the standalone binary
 
 
+## Deployment
+
+See [deployment safeguards](docs/deployment.md) for production environment requirements and the release gate. The default Docker web command validates configuration and completes migrations before accepting traffic. Start from `.env.production.example` when preparing deployment settings.
+
 ## Automatic FPL refreshes
 
 After installing dependencies, apply migrations and run both processes:

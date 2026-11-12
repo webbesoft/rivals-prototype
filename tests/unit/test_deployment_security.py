@@ -196,15 +196,10 @@ def runtime_environment(production):
     return env
 
 
-def test_explicit_production_check_rejects_unsafe_runtime_settings(production):
+def test_settings_import_does_not_validate_before_runtime_injection(production):
     env = runtime_environment(production)
     env.pop("SECRET_KEY")
-    script = (
-        "import sys, dotenv; dotenv.load_dotenv=lambda:False; "
-        "import os; os.environ['DJANGO_SETTINGS_MODULE']='rivalspy.settings'; "
-        "import django; django.setup(); "
-        "from django.core.management import call_command; call_command('check_production_config')"
-    )
+    script = "import dotenv; dotenv.load_dotenv=lambda:False; import rivalspy.settings"
     result = subprocess.run(
         [sys.executable, "-c", script],
         cwd=ROOT,

@@ -45,7 +45,7 @@ League failure logs include the external FPL league ID and the failed page or im
 
 ## Production
 
-The Docker image uses Python 3.15.2 for both build and runtime, matching `.python-version`, and installs production dependencies into `/opt/venv` during its build. Web startup runs Python directly; `uv run` commands in the job role and deployment hooks reuse that environment with `UV_NO_SYNC=1`. Containers should not create a new `.venv` or download packages at startup, which can exhaust Kamal's 30-second readiness window. After changing the Dockerfile, rebuild and redeploy the image with `kamal deploy`.
+The Docker image uses Python 3.15.2 for both build and runtime, matching `.python-version`, and installs production dependencies into `/opt/venv` during its build. The default `bin/start-web` command validates configuration and applies migrations before starting Uvicorn. Operational commands and the job role reuse the installed environment with `UV_NO_SYNC=1`; containers do not install dependencies at startup. Kamal allows 120 seconds for the new web container to become ready. After changing the Dockerfile, rebuild and redeploy the image with `kamal deploy`.
 
 Kamal's pre-deploy test hook runs on the machine invoking Kamal and explicitly installs the interpreter pinned in `.python-version` before testing. Keep that machine's `uv` current so it knows about new Python downloads: use `brew upgrade uv` for Homebrew installations or `uv self update` for standalone installations. A Python installation failure stops deployment before tests run.
 
@@ -55,7 +55,7 @@ Kamal's pre-deploy test hook runs on the machine invoking Kamal and explicitly i
 uv run python manage.py fpl_worker --wait-for-migrations 120
 ```
 
-The job waits up to two minutes for migrations because this project's existing post-deploy hook applies them after containers boot. The hook now targets only the web role for migration and checks the worker heartbeat. If migrations take longer than the wait window, restart the job after they complete. For deployments outside this workflow, apply migrations before starting either process.
+The job validates resolved production configuration before its two-minute migration wait for standalone starts and rolling restarts. Under the default Kamal workflow, the web process completes migrations before becoming healthy. The post-deploy hook checks the exact deployed job container, with a 60-second bounded wait, and fails if worker health cannot be confirmed. It no longer applies migrations after traffic has switched. See [deployment safeguards](deployment.md) for required production configuration and the complete release gate. For other workflows, apply migrations before starting either process.
 
 This epoch changes deployment configuration only. It does not deploy containers or assert that the remote worker is already running. After deployment, verify the running worker:
 

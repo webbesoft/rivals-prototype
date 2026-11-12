@@ -1,7 +1,7 @@
 .git
 .gitignore
-.env
-.env.*
+**/.env
+**/.env.*
 !.env.example
 .kamal
 .pytest_cache
@@ -9,6 +9,10 @@
 __pycache__
 *.pyc
 *.sqlite3
+**/*.sqlite3
+**/*.sqlite3-*
+**/*.db
+**/*.db-*
 dbs/*.sqlite3
 staticfiles
 mediafiles
