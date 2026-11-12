@@ -1,0 +1,27 @@
+{% load l10n %}
+<div class="rv-share-bar">
+  <p>A rivalry worth sharing.</p>
+  <button type="button" class="app-secondary-button" data-comparison-share
+    data-mine="{{ my_team.team_name }}" data-rival="{{ rival_team.team_name }}"
+    data-my-manager="{{ my_team.manager_name|default:my_team.team_name }}"
+    data-rival-manager="{{ rival_team.manager_name|default:rival_team.team_name }}"
+    data-my-points="{{ my_points|default_if_none:''|unlocalize }}"
+    data-rival-points="{{ rival_points|default_if_none:''|unlocalize }}"
+    data-score-source="{% if comparison.season_totals %}FPL entry totals{% else %}Latest stored totals{% endif %}"
+    data-gameweek="{{ comparison.current_gameweek|default_if_none:'' }}"
+    data-timestamp="{{ comparison.analysis_timestamp|default:'Not available' }}"
+    data-my-captain="{{ comparison.captaincy.mine.name|default:'Not available' }}"
+    data-rival-captain="{{ comparison.captaincy.rival.name|default:'Not available' }}"
+    data-my-form="{{ comparison.momentum.mine.average|floatformat:1|default:'—' }}"
+    data-rival-form="{{ comparison.momentum.rival.average|floatformat:1|default:'—' }}"
+    data-my-forecast="{{ comparison.projected_gw_outcome.my_expected|floatformat:1|default:'—' }}"
+    data-rival-forecast="{{ comparison.projected_gw_outcome.rival_expected|floatformat:1|default:'—' }}"
+    hidden>Share comparison ↗</button>
+</div>
+<dialog class="rv-share-dialog" aria-labelledby="comparison-share-title">
+  <div class="rv-share-dialog-heading"><h2 id="comparison-share-title">Share your comparison</h2><form method="dialog"><button type="submit" class="app-secondary-button" aria-label="Close share preview">Close ×</button></form></div>
+  <p>Save the infographic or share it with your rival.</p>
+  <p data-share-status role="status" aria-live="polite"></p>
+  <img data-share-preview alt="Comparison infographic with both teams’ season points, captain choices, recent form and next gameweek forecasts." hidden>
+  <div class="rv-share-actions"><a class="app-secondary-button" data-share-save hidden>Save PNG ↓</a><button type="button" class="app-secondary-button" data-share-native hidden>Share image ↗</button></div>
+</dialog>

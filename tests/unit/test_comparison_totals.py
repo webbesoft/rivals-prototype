@@ -53,6 +53,9 @@ def test_comparison_renders_fetched_entry_totals_instead_of_stale_profiles():
     assert "+14 pts ahead" in html
     assert "394" not in html and "285 pts behind" not in html
     assert "Season points / FPL entry totals" in html
+    assert 'data-my-points="704"' in html
+    assert 'data-rival-points="690"' in html
+    assert 'js/comparison-share.js' in html
 
 
 def test_zero_entry_total_does_not_fall_back_to_stored_points():
@@ -62,6 +65,7 @@ def test_zero_entry_total_does_not_fall_back_to_stored_points():
     html = render_scoreboard(comparison)
     assert "12 pts behind" in html
     assert "394" not in html and "679" not in html
+    assert 'data-my-points="0"' in html
 
 
 @pytest.mark.parametrize(
@@ -79,3 +83,5 @@ def test_missing_entry_totals_do_not_invent_a_points_gap(my_entry, rival_entry):
     assert "Totals not available" in html
     assert "pts ahead" not in html and "pts behind" not in html
     assert "394" not in html and "679" not in html
+    my_points = comparison["season_totals"]["mine"]
+    assert f'data-my-points="{my_points if my_points is not None else ""}"' in html

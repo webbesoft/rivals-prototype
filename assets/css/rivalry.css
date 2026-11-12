@@ -1153,3 +1153,30 @@
   .league-watchlist li { gap: 12px; }
   .league-watch-rank { min-width: 60px; font-size: 18px; }
 }
+
+.rv-share-bar,
+.rv-share-dialog-heading,
+.rv-share-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.rv-share-bar { margin-bottom: 18px; font-size: 13px; color: var(--soft-ink); }
+.rv-share-dialog {
+  width: min(600px, calc(100% - 32px));
+  max-height: 90dvh;
+  margin: auto;
+  padding: 24px;
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--rule);
+  overflow-y: auto;
+}
+.rv-share-dialog::backdrop { background: rgb(10 25 20 / 75%); }
+.rv-share-dialog h2 { font-size: 22px; font-weight: 600; }
+.rv-share-dialog p { font-size: 13px; margin-block: 12px; }
+.rv-share-dialog img { width: 100%; height: auto; border: 1px solid var(--rule); }
+.rv-share-actions { margin-top: 18px; justify-content: flex-end; }
+.rv-share-dialog [hidden], .rv-share-bar [hidden] { display: none; }

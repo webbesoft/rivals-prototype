@@ -1,5 +1,5 @@
 <c-layouts.base title="Head-to-Head: {{ my_team.team_name }} vs {{ rival_team.team_name }} - RivalSpy">
-{% load humanize math_filters %}
+{% load humanize math_filters static %}
 <div class="rv-wrap rv-comparison">
   {% if comparison.error %}
   <div class="rv-empty" role="status"><h1>Comparison unavailable</h1><p>{{ comparison.error }}</p><a class="app-secondary-button" href="{% url 'rivals:teams.show' rival_team.id %}">Back to rival squad</a></div>
@@ -51,4 +51,5 @@
   <p class="rv-footnote">Analysis generated: {{ comparison.analysis_timestamp|default:"Not available" }}. Squad and season updates may arrive at different times.</p>
   {% endif %}
 </div>
+<script src="{% static 'js/comparison-share.js' %}"></script>
 </c-layouts.base>
