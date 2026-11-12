@@ -1,6 +1,6 @@
 {% load humanize math_filters %}
 <section class="league-overview" aria-label="Your league position">
-  <div class="league-position">
+  <div class="league-position{% if position.current_rank >= 10000 %} is-long-rank{% endif %}">
     <span class="league-label">Your position</span>
     <strong>{% if position %}<span>#</span>{{ position.current_rank|intcomma }}{% else %}—{% endif %}</strong>
     <p>{% if user.team %}{{ user.team.team_name }}{% else %}Your place in the race{% endif %}</p>
