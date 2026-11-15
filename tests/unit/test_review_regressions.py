@@ -242,32 +242,65 @@ esac
 def test_chip_advice_checks_fit_xi_candidates_and_qualifying_recovery_weeks():
     from rivals.services.chip_advice_service import chip_advice
 
-    weeks = [11, 12, 13, 14]
+    # Second-half Free Hits require a temporary blank, as well as a points gap.
+    weeks = [21, 22, 23, 24]
+    positions = [1] + [2] * 4 + [3] * 4 + [4] * 2 + [1, 2, 3, 4]
+    blanks = {21: set(range(3, 8)), 22: set(range(3, 7))}
     engine = SimpleNamespace(
         ids=list(range(1, 16)),
-        players={pid: {"status": "d" if pid == 1 else "a"} for pid in range(1, 16)},
-        risk={pid: 0 for pid in range(1, 16)},
-        projections={pid: {week: 2 for week in weeks} for pid in range(1, 16)},
+        players={
+            pid: {
+                "id": pid,
+                "team": pid,
+                "element_type": positions[(pid - 1) % 15],
+                "status": "d" if pid == 1 else "a",
+            }
+            for pid in range(1, 31)
+        },
+        risk={pid: 0 for pid in range(1, 31)},
+        projections={
+            pid: {week: 2 if pid <= 15 else 6 for week in weeks} for pid in range(1, 31)
+        },
         name=lambda pid: f"Player {pid}",
         player_fixtures={
-            pid: [{"gameweek": week, "opponents": ["FC"]} for week in weeks]
-            for pid in range(1, 16)
+            pid: [
+                {
+                    "gameweek": week,
+                    "opponents": [] if pid in blanks.get(week, set()) else ["FC"],
+                }
+                for week in weeks
+            ]
+            for pid in range(1, 31)
         },
+        fixture_index={
+            (pid, week): ["FC"]
+            for pid in range(1, 31)
+            for week in weeks
+            if pid not in blanks.get(week, set())
+        },
+        chip_usage=lambda: {},
     )
     engine.projections[1] = {week: 13 for week in weeks}
-    engine.projections[2].update({11: 10, 12: 12})
-    for pid in range(3, 8):
-        engine.projections[pid][11] = 0
-    for pid in range(3, 7):
-        engine.projections[pid][12] = 0
+    engine.projections[2].update({21: 10, 22: 12})
+    for week, ids in blanks.items():
+        for pid in ids:
+            engine.projections[pid][week] = 0
     baseline = {
         "lineups": [
-            {"gameweek": week, "xi": list(range(1, 12)), "captain": 1} for week in weeks
+            {
+                "gameweek": week,
+                "xi": list(range(1, 12)),
+                "captain": 1,
+                "points": sum(engine.projections[pid][week] for pid in range(1, 12))
+                + engine.projections[1][week],
+            }
+            for week in weeks
         ]
     }
     advice = chip_advice(engine, baseline)
-    assert advice[0]["gameweek"] == 12
+    assert advice[0]["gameweek"] == 22
     assert "Player 2" in advice[0]["detail"]
     assert "extra 11.0 over baseline captaincy" in advice[0]["detail"]
-    assert advice[2]["gameweek"] == 12
+    assert advice[2]["gameweek"] == 22
     assert advice[2]["status"] == "Plan ahead"
+    assert advice[2]["projected_gain"] >= 15
