@@ -1180,3 +1180,16 @@
 .rv-share-dialog img { width: 100%; height: auto; border: 1px solid var(--rule); }
 .rv-share-actions { margin-top: 18px; justify-content: flex-end; }
 .rv-share-dialog [hidden], .rv-share-bar [hidden] { display: none; }
+/* AI connections settings */
+.mcp-settings-tabs { display: flex; gap: 1.5rem; border-bottom: 1px solid #d4d4d4; margin-bottom: 2rem; }
+.mcp-settings-tabs a { padding: .8rem 0; font-weight: 700; }
+.mcp-settings-tabs a[aria-current="page"] { border-bottom: 3px solid currentColor; }
+.mcp-address-input { width: 100%; padding: .8rem; border: 1px solid #a3a3a3; border-radius: .5rem; font-family: monospace; }
+.mcp-guides details { padding: 1rem 0; border-bottom: 1px solid #e5e5e5; }
+.mcp-guides summary { cursor: pointer; font-weight: 700; }
+.mcp-guides ol { list-style: decimal; margin: 1rem 0; padding-left: 1.5rem; }
+.mcp-guides li { margin: .65rem 0; }
+.mcp-guides details > p { margin-top: .75rem; }
+.mcp-question-list li, .mcp-connection { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid #e5e5e5; }
+.mcp-return-address { overflow-wrap: anywhere; }
+@media (max-width: 600px) { .mcp-connection, .mcp-question-list li { align-items: flex-start; flex-direction: column; } }

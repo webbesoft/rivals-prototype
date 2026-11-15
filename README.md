@@ -26,6 +26,10 @@ RivalSpy supports browser installation and a connection message when opened
 offline. See [PWA behavior and verification](docs/pwa.md) for installation,
 caching policy and deployment checks.
 
+## AI assistant connections
+
+The **MCP** tab in AI settings connects an assistant to read your published Rivals data. See [MCP setup and operations](docs/mcp.md) for ASGI hosting, account linking, configuration and verification.
+
 ## Automatic FPL refreshes
 
 After installing dependencies, apply migrations and run both processes:

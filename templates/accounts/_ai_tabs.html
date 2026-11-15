@@ -1,0 +1,4 @@
+<nav class="mcp-settings-tabs" aria-label="AI settings">
+  <a href="{% url 'accounts:gemini' %}" {% if request.resolver_match.url_name == 'gemini' %}aria-current="page"{% endif %}>AI briefings</a>
+  <a href="{% url 'accounts:mcp' %}" {% if request.resolver_match.url_name == 'mcp' %}aria-current="page"{% endif %}>MCP</a>
+</nav>

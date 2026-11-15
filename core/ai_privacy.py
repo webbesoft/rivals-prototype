@@ -19,7 +19,7 @@ def sensitive_ai(function):
 def filter_ai_event(event, hint):
     path = urlsplit(event.get("request", {}).get("url", "")).path
     if event.get("tags", {}).get("sensitive_ai") or path.startswith(
-        ("/accounts/gemini/", "/dashboard/decisions/ai/")
+        ("/accounts/gemini/", "/dashboard/decisions/ai/", "/mcp", "/accounts/ai/mcp/")
     ):
         return None
     return event

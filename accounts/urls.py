@@ -5,12 +5,14 @@ from django.contrib.auth.views import (
 from django.urls import path, reverse_lazy
 
 from accounts import ai_views, digest_views, views
+from rivals_mcp.views import settings_view as mcp_settings
 
 from .tokens import password_reset_token_generator
 
 app_name = "accounts"
 
 urlpatterns = [
+    path("ai/mcp/", mcp_settings, name="mcp"),
     path(
         "reset-password/<uidb64>/<token>/",
         PasswordResetConfirmView.as_view(

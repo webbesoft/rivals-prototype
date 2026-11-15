@@ -2,9 +2,10 @@
   <div class="app-settings-page px-4 py-10">
     <div class="app-masthead">
       <p class="app-kicker">Your account</p>
-      <h1 class="app-page-title">AI briefings</h1>
+      <h1 class="app-page-title">AI settings</h1>
       <p class="app-lede">Your forecast lineup and priorities, emailed before the FPL deadline. You can also preview the same briefing from your transfer plan.</p>
     </div>
+    {% include "accounts/_ai_tabs.html" %}
     {% for message in messages %}<p role="status" class="app-panel p-4 mb-4">{{ message }}</p>{% endfor %}
     <section class="app-panel p-6 mb-6">
       <h2 class="app-section-title mb-3">{% if gemini_connected %}Gemini connected · ••••••••{% else %}Enable AI briefings{% endif %}</h2>

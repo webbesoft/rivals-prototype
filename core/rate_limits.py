@@ -14,6 +14,9 @@ from core.models import RequestLimit
 # (subject, maximum attempts, window seconds). IP limits use REMOTE_ADDR only;
 # forwarded headers must be validated by the trusted application server/proxy.
 POLICIES = {
+    "mcp_register": (("ip", 10, 3600),),
+    "mcp_token": (("ip", 120, 60),),
+    "mcp_read": (("user", 60, 60),),
     "login": (("ip", 60, 300), ("identity", 10, 300)),
     "signup": (("ip", 5, 3600),),
     "resend": (("ip", 20, 3600), ("identity", 1, 60), ("identity", 5, 3600)),

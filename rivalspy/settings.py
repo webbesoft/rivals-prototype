@@ -102,7 +102,15 @@ THIRD_PARTY_APPS = [
     "corsheaders",
 ]
 
-LOCAL_APPS = ["accounts", "rivals", "core", "background_task", "api"]
+LOCAL_APPS = [
+    "accounts",
+    "rivals",
+    "core",
+    "background_task",
+    "api",
+    "oauth2_provider",
+    "rivals_mcp",
+]
 
 INSTALLED_APPS = []
 INSTALLED_APPS += DJANGO_CORE_APPS
@@ -255,6 +263,55 @@ LOGOUT_REDIRECT_URL = "/"
 # Email settings
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "noreply@yoursaas.com")
 SITE_URL = os.getenv("SITE_URL", "http://localhost:8000")
+
+MCP_ENABLED = os.getenv("MCP_ENABLED", "True").lower() in ("1", "true", "yes")
+OAUTH2_PROVIDER_APPLICATION_MODEL = "oauth2_provider.Application"
+MCP_ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv("MCP_ALLOWED_ORIGINS", SITE_URL).split(",")
+    if origin.strip()
+]
+OAUTH2_PROVIDER = {
+    "SCOPES": {"rivals:read": "Read your team, tracked rivals, leagues and fixtures"},
+    "DEFAULT_SCOPES": ["rivals:read"],
+    "OAUTH2_VALIDATOR_CLASS": "rivals_mcp.oauth.RivalsOAuthValidator",
+    "ACCESS_TOKEN_EXPIRE_SECONDS": 3600,
+    "AUTHORIZATION_CODE_EXPIRE_SECONDS": 120,
+    "REFRESH_TOKEN_EXPIRE_SECONDS": 30 * 86400,
+    "ROTATE_REFRESH_TOKEN": True,
+    "REFRESH_TOKEN_REUSE_PROTECTION": True,
+    "PKCE_REQUIRED": True,
+    **{
+        f"COMPLIANT_BCP_RFC9700_{gate}": True
+        for gate in (
+            "IMPLICIT_GRANT",
+            "PASSWORD_GRANT",
+            "PKCE_METHOD",
+            "ACCESS_TOKEN_TRANSPORT",
+            "AUTHZ_RESPONSE_ISS",
+            "TOKEN_STORAGE",
+            "REFRESH_TOKEN",
+            "REDIRECT_URI_SCHEME",
+            "REDIRECT_URI_MATCHING",
+            "PKCE_REQUIRED",
+        )
+    },
+    "ALLOWED_REDIRECT_URI_SCHEMES": ["https"],
+    "ALLOW_LOCALHOST_LOOPBACK": DEBUG,
+    "DCR_ENABLED": True,
+    "DCR_REGISTRATION_PERMISSION_CLASSES": ["rivals_mcp.oauth.RegistrationPermission"],
+    "OAUTH2_RESPONSE_TYPES_SUPPORTED": ["code"],
+    "OAUTH2_GRANT_TYPES_SUPPORTED": ["authorization_code", "refresh_token"],
+    "OAUTH2_TOKEN_ENDPOINT_AUTH_METHODS_SUPPORTED": [
+        "none",
+        "client_secret_post",
+        "client_secret_basic",
+    ],
+    "OIDC_ISS_ENDPOINT": SITE_URL.rstrip("/"),
+    "OAUTH2_PROTECTED_RESOURCE_IDENTIFIER": SITE_URL.rstrip("/") + "/mcp",
+    "OAUTH2_PROTECTED_RESOURCE_AUTHORIZATION_SERVERS": [SITE_URL.rstrip("/")],
+    "OAUTH2_PROTECTED_RESOURCE_NAME": "Rivals",
+}
 
 # SMTP / email backend (configured via environment variables)
 EMAIL_BACKEND = os.getenv(

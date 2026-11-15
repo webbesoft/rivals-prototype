@@ -22,6 +22,6 @@ uv run --locked python -m pytest -q -o addopts=
 node --test tests/js/*.test.cjs
 uv run --locked python manage.py check
 # Application-owned migrations only; third-party packages maintain their own.
-uv run --locked python manage.py makemigrations --check --dry-run accounts api core rivals
+uv run --locked python manage.py makemigrations --check --dry-run accounts api core rivals rivals_mcp
 
 echo "Release checks passed."

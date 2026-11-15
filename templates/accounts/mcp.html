@@ -1,0 +1,98 @@
+{% load static %}
+<c-layouts.base title="MCP connections - RivalSpy">
+  <div class="app-settings-page px-4 py-10">
+    <div class="app-masthead">
+      <p class="app-kicker">Your account</p>
+      <h1 class="app-page-title">AI settings</h1>
+      <p class="app-lede">Ask your AI assistant about your Rivals team, leagues and rivals.</p>
+    </div>
+    {% include "accounts/_ai_tabs.html" %}
+    {% include "partials/account_messages.html" %}
+    <section class="app-panel p-6 mb-6" aria-labelledby="mcp-start">
+      <h2 id="mcp-start" class="app-section-title mb-3">Bring Rivals into your chats</h2>
+      <p>Connect once, then ask questions in ChatGPT, Claude or Gemini. MCP is the connection that lets your assistant read your Rivals data.</p>
+      <p class="mt-3">Your assistant can read your team, tracked rivals, accessible leagues and fixtures. It cannot make transfers or change your settings. You do not need a Gemini API key for these connections.</p>
+      <p class="mt-3">Retrieved data is shared with your chosen assistant and handled under its privacy terms. Answers use the latest data available in Rivals; recent changes may take time to appear.</p>
+      {% if not mcp_enabled %}
+        <p role="status" class="mt-4">Connections are temporarily unavailable. You can still disconnect an existing assistant below.</p>
+      {% elif not user.is_verified %}
+        <p class="mt-4"><a class="underline" href="{% url 'accounts:verification_pending' %}">Verify your email</a> before connecting an assistant.</p>
+      {% else %}
+        <div class="mcp-address mt-5">
+          <label for="mcp-address" class="block font-bold mb-2">Your Rivals connection address</label>
+          <input id="mcp-address" class="mcp-address-input" value="{{ connection_address }}" readonly spellcheck="false" autocomplete="off">
+          <button type="button" class="app-primary-button mt-3" data-copy-target="mcp-address" data-copy-status="mcp-copy-status">Copy connection address</button>
+          <p id="mcp-copy-status" class="mt-2 text-sm" role="status" aria-live="polite"></p>
+        </div>
+      {% endif %}
+    </section>
+    <section class="app-panel p-6 mb-6 mcp-guides" aria-labelledby="mcp-guides">
+      <h2 id="mcp-guides" class="app-section-title mb-3">Choose your assistant</h2>
+      <p class="mb-4">Start in your assistant's web app. Its menus may vary by account or workspace.</p>
+      <details>
+        <summary>Connect with ChatGPT</summary>
+        <p class="mt-3">Your account must allow custom MCP connections. Workspace administrators may need to add Rivals for you.</p>
+        <ol>
+          <li>Open ChatGPT's <strong>Plugins</strong> page, choose the <strong>+</strong> button, then <strong>Add custom MCP server</strong>. In the older settings layout, look for <strong>Apps → Create</strong>.</li>
+          <li>Name it <strong>Rivals</strong> and paste the connection address above into the server address field.</li>
+          <li>Choose <strong>OAuth</strong> for sign-in. Review ChatGPT's notice and create the connection.</li>
+          <li>Sign in on Rivals and choose <strong>Allow read access</strong>. Return to ChatGPT and select Rivals in a chat.</li>
+        </ol>
+        <p><a class="underline" href="https://help.openai.com/en/articles/12584461-connecting-custom-mcp-servers-in-chatgpt" target="_blank" rel="noopener noreferrer">ChatGPT setup and account requirements ↗</a></p>
+      </details>
+      <details>
+        <summary>Connect with Claude</summary>
+        <p class="mt-3">Free accounts have a limit of one custom connector. Work accounts may need an organisation owner to add Rivals first.</p>
+        <ol>
+          <li>In Claude, open <strong>Customize → Connectors</strong>, choose <strong>+ Add</strong>, then <strong>Add custom connector</strong>.</li>
+          <li>Name it <strong>Rivals</strong>, paste the connection address above and continue.</li>
+          <li>Choose <strong>Sign in now</strong>. If asked how Claude should identify itself, choose <strong>Register automatically</strong>.</li>
+          <li>Sign in on Rivals and choose <strong>Allow read access</strong>. Finish adding the connector, then enable Rivals from the <strong>+</strong> menu in your chat.</li>
+        </ol>
+        <p><a class="underline" href="https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp" target="_blank" rel="noopener noreferrer">Claude setup and workspace help ↗</a></p>
+      </details>
+      <details>
+        <summary>Connect with Gemini</summary>
+        <p class="mt-3">Google currently offers custom app connections to US users aged 18 or over, in English, with a personal Google account and Keep Activity turned on. Work and school accounts are not supported.</p>
+        <ol>
+          <li>Open Gemini on the web and go to <strong>Settings → Connected Apps</strong>. You may find this under <strong>Personal Intelligence</strong>.</li>
+          <li>Under <strong>Custom apps</strong>, choose to add an app and paste the Rivals connection address.</li>
+          <li>Choose <strong>Next</strong>, sign in on Rivals and choose <strong>Allow read access</strong>.</li>
+          <li>Back in your chat, type <strong>@</strong> and choose Rivals. Once connected on the web, you can also use it in Gemini's mobile app.</li>
+        </ol>
+        <p><a class="underline" href="https://support.google.com/gemini/answer/17209137" target="_blank" rel="noopener noreferrer">Gemini setup and availability ↗</a></p>
+      </details>
+    </section>
+    <section class="app-panel p-6 mb-6" aria-labelledby="mcp-questions">
+      <h2 id="mcp-questions" class="app-section-title mb-3">Try your first question</h2>
+      <p>Choose Rivals in your assistant, then copy a question:</p>
+      <ul class="mcp-question-list">
+        <li><span id="mcp-question-1">How is my team doing in my mini leagues?</span><button type="button" class="app-secondary-button" data-copy-target="mcp-question-1" data-copy-status="mcp-question-status">Copy<span class="sr-only"> league question</span></button></li>
+        <li><span id="mcp-question-2">Which players do I share with my tracked rivals?</span><button type="button" class="app-secondary-button" data-copy-target="mcp-question-2" data-copy-status="mcp-question-status">Copy<span class="sr-only"> rival question</span></button></li>
+        <li><span id="mcp-question-3">What fixtures do my players have over the next three gameweeks?</span><button type="button" class="app-secondary-button" data-copy-target="mcp-question-3" data-copy-status="mcp-question-status">Copy<span class="sr-only"> fixture question</span></button></li>
+      </ul>
+      <p id="mcp-question-status" role="status" aria-live="polite"></p>
+    </section>
+    <section class="app-panel p-6 mb-6" aria-labelledby="mcp-connections">
+      <h2 id="mcp-connections" class="app-section-title mb-3">Connected assistants</h2>
+      {% for connection in connections %}
+        <div class="mcp-connection">
+          <div><h3 class="font-bold">{{ connection.application.name|default:"Custom assistant" }}</h3>
+            <p class="text-sm">Access granted {{ connection.authorized_at|date:"j M Y" }}.</p>
+            <p class="text-sm">{% if connection.last_used_at %}Last used {{ connection.last_used_at|date:"j M Y, H:i T" }}.{% else %}Not used yet. Return to your assistant and try a question.{% endif %}</p>
+          </div>
+          <form method="post">{% csrf_token %}<input type="hidden" name="connection" value="{{ connection.pk }}"><button class="app-secondary-button app-button-danger" type="submit">Disconnect<span class="sr-only"> {{ connection.application.name }}</span></button></form>
+        </div>
+      {% empty %}<p>No assistants connected yet. Choose your assistant above to get started.</p>{% endfor %}
+      <p class="mt-4 text-sm">Disconnecting stops future access. It cannot remove data already shared in a chat.</p>
+    </section>
+    <section class="app-panel p-6 mcp-guides" aria-labelledby="mcp-help">
+      <h2 id="mcp-help" class="app-section-title mb-3">Need a hand?</h2>
+      <details><summary>I cannot find the option to add Rivals</summary><p>Check the account requirements in your provider's guide above. On a work account, ask your administrator to enable custom connections. Try setup in a desktop web browser.</p></details>
+      <details><summary>I cancelled sign-in, or my connection stopped working</summary><p>Open Rivals in your assistant's connections and choose to connect again. Sign in to Rivals and approve access. If that fails, disconnect it here, remove it in your assistant, and follow the setup steps again.</p></details>
+      <details><summary>My assistant says data is unavailable or out of date</summary><p>Open your squad or league in Rivals so its normal refresh can run, then ask again later. Assistants read published data and cannot force a refresh or see your private upcoming FPL lineup.</p></details>
+      <details><summary>Advanced setup with Gemini CLI</summary><p>Gemini CLI is a separate developer tool, with different availability from the Gemini app. See <a class="underline" href="https://geminicli.com/docs/tools/mcp-server/" target="_blank" rel="noopener noreferrer">Google's CLI connection guide</a>. Use the address above as the HTTP server address. Local sign-in callbacks require administrator configuration.</p></details>
+    </section>
+  </div>
+  <script src="{% static 'js/mcp-settings.js' %}" defer></script>
+</c-layouts.base>
