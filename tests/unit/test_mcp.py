@@ -46,6 +46,13 @@ from rivals_mcp.server import (
 pytestmark = pytest.mark.django_db
 
 
+@pytest.fixture(autouse=True)
+def enable_mcp(settings):
+    # Feature tests must not inherit the operator's rollout/kill-switch setting.
+    # Disabled-mode tests override this explicitly within their own scope.
+    settings.MCP_ENABLED = True
+
+
 @pytest.fixture
 def published():
     now = timezone.now()
@@ -625,7 +632,7 @@ def test_read_permission_required_and_settings_never_show_tokens(client, publish
 
 
 def test_feature_switch_stops_new_connections(client, published):
-    with override_settings(MCP_ENABLED=False):
+    with override_settings(MCP_ENABLED=False, ALLOWED_HOSTS=["testserver"]):
         assert (
             client.post(
                 reverse("oauth2_provider:dcr-register"),
@@ -636,7 +643,11 @@ def test_feature_switch_stops_new_connections(client, published):
         )
         assert client.get(reverse("oauth2_provider:authorize")).status_code == 503
         client.force_login(published["user"])
-        assert b"temporarily unavailable" in client.get(reverse("accounts:mcp")).content
+        page = client.get(reverse("accounts:mcp"))
+        assert b"temporarily unavailable" in page.content
+        assert b"Copy connection address" not in page.content
+        with TestClient(create_app()) as http:
+            assert http.get("/mcp").status_code == 503
 
 
 @pytest.mark.django_db(transaction=True)

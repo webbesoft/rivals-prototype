@@ -51,6 +51,9 @@ def test_explicit_production_command_rejects_missing_injected_secret_without_tra
     env["DJANGO_SETTINGS_MODULE"] = "rivalspy.settings"
     env["PYTHON_DOTENV_DISABLED"] = "1"
     script = (
+        # Disable local dotenv loading directly, including on supported older
+        # python-dotenv versions that ignore PYTHON_DOTENV_DISABLED.
+        "import dotenv; dotenv.load_dotenv = lambda: False; "
         "from django.core.management import execute_from_command_line; "
         "execute_from_command_line(['manage.py','check_production_config'])"
     )
