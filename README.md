@@ -20,6 +20,12 @@ The architecture is based on my Django starter, with a separate `accounts` app f
 
 See [deployment safeguards](docs/deployment.md) for production environment requirements and the release gate. The default Docker web command validates configuration and completes migrations before accepting traffic. Start from `.env.production.example` when preparing deployment settings.
 
+## Progressive web app
+
+RivalSpy supports browser installation and a connection message when opened
+offline. See [PWA behavior and verification](docs/pwa.md) for installation,
+caching policy and deployment checks.
+
 ## Automatic FPL refreshes
 
 After installing dependencies, apply migrations and run both processes:
