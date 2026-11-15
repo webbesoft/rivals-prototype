@@ -128,11 +128,11 @@
           {% else %}
           <ul class="rv-watch-rows" aria-label="Tracked rivals and your points gaps">
             {% for team in tracked_teams %}<li class="rv-watch-item">
-              <div class="rv-watch-identity"><a href="{% url 'rivals:teams.show' team.team.id %}">{{ team.team.team_name }}</a><p>{{ team.team.manager_name }}</p><span>{{ team.team.current_total_points|default_if_none:"—"|intcomma }} pts{% if team.team.current_overall_rank %} · Rank #{{ team.team.current_overall_rank|intcomma }}{% endif %}</span></div>
+              <div class="rv-watch-identity"><a href="{% url 'rivals:teams.show' team.team.id %}">{{ team.team.team_name }}</a><p>{{ team.team.manager_name }}</p><span>{{ team.watch_points|default_if_none:"—"|intcomma }} pts{% if team.team.current_overall_rank %} · Rank #{{ team.team.current_overall_rank|intcomma }}{% endif %}</span></div>
               <div class="rv-watch-gap"><span>Your gap</span>
-                {% if user_team and user_team.current_total_points != None and team.team.current_total_points != None %}
-                  {% if user_team.current_total_points > team.team.current_total_points %}<strong>+{{ user_team.current_total_points|subtract:team.team.current_total_points }}</strong><span>pts ahead</span>
-                  {% elif user_team.current_total_points < team.team.current_total_points %}<strong>−{{ team.team.current_total_points|subtract:user_team.current_total_points }}</strong><span>pts behind</span>
+                {% if user_team and user_watch_points != None and team.watch_points != None %}
+                  {% if user_watch_points > team.watch_points %}<strong>+{{ user_watch_points|subtract:team.watch_points }}</strong><span>pts ahead</span>
+                  {% elif user_watch_points < team.watch_points %}<strong>−{{ team.watch_points|subtract:user_watch_points }}</strong><span>pts behind</span>
                   {% else %}<strong>0</strong><span>level on points</span>{% endif %}
                 {% else %}<strong>—</strong><span>Not available</span>{% endif %}
               </div>

@@ -8,7 +8,7 @@ from django.shortcuts import redirect, render
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 
-from rivals.models import GameweekData, LeagueRankSnapshot, Transfer
+from rivals.models import FplSnapshot, GameweekData, LeagueRankSnapshot, Transfer
 from core.rate_limits import rate_limit
 from rivals.services.gameweek_context_service import GameweekContextService
 from rivals.services.refresh_service import (
@@ -86,7 +86,32 @@ def dashboard(request):
         "team"
     )
     tracked_teams_count = tracked_teams_qs.count()
-    tracked_teams = tracked_teams_qs[:5]
+    tracked_teams = list(tracked_teams_qs[:5])
+    watch_teams = [tracked.team for tracked in tracked_teams]
+    if user_team:
+        watch_teams.append(user_team)
+    # League imports can overwrite Team totals with older standings. Prefer the
+    # worker's season-scoped entry publications for both sides of each gap.
+    season = gameweek_context["season"]
+    entry_totals = dict(
+        FplSnapshot.objects.filter(
+            key__in=(
+                [f"profile:{season}:{team.fpl_team_id}" for team in watch_teams]
+                if season
+                else []
+            )
+        ).values_list("key", "payload")
+    )
+    watch_points = {}
+    for team in watch_teams:
+        points = entry_totals.get(f"profile:{season}:{team.fpl_team_id}", {}).get(
+            "summary_overall_points"
+        )
+        watch_points[team.pk] = (
+            points if points is not None else team.current_total_points
+        )
+    for tracked in tracked_teams:
+        tracked.watch_points = watch_points[tracked.team_id]
     recent_activity = fetch_recent_activity(request.user, request.GET, gameweek_context)
 
     user_gameweek_data = None
@@ -135,6 +160,7 @@ def dashboard(request):
             "recent_leagues": recent_leagues,
             "tracked_teams": tracked_teams,
             "tracked_teams_count": tracked_teams_count,
+            "user_watch_points": watch_points.get(request.user.team_id),
             "recent_activity": recent_activity,
             "user_gameweek_data": user_gameweek_data,
             "new_season_detected": new_season_detected,
