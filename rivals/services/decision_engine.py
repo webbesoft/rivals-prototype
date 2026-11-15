@@ -41,7 +41,7 @@ def digest(value):
 
 
 class DecisionEngine:
-    VERSION = "decision-v4-chip-refresh"
+    VERSION = "decision-v5-ledger-chip-advice"
 
     def __init__(self, user, api=None, *, fresh_squad=False):
         self.fresh_squad = fresh_squad
@@ -728,6 +728,20 @@ class DecisionEngine:
             "players": self.player_forecasts(),
         }
 
+    def chip_usage(self):
+        first = 1 if self.weeks[0] <= 19 else 20
+        return dict(
+            self.team.gameweek_data.filter(
+                season=self.context["season"],
+                gameweek__gte=first,
+                gameweek__lte=self.weeks[0],
+            )
+            .exclude(chip_name__isnull=True)
+            .exclude(chip_name="")
+            .order_by("gameweek")
+            .values_list("chip_name", "gameweek")
+        )
+
     def report(self, inputs=None, manual=None):
         if not hasattr(self, "players"):
             self.load()
@@ -740,6 +754,7 @@ class DecisionEngine:
             [
                 self.VERSION,
                 self.source_hash,
+                self.chip_usage(),
                 self.rival_signature(data),
                 self.context["season"],
                 self.weeks,

@@ -1,10 +1,18 @@
-"""Conditional chip opportunities for the unchanged squad's forecast window."""
+"""Chip opportunities reconciled with the squad ledger."""
+
+from rivals.services.xi_benchmark import best_projected_xi
+
+CHIP_NAMES = {
+    "Triple Captain": "3xc",
+    "Bench Boost": "bboost",
+    "Free Hit": "freehit",
+    "Wildcard": "wildcard",
+}
+FREE_HIT_GAIN_THRESHOLD = 15
 
 
 def chip_advice(engine, baseline):
     # These are transparent planning heuristics, not FPL rules or probabilities.
-    # Availability is deliberately conditional: public squads do not establish
-    # which chips the manager still has, or whether one is already selected.
     def reliable(pid):
         player = engine.players[pid]
         chance = player.get("chance_of_playing_next_round")
@@ -22,6 +30,11 @@ def chip_advice(engine, baseline):
             {
                 "week": week,
                 "xi": lineup["xi"],
+                "points": lineup["points"],
+                "blanks": sum(
+                    not engine.fixture_index.get((engine.players[pid]["team"], week))
+                    for pid in lineup["xi"]
+                ),
                 "captain": lineup["captain"],
                 "captain_points": engine.projections[lineup["captain"]][week],
                 "bench": bench,
@@ -113,41 +126,69 @@ def chip_advice(engine, baseline):
             ),
         }
     )
+    comparisons = []
+    for week in weeks:
+        benchmark = best_projected_xi(
+            {
+                **player,
+                "expected_points": engine.projections[pid].get(week["week"], 0),
+            }
+            for pid, player in engine.players.items()
+            if not player.get("removed", False)
+        )
+        if benchmark is None:
+            continue
+        # Compare both sides with captaincy using the same forecast model.
+        points = float(benchmark["points"]) + max(
+            engine.projections[pid].get(week["week"], 0) for pid in benchmark["ids"]
+        )
+        following = next(
+            (w for w in forecast_weeks if w["week"] == week["week"] + 1), None
+        )
+        temporary_blank = (
+            week["blanks"] >= 3 and following is not None and following["blanks"] <= 1
+        )
+        comparisons.append(
+            {
+                **week,
+                "benchmark_points": points,
+                "gain": points - week["points"],
+                "temporary_blank": temporary_blank,
+            }
+        )
     qualifying = [
         w
-        for w in weeks
-        if w["missing"] >= 3
-        and any(
-            following["week"] == w["week"] + 1 and following["missing"] <= 1
-            for following in forecast_weeks
-        )
+        for w in comparisons
+        if w["gain"] >= FREE_HIT_GAIN_THRESHOLD
+        and (current <= 19 or w["temporary_blank"])
     ]
-    disruption = max(qualifying or weeks, key=lambda w: w["missing"])
-    # Recovery after the refresh still matters for a one-week Free Hit.
-    following = next(
-        (w for w in forecast_weeks if w["week"] == disruption["week"] + 1), None
-    )
-    temporary = (
-        disruption["missing"] >= 3
-        and following is not None
-        and following["missing"] <= 1
-    )
+    opportunity = max(qualifying or comparisons, key=lambda w: w["gain"], default=None)
+    strong_fh = bool(qualifying)
     advice.append(
         {
             "chip": "Free Hit",
             "status": (
-                ("Review now" if disruption["week"] == current else "Plan ahead")
-                if temporary
+                ("Review now" if opportunity["week"] == current else "Plan ahead")
+                if strong_fh
                 else "Hold for now"
             ),
-            "gameweek": disruption["week"],
+            "gameweek": opportunity["week"] if opportunity else current,
+            "projected_gain": round(opportunity["gain"], 1) if opportunity else None,
             "detail": (
-                f"Your best legal XI has {disruption['missing']} zero-projection slots in GW{disruption['week']}. "
-                + (
-                    f"That falls to {following['missing']} the following week, suggesting a temporary squad problem. Consider a one-week rebuild if free transfers cannot cover it."
-                    if temporary
-                    else "A Free Hit is most useful for a temporary shortage, such as a blank gameweek, when your permanent squad looks healthy afterwards. No clear one-week recovery is established in this window."
+                (
+                    f"The team-of-the-week benchmark projects {opportunity['benchmark_points']:.1f} "
+                    f"points versus your XI's {opportunity['points']:.1f} in GW{opportunity['week']}, "
+                    f"a {opportunity['gain']:.1f}-point gap including captaincy. "
+                    if opportunity
+                    else "No complete benchmark XI is available. "
                 )
+                + (
+                    "Review a one-week rebuild when the projected gap is at least 15 points. "
+                    if current <= 19
+                    else "Save your second-half Free Hit for blank gameweeks: require at least three blank-fixture XI slots, recovery to at most one the following week, and a projected gap of at least 15 points. "
+                )
+                + "The benchmark follows formation and club limits but has no budget cap; confirm an affordable 15-player squad and compare free transfers before committing. "
+                "Both teams use the planner's projections; the landing page uses FPL expected points."
             ),
         }
     )
@@ -176,9 +217,25 @@ def chip_advice(engine, baseline):
             ),
         }
     )
+    used = engine.chip_usage()
     for item in advice:
         item["expiry_gameweek"] = expiry
         item["deadlines_remaining"] = expiry - current + 1
+        used_week = used.get(CHIP_NAMES[item["chip"]])
+        item["available"] = used_week is None
+        item["used_gameweek"] = used_week
+        if used_week is not None:
+            item["status"] = "Used"
+            item["gameweek"] = used_week
+            item["detail"] = (
+                f"Used in GW{used_week}, according to your squad ledger. "
+                + (
+                    "A fresh chip is available from GW20."
+                    if current <= 19
+                    else "No further use is available in this chip window."
+                )
+            )
+            continue
         if current == expiry:
             if item["status"] == "Hold for now":
                 item["status"] = "Review before expiry"

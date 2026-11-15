@@ -1535,7 +1535,7 @@ def test_free_hit_distinguishes_temporary_and_persistent_shortages(
                 engine.projections[pid][week] = 0
     baseline = engine.evaluate(engine.ids)
     advice = chip_advice(engine, baseline)
-    assert advice[2]["status"] == ("Review now" if recovers else "Hold for now")
+    assert advice[2]["status"] in {"Review now", "Plan ahead"}
     assert advice[3]["status"] == ("Hold for now" if recovers else "Review now")
 
 
@@ -1548,7 +1548,7 @@ def test_report_renders_chip_advice_and_passes_it_to_ai_evidence(manager, api):
     assert len(report["chip_advice"]) == 4
     html = render_to_string("partials/decision_workspace.html", {"report": report})
     assert "Chip advice" in html and "Triple Captain" in html
-    assert "only if you still have the chip available" in html
+    assert "checked against your squad ledger" in html
     assert "not included in its totals" in html
     evidence = evidence_for(report)
     assert len([item for item in evidence if item["id"].startswith("chip_")]) == 4
@@ -1563,7 +1563,7 @@ def test_chip_opportunities_respect_refresh_and_expiry(manager, api, current, ex
     engine.prepare(confirmed(engine))
     mapping = {week: current + index for index, week in enumerate(engine.weeks)}
     engine.weeks = list(mapping.values())
-    for pid in engine.ids:
+    for pid in engine.players:
         engine.projections[pid] = {
             mapping[week]: points for week, points in engine.projections[pid].items()
         }
@@ -1598,3 +1598,96 @@ def test_chip_opportunities_respect_refresh_and_expiry(manager, api, current, ex
     )
     assert "a fresh set is available from GW20" in html
     assert "Unused chips do not carry over" in html
+
+
+@pytest.mark.django_db
+def test_chip_advice_knows_ledger_usage_and_refresh(manager, api):
+    GameweekData.objects.create(
+        team=manager.team, season="2026/27", gameweek=8, chip_name="3xc"
+    )
+    engine = DecisionEngine(manager, api).load()
+    report = engine.report(confirmed(engine))
+    assert report["chip_advice"][0]["status"] == "Used"
+    assert report["chip_advice"][0]["used_gameweek"] == 8
+    GameweekData.objects.create(
+        team=manager.team, season="2026/27", gameweek=9, chip_name="bboost"
+    )
+    refreshed = engine.report(confirmed(engine))
+    assert refreshed["chip_advice"][1]["status"] == "Used"
+
+
+@pytest.mark.django_db
+def test_free_hit_flags_large_first_half_gap_without_zero_slots(manager, api):
+    engine = DecisionEngine(manager, api).load()
+    report = engine.report(confirmed(engine))
+    advice = report["chip_advice"][2]
+    assert advice["status"] in {"Review now", "Plan ahead"}
+    assert advice["projected_gain"] >= 15
+    assert "benchmark" in advice["detail"]
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("chip", ["3xc", "bboost", "freehit", "wildcard"])
+def test_first_half_chip_usage_does_not_block_refreshed_chips(manager, api, chip):
+    from rivals.services.chip_advice_service import CHIP_NAMES, chip_advice
+
+    GameweekData.objects.create(
+        team=manager.team, season="2026/27", gameweek=8, chip_name=chip
+    )
+    engine = DecisionEngine(manager, api).load()
+    engine.prepare(confirmed(engine))
+    # Only the usage lookup needs the second-half window for this assertion.
+    engine.weeks = [20]
+    assert chip not in engine.chip_usage()
+    engine.weeks = [11, 12, 13]
+    item = next(
+        a
+        for a in chip_advice(engine, engine.evaluate(engine.ids))
+        if CHIP_NAMES[a["chip"]] == chip
+    )
+    assert item["status"] == "Used"
+    assert item["available"] is False
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("blank", [False, True])
+def test_second_half_free_hit_requires_temporary_blank_week(manager, api, blank):
+    from rivals.services.chip_advice_service import chip_advice
+
+    engine = DecisionEngine(manager, api).load()
+    engine.prepare(confirmed(engine))
+    engine.weeks = [21, 22, 23]
+    for pid in engine.players:
+        engine.projections[pid] = {
+            week + 10: points for week, points in engine.projections[pid].items()
+        }
+        for fixture in engine.player_fixtures[pid]:
+            fixture["gameweek"] += 10
+    engine.fixture_index = {
+        (club, week + 10): fixtures
+        for (club, week), fixtures in engine.fixture_index.items()
+    }
+    if blank:
+        owned_clubs = {engine.players[pid]["team"] for pid in engine.ids}
+        engine.fixture_index = {
+            (club, week): fixtures
+            for (club, week), fixtures in engine.fixture_index.items()
+            if week != 21 or club not in owned_clubs
+        }
+        for pid in engine.ids:
+            engine.projections[pid][21] = 0
+    advice = chip_advice(engine, engine.evaluate(engine.ids))[2]
+    assert advice["status"] == ("Review now" if blank else "Hold for now")
+
+
+@pytest.mark.django_db
+def test_free_hit_holds_when_benchmark_gap_is_small(manager, api):
+    from rivals.services.chip_advice_service import chip_advice
+
+    engine = DecisionEngine(manager, api).load()
+    engine.prepare(confirmed(engine))
+    for pid in engine.players:
+        engine.projections[pid] = {week: 5 for week in engine.weeks}
+    advice = chip_advice(engine, engine.evaluate(engine.ids))[2]
+    assert advice["status"] == "Hold for now"
+    assert advice["projected_gain"] == 0

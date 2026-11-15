@@ -125,7 +125,7 @@ def test_landing_renders_xi_and_methodology(service):
     html = render_to_string(
         "pages/index.html", {"best_xi": best_xi, "user": request.user}
     )
-    assert "The statistically best XI" in html
+    assert "Team of the week" in html
     assert "No budget cap" in html
     assert "Next gameweek · FPL expected points" in html
     assert "xPts" in html
