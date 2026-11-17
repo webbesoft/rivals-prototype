@@ -18,10 +18,20 @@ from rivals.services.ai_credentials import (
 
 class GeminiConnectionForm(forms.Form):
     api_key = forms.RegexField(
-        regex=r"^[A-Za-z0-9_-]+$",
+        # Google owns the key format. Allow printable ASCII for the HTTP header,
+        # including dots in authorization keys, and verify the key with Google.
+        regex=r"\A[!-~]+\Z",
+        strip=True,
         min_length=16,
-        max_length=256,
+        max_length=4096,
         label="Gemini API key",
+        error_messages={
+            "required": "Paste your Gemini API key from Google AI Studio.",
+            "invalid": "Paste the complete Gemini API key without spaces or line breaks.",
+            "min_length": "This key looks incomplete. Copy the full key from Google AI Studio.",
+            "max_length": "This value is too long for an API key. Paste only the key from Google AI Studio.",
+            "null_characters_not_allowed": "Paste the complete Gemini API key without spaces or line breaks.",
+        },
         widget=forms.PasswordInput(
             render_value=False,
             attrs={

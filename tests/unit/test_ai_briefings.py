@@ -14,6 +14,7 @@ from django.core.management.base import CommandError
 from django.test import Client
 from django.urls import reverse
 
+from accounts.ai_views import GeminiConnectionForm
 from core.ai_privacy import filter_ai_breadcrumb, filter_ai_event
 from rivals.models import AIBriefing, AICredential, AIUsage, Team
 from rivals.services.ai_briefing_service import (
@@ -590,6 +591,98 @@ def test_telemetry_drops_sensitive_requests_jobs_and_provider_breadcrumbs():
     assert filter_ai_breadcrumb({"data": {"url": URL, "key": KEY}}, {}) is None
     event = {"request": {"url": "https://example.com/dashboard/"}}
     assert filter_ai_event(event, {}) == event
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "",
+        "short",
+        "a" * 4097,
+        "invalid key with spaces",
+        "test_key\r\ninjected_header",
+        "test_key\tin_the_middle",
+        "test_key\x00in_the_middle",
+        "test_key\x7fin_the_middle",
+        "test_key_with_unicode_é",
+    ],
+    ids=[
+        "empty",
+        "short",
+        "oversized",
+        "spaces",
+        "newline",
+        "tab",
+        "null",
+        "control",
+        "unicode",
+    ],
+)
+def test_connection_form_rejects_malformed_header_values(value):
+    form = GeminiConnectionForm({"api_key": value})
+    assert not form.is_valid()
+    assert "Enter a valid value." not in form.errors["api_key"]
+
+
+@pytest.mark.parametrize(
+    "key",
+    [KEY, "AQ." + "test_auth_key-" * 32],
+    ids=["standard", "authorization"],
+)
+@pytest.mark.parametrize("padding", ["", " \n"], ids=["plain", "pasted"])
+@pytest.mark.django_db
+def test_connection_accepts_provider_verified_key_formats(user, settings, key, padding):
+    settings.PASSWORDLESS_AUTH_ENABLED = False
+    client = Client()
+    client.force_login(user)
+    with patch.object(Gemini, "verify") as verify:
+        response = client.post(
+            reverse("accounts:gemini"),
+            {"action": "connect", "api_key": padding + key + padding},
+        )
+    assert response.status_code == 302, response.context["connection_form"].errors
+    verify.assert_called_once_with(key)
+    assert decrypt(AICredential.objects.get(user=user)) == key
+
+
+@pytest.mark.django_db
+def test_invalid_key_has_actionable_accessible_error_without_provider_call(
+    user, settings
+):
+    settings.PASSWORDLESS_AUTH_ENABLED = False
+    client = Client()
+    client.force_login(user)
+    with patch.object(Gemini, "verify") as verify:
+        response = client.post(
+            reverse("accounts:gemini"),
+            {"action": "connect", "api_key": "invalid key with spaces"},
+        )
+    body = response.content.decode()
+    assert response.status_code == 200
+    assert "Enter a valid value" not in body
+    assert 'id="id_api_key_error"' in body
+    assert 'role="alert" class="app-notice app-notice-error"' in body
+    assert 'aria-invalid="true"' in body
+    assert 'aria-describedby="id_api_key_error"' in body
+    assert "invalid key with spaces" not in body
+    verify.assert_not_called()
+    assert not AICredential.objects.filter(user=user).exists()
+
+
+@pytest.mark.django_db
+def test_connection_provider_error_is_shown_as_an_error_alert(user, settings):
+    settings.PASSWORDLESS_AUTH_ENABLED = False
+    client = Client()
+    client.force_login(user)
+    message = "Gemini could not use this key. Check its permissions or reconnect."
+    with patch.object(Gemini, "verify", side_effect=AIUnavailable(message)):
+        response = client.post(
+            reverse("accounts:gemini"), {"action": "connect", "api_key": KEY}
+        )
+    body = response.content.decode()
+    assert message in body
+    assert 'role="alert" class="app-notice app-notice-error"' in body
+    assert KEY not in body
 
 
 @pytest.mark.django_db

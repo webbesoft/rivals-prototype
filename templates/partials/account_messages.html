@@ -1,4 +1,4 @@
 {% for message in messages %}
-<div role="status" class="app-notice{% if message.tags == 'error' %} app-notice-error{% elif message.tags == 'warning' %} app-notice-warning{% endif %}">{{ message }}</div>
+<div role="{% if message.level == DEFAULT_MESSAGE_LEVELS.ERROR %}alert{% else %}status{% endif %}" class="app-notice{% if message.level == DEFAULT_MESSAGE_LEVELS.ERROR %} app-notice-error{% elif message.level == DEFAULT_MESSAGE_LEVELS.WARNING %} app-notice-warning{% endif %}">{{ message }}</div>
 {% endfor %}
 {% if form.non_field_errors %}<div role="alert" class="app-notice app-notice-error">{{ form.non_field_errors }}</div>{% endif %}

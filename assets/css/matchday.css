@@ -413,6 +413,7 @@
 .app-auth-switch { border-top: 1px solid var(--rule); padding-top: 22px; margin-top: 24px; font-size: 12px; color: var(--soft-ink); }
 .app-auth-switch a { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; font-weight: 650; }
 .app-field-error { font-size: 12px; color: var(--danger); margin-top: 7px; }
+.matchday-app .app-content :is(input:not([type=hidden]):not([type=checkbox]):not([type=radio]), select, textarea)[aria-invalid="true"] { border-color: var(--danger); }
 .app-notice { padding: 14px 16px; margin-bottom: 20px; background: #edf0e4; border-left: 3px solid var(--accent); font-size: 13px; line-height: 1.7; }
 .app-notice-error { background: #f8ebe4; border-color: var(--danger); color: var(--danger); }
 .app-notice-warning { background: #f1e9ce; border-color: #9b7634; }

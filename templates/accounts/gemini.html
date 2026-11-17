@@ -6,7 +6,7 @@
       <p class="app-lede">Your forecast lineup and priorities, emailed before the FPL deadline. You can also preview the same briefing from your transfer plan.</p>
     </div>
     {% include "accounts/_ai_tabs.html" %}
-    {% for message in messages %}<p role="status" class="app-panel p-4 mb-4">{{ message }}</p>{% endfor %}
+    {% include "partials/account_messages.html" %}
     <section class="app-panel p-6 mb-6">
       <h2 class="app-section-title mb-3">{% if gemini_connected %}Gemini connected · ••••••••{% else %}Enable AI briefings{% endif %}</h2>
       <p class="text-sm text-gray-600 mb-4">Supported provider: Google Gemini.</p>
@@ -21,7 +21,13 @@
         <form method="POST" class="space-y-4">
           {% csrf_token %}<input type="hidden" name="action" value="connect">
           <label class="block text-sm font-bold" for="{{ connection_form.api_key.id_for_label }}">{% if gemini_connected %}Replacement Gemini API key{% else %}Gemini API key{% endif %}</label>
-          {{ connection_form.api_key }}{{ connection_form.api_key.errors }}
+          {{ connection_form.api_key }}
+          {% if connection_form.api_key.errors %}
+            <div id="{{ connection_form.api_key.auto_id }}_error" role="alert" class="app-notice app-notice-error">
+              <p class="font-bold">Check your Gemini API key</p>
+              {% for error in connection_form.api_key.errors %}<p>{{ error }}</p>{% endfor %}
+            </div>
+          {% endif %}
           <p class="text-xs text-gray-600">By connecting, you agree to send the planning summary above to Google when you request a briefing or enable scheduled delivery below. Up to six briefings per day, with ten minutes between new requests.</p>
           <button type="submit" class="app-primary-button">{% if gemini_connected %}Replace key{% else %}Enable AI briefings{% endif %}</button>
           <a class="underline text-sm ml-3" href="https://aistudio.google.com/api-keys" target="_blank" rel="noopener noreferrer">Get a Gemini key</a>
