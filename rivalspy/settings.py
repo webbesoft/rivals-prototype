@@ -131,6 +131,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "accounts.middleware.timezone_middleware",
     "allauth.account.middleware.AccountMiddleware",
     "accounts.middleware.OnboardingMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",

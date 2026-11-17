@@ -1,12 +1,34 @@
 from urllib.parse import urlencode
 
+from asgiref.sync import iscoroutinefunction
 from django.conf import settings
 from django.shortcuts import redirect
 from django.urls import reverse
-from django.utils.deprecation import MiddlewareMixin
+from django.utils import timezone
 from django.utils.cache import add_never_cache_headers
+from django.utils.decorators import sync_and_async_middleware
+from django.utils.deprecation import MiddlewareMixin
 
 from .onboarding import has_fpl_setup
+from .timezones import user_timezone
+
+
+@sync_and_async_middleware
+def timezone_middleware(get_response):
+    if iscoroutinefunction(get_response):
+
+        async def middleware(request):
+            user = await request.auser()
+            with timezone.override(user_timezone(user)):
+                return await get_response(request)
+
+    else:
+
+        def middleware(request):
+            with timezone.override(user_timezone(request.user)):
+                return get_response(request)
+
+    return middleware
 
 
 class OnboardingMiddleware(MiddlewareMixin):

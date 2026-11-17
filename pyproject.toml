@@ -22,6 +22,7 @@ dependencies = [
     "django-oauth-toolkit==3.4.1",
     "jsonschema==4.26.0",
     "django-allauth[socialaccount]>=65.22.1,<66",
+    "tzdata>=2025.2",
 ]
 
 [dependency-groups]

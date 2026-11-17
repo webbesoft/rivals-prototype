@@ -1,4 +1,4 @@
-RivalSpy{% if is_test %} · Test email{% endif %}
+{% load date_filters %}RivalSpy{% if is_test %} · Test email{% endif %}
 GW{{ report.gameweek }} · Your AI briefing
 Deadline: {{ deadline|date:"D j M Y H:i T" }}
 
@@ -30,7 +30,7 @@ Estimated gain versus hold: {{ report.best.net_gain }} points over {{ report.hor
 Captain: {{ report.captain|default:"No clear option" }}; vice: {{ report.vice|default:"No clear option" }}.
 Chosen using next gameweek fixture and playing-time estimates. Check late team news.
 {% endif %}
-{% if report.rival %}{% if report.rival.unavailable %}Rival scenarios are unavailable. Check the planner after standings update.{% else %}{{ report.rival.league }} · {{ report.rival.rival }}. Current gap (rival minus you): {{ report.rival.gap }}. Forecast gap if squads stay unchanged: {{ report.rival.hold_gap }}. Rival transfers and captain choices are unknown. Standings snapshot: {{ report.rival.updated_at }}.{% endif %}{% endif %}
+{% if report.rival %}{% if report.rival.unavailable %}Rival scenarios are unavailable. Check the planner after standings update.{% else %}{{ report.rival.league }} · {{ report.rival.rival }}. Current gap (rival minus you): {{ report.rival.gap }}. Forecast gap if squads stay unchanged: {{ report.rival.hold_gap }}. Rival transfers and captain choices are unknown. Standings snapshot: {{ report.rival.updated_at|local_datetime }}.{% endif %}{% endif %}
 {% if notice %}{{ notice }}{% endif %}
 Open your transfer plan: {{ planner_url }}
 

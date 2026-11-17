@@ -59,5 +59,6 @@ urlpatterns = [
         name="resend_verification",
     ),
     path("profile/", views.profile_view, name="profile"),
+    path("profile/timezone/", views.update_timezone_view, name="update_timezone"),
     path("profile/update-fpl-id/", views.update_fpl_id_view, name="update_fpl_id"),
 ]

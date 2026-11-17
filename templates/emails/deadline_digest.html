@@ -1,4 +1,5 @@
 {% extends "emails/base.html" %}
+{% load date_filters %}
 
 {% block title %}GW{{ report.gameweek }} · Your AI briefing — RivalSpy{% endblock %}
 {% block preheader %}Your GW{{ report.gameweek }} forecast, captain options and priorities before the deadline.{% endblock %}
@@ -90,7 +91,7 @@
       <p style="margin:0 0 8px;color:#58685c;font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;">The league within the league</p>
       {% if report.rival.unavailable %}<p style="margin:0;font-size:13px;line-height:1.7;">Fresh rival scenarios are unavailable. Check the planner after standings update.</p>
       {% else %}<p style="margin:0 0 8px;font-size:14px;font-weight:700;line-height:1.5;">{{ report.rival.league }} &middot; {{ report.rival.rival }}</p>
-      <p style="margin:0;color:#58685c;font-size:12px;line-height:1.7;">{% if report.rival.gap != None %}Current points gap (rival minus you): <strong>{{ report.rival.gap }}</strong>. {% endif %}Unchanged-squad forecast gap over this window: <strong>{{ report.rival.hold_gap }}</strong>. Rival transfers and captain choices are unknown.{% if report.rival.updated_at %} Standings snapshot: {{ report.rival.updated_at }}.{% endif %}</p>{% endif %}
+      <p style="margin:0;color:#58685c;font-size:12px;line-height:1.7;">{% if report.rival.gap != None %}Current points gap (rival minus you): <strong>{{ report.rival.gap }}</strong>. {% endif %}Unchanged-squad forecast gap over this window: <strong>{{ report.rival.hold_gap }}</strong>. Rival transfers and captain choices are unknown.{% if report.rival.updated_at %} Standings snapshot: {{ report.rival.updated_at|local_datetime }}.{% endif %}</p>{% endif %}
     </td></tr></table>
     {% endif %}
 

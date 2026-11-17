@@ -1,4 +1,4 @@
-{% load l10n %}
+{% load l10n date_filters %}
 <div class="rv-share-bar">
   <p>A rivalry worth sharing.</p>
   <button type="button" class="app-secondary-button" data-comparison-share
@@ -9,7 +9,7 @@
     data-rival-points="{{ rival_points|default_if_none:''|unlocalize }}"
     data-score-source="{% if comparison.season_totals.mine != None and comparison.season_totals.rival != None and comparison.season_totals %}FPL entry totals{% else %}Latest available totals{% endif %}"
     data-gameweek="{{ comparison.current_gameweek|default_if_none:'' }}"
-    data-timestamp="{{ comparison.analysis_timestamp|default:'Not available' }}"
+    data-timestamp="{{ comparison.analysis_timestamp|local_datetime|default:'Not available' }}"
     data-my-captain="{{ comparison.captaincy.mine.name|default:'Not available' }}"
     data-rival-captain="{{ comparison.captaincy.rival.name|default:'Not available' }}"
     data-my-form="{{ comparison.momentum.mine.average|floatformat:1|default:'—' }}"

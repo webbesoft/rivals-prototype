@@ -15,6 +15,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.views.decorators.debug import sensitive_variables
 
+from accounts.timezones import user_timezone
 from core.ai_privacy import sensitive_ai
 from rivals.models import AICredential, DeadlineDigest, DigestSubscription
 from rivals.services.ai_briefing_service import complete_briefing, request_briefing
@@ -543,10 +544,14 @@ def deliver_digest(record_id):
                 return
             record.refresh_from_db(fields=["ai_briefing"])
             context = email_context(record)
+            # Workers have no request middleware; render for the actual recipient.
+            with timezone.override(user_timezone(record.user)):
+                text_body = render_to_string("emails/deadline_digest.txt", context)
+                html_body = render_to_string("emails/deadline_digest.html", context)
             message = EmailMultiAlternatives(
                 ("[Test] " if record.kind == "test" else "")
                 + f"GW{record.gameweek}: your AI briefing",
-                render_to_string("emails/deadline_digest.txt", context),
+                text_body,
                 settings.DEFAULT_FROM_EMAIL,
                 [record.user.email],
                 headers={
@@ -554,9 +559,7 @@ def deliver_digest(record_id):
                     "List-Unsubscribe": f'<{context["unsubscribe_url"]}>',
                 },
             )
-            message.attach_alternative(
-                render_to_string("emails/deadline_digest.html", context), "text/html"
-            )
+            message.attach_alternative(html_body, "text/html")
             message.connection = connection
             claimed = DeadlineDigest.objects.filter(
                 pk=record.pk,

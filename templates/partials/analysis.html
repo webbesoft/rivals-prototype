@@ -1,3 +1,4 @@
+{% load date_filters %}
 <div class="app-panel bg-white border border-gray-200 shadow-sm p-6 sm:p-8">
   {% if analysis.error %}
   <div class="border-l-4 border-danger bg-danger/5 p-4 text-xs tabular-nums text-danger">
@@ -17,7 +18,7 @@
       </p>
     </div>
     <div class="text-right tabular-nums text-xs">
-      <span class="text-[11px] text-gray-400 block">{{ analysis.analysis_timestamp }}</span>
+      <span class="text-[11px] text-gray-400 block">{{ analysis.analysis_timestamp|local_datetime }}</span>
       <div class="text-text-main mt-0.5">
         <span class="font-bold text-pitch">{{ analysis.team_summary.total_points }} pts</span>
         <span class="text-gray-300 mx-1.5">|</span>

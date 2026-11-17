@@ -3,8 +3,10 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.tokens import default_token_generator
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.encoding import force_str
 from django.utils.http import (
     url_has_allowed_host_and_scheme,
@@ -14,7 +16,13 @@ from django.views.decorators.http import require_POST
 
 from core.rate_limits import rate_limit
 
-from .forms import LoginForm, PasswordResetForm, SignUpForm, UpdateFplIdForm
+from .forms import (
+    LoginForm,
+    PasswordResetForm,
+    SignUpForm,
+    TimezoneForm,
+    UpdateFplIdForm,
+)
 from .tasks import send_verification_email_task
 
 User = get_user_model()
@@ -226,7 +234,7 @@ def resend_verification_email(request):
 
 
 @login_required
-def profile_view(request):
+def profile_view(request, *, timezone_form=None):
     """Display the user's profile and FPL settings."""
     from rivals.services.gameweek_context_service import GameweekContextService
 
@@ -247,10 +255,35 @@ def profile_view(request):
         "accounts/profile.html",
         {
             "form": form,
+            "timezone_form": timezone_form or TimezoneForm(
+                initial={"timezone": request.user.timezone or settings.TIME_ZONE}
+            ),
             "new_season_available": new_season_available,
             "passwordless_enabled": settings.PASSWORDLESS_AUTH_ENABLED,
         },
     )
+
+
+@login_required
+@require_POST
+@rate_limit("profile_update")
+def update_timezone_view(request):
+    form = TimezoneForm(request.POST)
+    browser_default = request.POST.get("source") == "browser"
+    if not form.is_valid():
+        if browser_default:
+            return JsonResponse({"errors": form.errors}, status=400)
+        return profile_view(request, timezone_form=form)
+
+    users = User.objects.filter(pk=request.user.pk)
+    if browser_default:
+        # A second device or a late detection request cannot replace a saved choice.
+        users = users.filter(timezone="")
+    users.update(timezone=form.cleaned_data["timezone"], updated_at=timezone.now())
+    if browser_default:
+        return HttpResponse(status=204)
+    messages.success(request, "Timezone saved. Times now follow your preference.")
+    return redirect("accounts:profile")
 
 
 @login_required
@@ -281,6 +314,11 @@ def update_fpl_id_view(request):
                     "accounts/profile.html",
                     {
                         "form": form,
+                        "timezone_form": TimezoneForm(
+                            initial={
+                                "timezone": request.user.timezone or settings.TIME_ZONE
+                            }
+                        ),
                         "passwordless_enabled": settings.PASSWORDLESS_AUTH_ENABLED,
                     },
                 )
@@ -336,5 +374,11 @@ def update_fpl_id_view(request):
     return render(
         request,
         "accounts/profile.html",
-        {"form": form, "passwordless_enabled": settings.PASSWORDLESS_AUTH_ENABLED},
+        {
+            "form": form,
+            "timezone_form": TimezoneForm(
+                initial={"timezone": request.user.timezone or settings.TIME_ZONE}
+            ),
+            "passwordless_enabled": settings.PASSWORDLESS_AUTH_ENABLED,
+        },
     )

@@ -16,7 +16,18 @@ from django.utils.http import urlsafe_base64_encode
 
 from rivals.services.fpl_api_service import FplApiService
 
+from .timezones import timezone_choices
+
 User = get_user_model()
+
+
+class TimezoneForm(forms.Form):
+    timezone = forms.ChoiceField(
+        choices=timezone_choices,
+        label="Your timezone",
+        widget=forms.Select(attrs={"aria-describedby": "timezone-help"}),
+        error_messages={"invalid_choice": "Choose a valid timezone."},
+    )
 
 
 class SignUpForm(UserCreationForm):

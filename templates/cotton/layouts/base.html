@@ -63,6 +63,15 @@
   <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.7/dist/htmx.min.js"></script>
   <script src="{% static 'js/request-feedback.js' %}" defer></script>
   <script src="{% static 'js/pwa.js' %}" defer></script>
+  {% if user.is_authenticated and not user.timezone and request.method == 'GET' %}
+  <script id="timezone-edit-tracker">
+    document.documentElement.dataset.timezoneUntouched = 'true';
+    document.addEventListener('input', function () {
+      document.documentElement.dataset.timezoneUntouched = 'false';
+    }, { capture: true, once: true });
+  </script>
+  <script src="{% static 'js/timezone-default.js' %}" data-timezone-url="{% url 'accounts:update_timezone' %}" data-csrf-token="{{ csrf_token }}" defer></script>
+  {% endif %}
   {% block extra_head %}{% endblock %}
 </head>
 

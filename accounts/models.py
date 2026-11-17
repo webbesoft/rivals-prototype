@@ -4,6 +4,8 @@ from django.db.models.functions import Lower
 
 from rivals.models import MiniLeague, Team
 
+from .timezones import validate_timezone
+
 
 # Create your models here.
 class User(AbstractUser):
@@ -12,6 +14,9 @@ class User(AbstractUser):
     email = models.EmailField(unique=True)
     manager_name = models.CharField(max_length=100, null=True)
     team_name = models.CharField(max_length=30, null=True)
+    timezone = models.CharField(
+        max_length=64, blank=True, default="", validators=[validate_timezone]
+    )
     team = models.ForeignKey(
         Team,
         on_delete=models.SET_NULL,

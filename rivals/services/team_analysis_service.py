@@ -2,7 +2,6 @@
 import hashlib
 import logging
 from collections import defaultdict
-from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
 from django.core.cache import cache
@@ -811,7 +810,7 @@ class TeamAnalysisService:
                 ),
                 "captain_suggestions": self.get_captain_suggestions(current_squad),
                 "budget_insights": budget_insights,
-                "analysis_timestamp": timezone.now().strftime("%Y-%m-%d %H:%M %Z"),
+                "analysis_timestamp": timezone.now().isoformat(),
             }
             cache.set(key, result, 120)
             return result
@@ -1236,7 +1235,7 @@ class TeamAnalysisService:
                     "difference": round(projected_diff, 1),
                 },
                 "current_gameweek": gw,
-                "analysis_timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "analysis_timestamp": timezone.now().isoformat(),
             }
         except Exception as e:
             logger.exception("Compare teams failed: %s", e)

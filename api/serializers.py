@@ -33,6 +33,7 @@ class UserSerializer(serializers.ModelSerializer):
             "username",
             "manager_name",
             "team_name",
+            "timezone",
             "fpl_id",
             "is_verified",
             "onboarding_required",

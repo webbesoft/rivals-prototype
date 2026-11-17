@@ -275,6 +275,39 @@ def test_multipart_delivery_is_once_and_visually_leads_with_forecast(
     assert "Unsubscribe" in html and "AI priorities are unavailable" in html
 
 
+@pytest.mark.parametrize(
+    ("zone", "deadline", "prepared"),
+    [
+        ("Africa/Harare", "18:00 CAT", "14:00 CAT"),
+        ("Asia/Kolkata", "21:30 IST", "17:30 IST"),
+        ("America/New_York", "11:00 EST", "07:00 EST"),
+    ],
+)
+def test_worker_email_uses_recipient_timezone_without_changing_schedule(
+    subscriber, report, api, zone, deadline, prepared
+):
+    from django.utils import timezone
+
+    record = record_for(
+        subscriber, generation_state="ready", prepared_at=NOW, report=report
+    )
+    # Delivery must read the latest preference even if generation used another zone.
+    get_user_model().objects.filter(pk=subscriber.pk).update(timezone=zone)
+    with (
+        timezone.override("Pacific/Auckland"),
+        patch("rivals.services.deadline_digest_service.FplApiService", return_value=api),
+    ):
+        deliver_digest.now(str(record.pk))
+        assert timezone.get_current_timezone_name() == "Pacific/Auckland"
+    message = mail.outbox[0]
+    for content in (message.body, message.alternatives[0].content):
+        assert deadline in content and prepared in content
+    record.refresh_from_db()
+    assert record.deadline == NOW + timedelta(hours=4)
+    assert record.scheduled_for == NOW
+    assert record.delivery_state == "sent"
+
+
 def test_ambiguous_smtp_failure_never_retries(subscriber, report, api):
     record = record_for(
         subscriber, generation_state="ready", prepared_at=NOW, report=report

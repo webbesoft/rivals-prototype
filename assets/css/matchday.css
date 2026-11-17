@@ -112,6 +112,18 @@
 /* A common hierarchy, with serif headlines and tabular sans-serif statistics. */
 .matchday-app .app-content > .max-w-7xl { max-width: 1336px; padding-inline: 48px; }
 .app-settings-page { width: 100%; max-width: 48rem; margin-inline: auto; }
+.app-profile-page { overflow-wrap: anywhere; }
+.profile-timezone { margin-bottom: 24px; padding: 24px; }
+.profile-timezone-heading > p:last-child { max-width: 680px; margin-top: 12px; color: var(--soft-ink); font-size: 13px; line-height: 1.75; }
+.profile-timezone-form { display: flex; align-items: flex-end; gap: 16px; margin-top: 22px; }
+.profile-timezone-form > div { flex: 1; min-width: 0; }
+.profile-timezone-form label { display: block; margin-bottom: 8px; font-size: 12px; }
+.profile-timezone-form select { width: 100%; padding: 11px 12px; font-size: 14px; }
+.profile-timezone-form button { flex-shrink: 0; }
+@media (max-width: 540px) {
+  .profile-timezone { padding: 20px; }
+  .profile-timezone-form { align-items: stretch; flex-direction: column; }
+}
 .briefing-settings-card { padding: 24px; margin-bottom: 24px; }
 .briefing-settings-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
 .briefing-settings-heading p { margin-top: 7px; color: var(--soft-ink); font-size: 13px; line-height: 1.65; }
