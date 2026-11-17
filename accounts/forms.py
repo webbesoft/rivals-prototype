@@ -30,6 +30,27 @@ class TimezoneForm(forms.Form):
     )
 
 
+class DeleteAccountForm(forms.Form):
+    confirmation_email = forms.EmailField(
+        label="Confirm your email address",
+        widget=forms.EmailInput(
+            attrs={"autocomplete": "email", "aria-describedby": "delete-email-help"}
+        ),
+    )
+
+    def __init__(self, *args, user, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = user
+
+    def clean_confirmation_email(self):
+        email = self.cleaned_data["confirmation_email"]
+        if email.casefold() != self.user.email.casefold():
+            raise ValidationError(
+                "Enter your account's email address to confirm deletion."
+            )
+        return email
+
+
 class SignUpForm(UserCreationForm):
     fpl_id = forms.IntegerField(
         min_value=1,

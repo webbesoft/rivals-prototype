@@ -43,6 +43,37 @@ Authentication forms use `Referrer-Policy: same-origin`. Setting `no-referrer` o
 
 Turning the flag off restores legacy routes while diagnosing a rollout problem. Active accounts with unusable passwords, including email-link and Google accounts, can request a recovery email through **Forgot your password?** and set a password using the single-use reset link. The rollback form explicitly includes these users; Django's default reset form excludes them. Disabled accounts remain ineligible. Re-enabling passwordless restores email-link access. Password retirement is a separate operational action and is not run by migrations or deployment.
 
+## Account deletion and incomplete onboarding
+
+Users can choose **Delete my account** from their profile or the FPL onboarding
+page. The confirmation page requires their account email and a CSRF-protected
+POST. Deletion signs them out, removes private plans, tracking subscriptions,
+briefing history and AI credentials, and revokes API tokens, social sign-ins and
+MCP OAuth grants. Outstanding email sign-in links and legacy account jobs are
+also removed. Other browser sessions lose access on their next request.
+Shared public FPL teams, leagues and history remain available to other users;
+usage audit metadata is retained with its user reference removed. A later
+sign-up creates a fresh account.
+
+New accounts have seven days from creation to connect an FPL team. The onboarding
+page shows the deletion deadline. Signing in again does not extend it; successful
+FPL initialization permanently clears it, including through the legacy signup
+flow. Staff and superuser accounts are excluded from automatic cleanup.
+
+Apply migration `0009_user_onboarding_expires_at` before restarting the web and
+worker processes. Existing incomplete accounts receive seven days from migration
+time, while existing accounts with FPL setup are preserved. Cleanup runs in
+batches of up to 100 accounts on each `fpl_worker` dispatcher tick, including when
+upstream FPL data is unavailable. No additional scheduler is required. Expired
+accounts are deleted when the worker next processes them; keep the worker running.
+
+For an operational preview or a manual batch:
+
+```sh
+uv run python manage.py cleanup_incomplete_accounts --dry-run
+uv run python manage.py cleanup_incomplete_accounts --limit 100
+```
+
 ## API contract
 
 With passwordless enabled, `POST /api/auth/login/` and `/api/auth/signup/` accept `{ "email": "manager@example.com", "next": "/dashboard/" }` and return `202` with generic delivery guidance. Any password field returns `410` with `code: password_login_retired`. Completing the emailed link establishes a browser session; these endpoints do not issue bearer tokens.

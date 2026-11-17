@@ -4,6 +4,7 @@ from django.db.models.functions import Lower
 
 from rivals.models import MiniLeague, Team
 
+from .lifecycle import onboarding_deadline
 from .timezones import validate_timezone
 
 
@@ -29,6 +30,10 @@ class User(AbstractUser):
     is_verified = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    # Cleared permanently after successful setup; sign-ins never extend it.
+    onboarding_expires_at = models.DateTimeField(
+        default=onboarding_deadline, null=True, blank=True, db_index=True
+    )
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["username", "password"]

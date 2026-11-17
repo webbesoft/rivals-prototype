@@ -137,5 +137,10 @@
         </form>
       </div>
     </div>
+    <section class="app-panel p-6 mt-8" aria-labelledby="delete-account-title">
+      <h2 id="delete-account-title" class="app-section-title">Delete account</h2>
+      <p class="text-sm text-muted mt-2 mb-4">Permanently delete your RivalSpy account, saved plans and private settings.</p>
+      <a href="{% url 'accounts:delete_account' %}" class="app-secondary-button app-button-danger">Delete my account</a>
+    </section>
   </div>
 </c-layouts.base>

@@ -73,5 +73,6 @@ class InitUserService:
             )
 
         self.user.team = team
-        self.user.save(update_fields=["team"])
+        self.user.onboarding_expires_at = None
+        self.user.save(update_fields=["team", "onboarding_expires_at"])
         return team

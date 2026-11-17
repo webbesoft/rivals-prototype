@@ -19,7 +19,11 @@
         <button type="submit" class="app-primary-button">Connect team and continue <span aria-hidden="true">↗</span></button>
       </form>
       <p class="app-auth-switch">Your leagues and stats will refresh after connecting.</p>
+      {% if user.onboarding_expires_at %}
+      <p class="app-field-help">Complete this step by {{ user.onboarding_expires_at|date:"j F Y, H:i T" }} to keep your account. Incomplete accounts are automatically deleted after seven days. You can sign up again later.</p>
+      {% endif %}
       <form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}<button type="submit">Sign out</button></form>
+      <p class="app-auth-switch"><a href="{% url 'accounts:delete_account' %}">Delete my account</a></p>
     </section>
   </div>
 </c-layouts.base>

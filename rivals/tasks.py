@@ -270,6 +270,10 @@ def refresh_tick():
             "last_success_at": timezone.now(),
         },
     )
+    from accounts.lifecycle import delete_expired_accounts
+
+    # Account housekeeping must also run while FPL's upstream data is stale.
+    delete_expired_accounts()
     context = GameweekContextService.cached()
     enqueue_refresh("context", context=context)
     from rivals.services.deadline_digest_service import dispatch_digests

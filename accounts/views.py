@@ -12,17 +12,22 @@ from django.utils.http import (
     url_has_allowed_host_and_scheme,
     urlsafe_base64_decode,
 )
-from django.views.decorators.http import require_POST
+from django.views.decorators.cache import never_cache
+from django.views.decorators.debug import sensitive_post_parameters
+from django.views.decorators.http import require_http_methods, require_POST
 
 from core.rate_limits import rate_limit
 
 from .forms import (
+    DeleteAccountForm,
     LoginForm,
     PasswordResetForm,
     SignUpForm,
     TimezoneForm,
     UpdateFplIdForm,
 )
+from .lifecycle import delete_account
+from .onboarding import has_fpl_setup
 from .tasks import send_verification_email_task
 
 User = get_user_model()
@@ -102,6 +107,33 @@ def logout_view(request):
     logout(request)
     messages.success(request, "You have been logged out successfully.")
     return redirect("core:index")
+
+
+@login_required
+@never_cache
+@sensitive_post_parameters("confirmation_email")
+@require_http_methods(["GET", "POST"])
+def delete_account_view(request):
+    form = DeleteAccountForm(
+        request.POST if request.method == "POST" else None, user=request.user
+    )
+    if request.method == "POST" and form.is_valid():
+        delete_account(request.user.pk)
+        logout(request)
+        messages.success(request, "Your account has been deleted.")
+        return redirect("accounts:login")
+    return render(
+        request,
+        "accounts/delete_account.html",
+        {
+            "form": form,
+            "cancel_url": reverse(
+                "accounts:profile"
+                if has_fpl_setup(request.user)
+                else "accounts:onboarding"
+            ),
+        },
+    )
 
 
 @rate_limit("password_reset", identity_field="email")
@@ -255,7 +287,8 @@ def profile_view(request, *, timezone_form=None):
         "accounts/profile.html",
         {
             "form": form,
-            "timezone_form": timezone_form or TimezoneForm(
+            "timezone_form": timezone_form
+            or TimezoneForm(
                 initial={"timezone": request.user.timezone or settings.TIME_ZONE}
             ),
             "new_season_available": new_season_available,
