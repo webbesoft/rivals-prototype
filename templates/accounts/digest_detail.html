@@ -1,12 +1,100 @@
 <c-layouts.base title="Your briefing email - RivalSpy">
-  <div class="max-w-4xl mx-auto px-4 py-8">
-    <h1 class="app-page-title mb-4">GW{{ digest.gameweek }} briefing email</h1>
-    <p class="mb-3">{{ digest.status_label }}</p>
-    {% if digest.notice %}<p role="status" class="mb-4">{{ digest.notice }}</p>{% endif %}
-    {% if digest.is_processing %}
-      <p class="mb-4" hx-get="{% url 'accounts:digests.detail' digest.id %}" hx-trigger="every 5s" hx-select="#main-content" hx-target="#main-content" hx-swap="innerHTML" hx-request='{"timeout":10000}'>Preparing your briefing. This page checks its progress automatically.</p>
-    {% endif %}
-    {% if digest.report and user.team_id == digest.team_id %}<p class="mb-4"><a class="app-primary-button" href="?email=1" target="_blank" rel="noopener">Open email preview</a></p>{% endif %}
-    <a class="underline" href="{% url 'accounts:gemini' %}">Back to AI briefings</a>
+  <div id="briefing-detail" class="briefing-detail"
+    {% if digest.is_processing %}hx-get="{% url 'accounts:digests.detail' digest.id %}" hx-trigger="every 5s" hx-select="#briefing-detail" hx-target="this" hx-swap="outerHTML" hx-request='{"timeout":10000}'{% endif %}>
+    <a class="briefing-detail-back" href="{% url 'accounts:gemini' %}"><span aria-hidden="true">←</span> Back to AI briefings</a>
+    <header class="briefing-detail-heading">
+      <div>
+        <p class="app-kicker">The deadline edition · {{ digest.season }}</p>
+        <h1 class="app-page-title">Your GW{{ digest.gameweek }} briefing</h1>
+        <p class="app-lede">Your squad, your rivals and the decisions before the deadline.</p>
+      </div>
+      <span class="briefing-state-badge {% if digest.status_label == 'Sent' or digest.status_label == 'Preview ready' %}is-ready{% elif digest.status_label == 'Could not prepare' or digest.status_label == 'Could not send' or digest.status_label == 'Delivery unconfirmed' or digest.status_label == 'Skipped' %}is-stopped{% elif digest.is_processing %}is-processing{% endif %}"><span aria-hidden="true"></span>{{ digest.status_label }}</span>
+    </header>
+
+    <section class="briefing-detail-card" aria-labelledby="briefing-status-title">
+      <div class="briefing-detail-main">
+        <div class="briefing-status-icon" aria-hidden="true">
+          {% if digest.status_label == 'Sent' or digest.status_label == 'Preview ready' %}
+          <svg viewBox="0 0 32 32" fill="none"><path d="m9 16 5 5 10-11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="16" cy="16" r="13" stroke="currentColor" stroke-width="1.5"/></svg>
+          {% elif digest.status_label == 'Could not prepare' or digest.status_label == 'Could not send' or digest.status_label == 'Delivery unconfirmed' or digest.status_label == 'Skipped' %}
+          <svg viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="13" stroke="currentColor" stroke-width="1.5"/><path d="M16 9v8m0 5v.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          {% else %}
+          <svg viewBox="0 0 32 32" fill="none"><path d="M8 3h11l6 6v20H8V3Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M19 3v7h6M12 15h9m-9 5h9m-9 5h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          {% endif %}
+        </div>
+        <div class="briefing-status-copy" role="status" aria-live="polite" aria-atomic="true">
+          {% if digest.status_label == 'Sent' %}
+          <h2 id="briefing-status-title">Your briefing is in.</h2>
+          <p>Sent{% if digest.recipient %} to <strong>{{ digest.recipient }}</strong>{% endif %}. Open the preview here or catch up in your inbox before the deadline.</p>
+          {% elif digest.status_label == 'Preview ready' %}
+          <h2 id="briefing-status-title">Your next move is ready.</h2>
+          <p>Your forecast and priorities are ready to read. Open the email preview to see the full briefing.</p>
+          {% elif digest.status_label == 'Sending' %}
+          <h2 id="briefing-status-title">Sending your briefing.</h2>
+          <p>Your forecast and priorities are prepared. We're sending the email to your verified address.</p>
+          {% elif digest.status_label == 'Ready to send' %}
+          <h2 id="briefing-status-title">Prepared. Next stop, your inbox.</h2>
+          <p>Your forecast and priorities are ready. Your email is waiting to be sent; you can open the preview now.</p>
+          {% elif digest.status_label == 'Waiting to retry' %}
+          <h2 id="briefing-status-title">We'll try again shortly.</h2>
+          <p>Preparation couldn't finish this time. We'll retry automatically while there's still time before the deadline.</p>
+          {% elif digest.status_label == 'Scheduled' %}
+          <h2 id="briefing-status-title">Set for your gameweek.</h2>
+          <p>Your briefing is scheduled for {{ digest.scheduled_for|date:"D j M, H:i T" }}. We'll prepare it closer to delivery so it uses the latest available squad data.</p>
+          {% elif digest.status_label == 'Could not prepare' %}
+          <h2 id="briefing-status-title">We couldn't prepare this briefing.</h2>
+          <p>Your transfer plan is still available. Head back to AI briefings to check your settings or request another preview.</p>
+          {% elif digest.status_label == 'Could not send' %}
+          <h2 id="briefing-status-title">Prepared, but not delivered.</h2>
+          <p>We couldn't send this email. You can still read the preview here and check your delivery settings in AI briefings.</p>
+          {% elif digest.status_label == 'Delivery unconfirmed' %}
+          <h2 id="briefing-status-title">Check your inbox.</h2>
+          <p>We couldn't confirm delivery. The email may have arrived, so we won't resend it automatically. You can read the preview here.</p>
+          {% elif digest.status_label == 'Skipped' %}
+          <h2 id="briefing-status-title">This briefing was skipped.</h2>
+          <p>This briefing won't be sent. Your transfer plan and AI briefing settings are still available.</p>
+          {% else %}
+          <h2 id="briefing-status-title">Getting your gameweek ready.</h2>
+          <p>We're preparing your squad forecast and priorities. This usually takes about a minute. You can keep planning while we work.</p>
+          {% endif %}
+        </div>
+
+        {% if digest.notice %}<div class="briefing-detail-notice"><p class="app-kicker">Briefing update</p><p>{{ digest.notice }}</p></div>{% endif %}
+
+        <ol class="briefing-detail-steps" aria-label="Briefing progress">
+          <li class="{% if digest.report %}is-complete{% elif digest.is_processing %}is-current{% endif %}" {% if digest.is_processing and not digest.report %}aria-current="step"{% endif %}>
+            <span class="briefing-step-marker" aria-hidden="true">{% if digest.report %}✓{% else %}01{% endif %}</span>
+            <div><h3>Prepare your briefing</h3><p>Your forecast lineup, risks and priorities.</p></div>
+            <span class="briefing-step-state">{% if digest.report %}Ready{% elif digest.is_processing %}In progress{% else %}{{ digest.status_label }}{% endif %}</span>
+          </li>
+          <li class="{% if digest.status_label == 'Sent' or digest.kind == 'preview' and digest.report %}is-complete{% elif digest.is_processing and digest.report %}is-current{% endif %}" {% if digest.is_processing and digest.report %}aria-current="step"{% endif %}>
+            <span class="briefing-step-marker" aria-hidden="true">{% if digest.status_label == 'Sent' or digest.kind == 'preview' and digest.report %}✓{% else %}02{% endif %}</span>
+            <div><h3>{% if digest.kind == 'preview' %}Open your preview{% else %}Deliver your email{% endif %}</h3><p>{% if digest.kind == 'preview' %}Read the full briefing here, without sending an email.{% else %}To your verified email address.{% endif %}</p></div>
+            <span class="briefing-step-state">{% if digest.status_label == 'Sent' %}Sent{% elif digest.kind == 'preview' and digest.report %}Ready{% elif digest.report %}{{ digest.status_label }}{% elif digest.status_label == 'Skipped' or digest.status_label == 'Could not prepare' %}Not started{% else %}Up next{% endif %}</span>
+          </li>
+        </ol>
+
+        {% if digest.is_processing %}
+        <p class="briefing-detail-live"><span aria-hidden="true"></span>Updates automatically. Find this briefing again in Recent briefings.</p>
+        <noscript><p class="briefing-detail-live"><a href="{% url 'accounts:digests.detail' digest.id %}">Refresh this page</a> to check your briefing's progress.</p></noscript>
+        {% endif %}
+        <div class="briefing-detail-actions">
+          {% if digest.report and user.team_id == digest.team_id %}<a class="app-primary-button" href="?email=1" target="_blank" rel="noopener">Open email preview <span aria-hidden="true">↗</span></a>{% endif %}
+          <a class="app-secondary-button" href="{% url 'rivals:decisions' %}">Open transfer plan <span aria-hidden="true">↗</span></a>
+        </div>
+      </div>
+
+      <aside class="briefing-detail-edition" aria-label="Briefing details">
+        <p class="briefing-edition-label">Your deadline edition</p>
+        <div class="briefing-edition-number"><span>GW</span><strong>{{ digest.gameweek }}</strong></div>
+        <p class="briefing-edition-tagline">A clearer view.<br><em>A better next move.</em></p>
+        <dl class="briefing-edition-facts">
+          <div><dt>FPL deadline</dt><dd>{{ digest.deadline|date:"D j M Y" }}<span>{{ digest.deadline|date:"H:i T" }}</span></dd></div>
+          <div><dt>Briefing type</dt><dd>{% if digest.kind == 'preview' %}Preview only{% elif digest.kind == 'test' %}Test email{% else %}Deadline email{% endif %}</dd></div>
+          {% if digest.sent_at %}<div><dt>Sent</dt><dd>{{ digest.sent_at|date:"D j M, H:i T" }}</dd></div>{% elif digest.prepared_at %}<div><dt>Prepared</dt><dd>{{ digest.prepared_at|date:"D j M, H:i T" }}</dd></div>{% endif %}
+        </dl>
+        <div class="briefing-edition-contents"><h3>In your briefing</h3><ul><li>Forecast XI &amp; bench</li><li>Captain options &amp; squad risks</li><li>Your transfer priorities</li></ul></div>
+      </aside>
+    </section>
   </div>
 </c-layouts.base>
