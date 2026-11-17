@@ -16,6 +16,8 @@ export SECRET_KEY=local-release-tests-only-57a624b380fe49f8b23dca6072d9e4a5
 export SENTRY_DSN=
 export EMAIL_BACKEND=django.core.mail.backends.locmem.EmailBackend
 export BACKGROUND_TASK_RUN_ASYNC=False
+# Legacy-flow tests need a fixed baseline; passwordless tests enable it explicitly.
+export PASSWORDLESS_AUTH_ENABLED=False
 unset PYTEST_ADDOPTS
 
 uv run --locked python -m pytest -q -o addopts=

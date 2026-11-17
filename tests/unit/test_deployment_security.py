@@ -323,10 +323,14 @@ def test_release_gate_runs_both_suites_and_propagates_failures(tmp_path, failure
         '[ "$FAIL_STEP" != configuration ] || exit 6; exit 0;;\n'
         "esac\n"
         '[ "$DEBUG" = True ] && [ -z "$SENTRY_DSN" ] && [ -z "${PYTEST_ADDOPTS:-}" ] || exit 99\n'
+        '[ "$PASSWORDLESS_AUTH_ENABLED" = False ] || exit 99\n'
         'case "$*" in *pytest*) [ "$FAIL_STEP" != python ] || exit 7;; esac\n'
     )
     ruby = tmp_path / "ruby"
-    ruby.write_text('#!/bin/sh\n[ "$FAIL_STEP" != configuration ] || exit 6\n')
+    ruby.write_text(
+        '#!/bin/sh\n[ "$PASSWORDLESS_AUTH_ENABLED" = True ] || exit 99\n'
+        '[ "$FAIL_STEP" != configuration ] || exit 6\n'
+    )
     ruby.chmod(0o755)
     node = tmp_path / "node"
     node.write_text(
@@ -341,6 +345,7 @@ def test_release_gate_runs_both_suites_and_propagates_failures(tmp_path, failure
         "COMMAND_LOG": str(log),
         "FAIL_STEP": failure,
         "DEBUG": "False",
+        "PASSWORDLESS_AUTH_ENABLED": "True",
         "SENTRY_DSN": "",
         "PYTEST_ADDOPTS": "--collect-only",
     }
