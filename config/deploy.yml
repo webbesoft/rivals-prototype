@@ -1,4 +1,16 @@
-<% require "dotenv"; Dotenv.load(".env.production") %>
+<%
+require "dotenv"
+Dotenv.load(".env.production")
+
+# Resolve defaults here: Kamal's dotenv parser does not support ${VAR:-default}.
+{
+  "AI_CREDENTIAL_ACTIVE_KEY" => "v1",
+  "AI_GENERATION_ENABLED" => "True",
+  "MCP_ENABLED" => "True",
+  "PASSWORDLESS_AUTH_ENABLED" => "False",
+  "MCP_ALLOWED_ORIGINS" => ENV["SITE_URL"].to_s
+}.each { |key, value| ENV[key] = value if ENV[key].to_s.empty? }
+%>
 
 # Name of your application. Used to uniquely configure containers.
 service: rivalspy

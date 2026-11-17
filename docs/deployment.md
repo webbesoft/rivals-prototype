@@ -6,6 +6,8 @@ The default web container validates its production configuration and applies dat
 
 Start with `.env.production.example` and configure your deployment environment. Kamal loads `.env.production` locally and injects the values listed in `config/deploy.yml` into both roles. `SITE_URL` and `DEFAULT_FROM_EMAIL` are included alongside the existing SMTP, Django and AI settings. The example deliberately leaves secrets empty.
 
+`.kamal/secrets` uses plain `$VARIABLE` references. Kamal's Ruby dotenv parser does not support Bash defaults such as `${VARIABLE:-True}`: it leaves a literal `:-True}` suffix, disabling boolean flags and corrupting credentials. Optional defaults are resolved in the Ruby block in `config/deploy.yml` before secrets are parsed. Existing shell environment variables take precedence over `.env.production`. After changing production values, redeploy with `kamal deploy` so both roles receive the updated environment.
+
 Production startup rejects these conditions:
 
 - A missing, short, repetitive or Django development `SECRET_KEY`. Use an independently generated key with at least 32 characters. For a new installation, `uv run --locked python -c 'from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())'` generates one. Changing an existing key invalidates signed links and sessions unless rotation is planned separately; this epoch does not automatically rotate private credentials.
