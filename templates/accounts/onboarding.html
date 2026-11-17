@@ -1,0 +1,25 @@
+<c-layouts.base title="Connect your FPL team - RivalSpy">
+  <div class="app-auth">
+    <div class="app-auth-intro">
+      <p class="app-kicker">One more step</p>
+      <h1 class="app-page-title">Bring your team.<br><em>Find your rivals.</em></h1>
+      <p class="app-lede">Connect your Fantasy Premier League team before opening your dashboard.</p>
+    </div>
+    <section class="app-panel app-auth-card" aria-labelledby="onboarding-title">
+      <h2 id="onboarding-title" class="app-section-title">Connect your FPL team</h2>
+      {% include 'partials/account_messages.html' %}
+      <form method="post" action="{% url 'accounts:onboarding' %}" class="app-form">
+        {% csrf_token %}
+        <div>
+          <label for="fpl_id">FPL team ID</label>
+          <input type="number" id="fpl_id" name="fpl_id" min="1" max="2147483647" inputmode="numeric" value="{{ form.fpl_id.value|default:'' }}" placeholder="e.g. 1234567" required aria-describedby="team-id-help{% if form.fpl_id.errors %} fpl-id-errors{% endif %}" {% if form.fpl_id.errors %}aria-invalid="true"{% endif %}>
+          <p id="team-id-help" class="app-field-help">Open your team’s Points page on the FPL website. Your ID is the number after /entry/ in the address.</p>
+          {% if form.fpl_id.errors %}<div id="fpl-id-errors" class="app-field-error">{{ form.fpl_id.errors }}</div>{% endif %}
+        </div>
+        <button type="submit" class="app-primary-button">Connect team and continue <span aria-hidden="true">↗</span></button>
+      </form>
+      <p class="app-auth-switch">Your leagues and stats will refresh after connecting.</p>
+      <form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}<button type="submit">Sign out</button></form>
+    </section>
+  </div>
+</c-layouts.base>

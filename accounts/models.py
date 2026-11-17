@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.db.models.functions import Lower
 
 from rivals.models import MiniLeague, Team
 
@@ -61,3 +62,20 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.email
+
+    class Meta(AbstractUser.Meta):
+        constraints = [
+            models.UniqueConstraint(
+                Lower("email"), name="accounts_user_email_ci_unique"
+            ),
+        ]
+
+
+class SignInLink(models.Model):
+    # The raw bearer secret is delivered by email and never persisted.
+    digest = models.CharField(max_length=64, unique=True)
+    email = models.EmailField()
+    redirect_to = models.CharField(max_length=2048, default="")
+    expires_at = models.DateTimeField(db_index=True)
+    used_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)

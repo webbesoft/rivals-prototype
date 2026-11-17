@@ -269,6 +269,10 @@ def authenticate(raw, ip):
             return None, 403
         if not token.user_id or not token.user.is_active or not token.user.is_verified:
             return None, 401
+        from accounts.onboarding import has_fpl_setup
+
+        if settings.PASSWORDLESS_AUTH_ENABLED and not has_fpl_setup(token.user):
+            return "onboarding_required", 403
         with transaction.atomic():
             grant = (
                 Connection.objects.select_for_update()
@@ -372,6 +376,17 @@ def create_app():
                 else (None, 401)
             )
             if status != 200:
+                if status == 403 and identity == "onboarding_required":
+                    return await JSONResponse(
+                        {
+                            "error": "Complete FPL onboarding in Rivals before using this connection.",
+                            "code": "onboarding_required",
+                            "onboarding_url": settings.SITE_URL.rstrip("/")
+                            + "/accounts/onboarding/fpl/",
+                        },
+                        status_code=403,
+                        headers=headers,
+                    )(scope, receive, send)
                 if status == 401:
                     headers["WWW-Authenticate"] = (
                         f'Bearer resource_metadata="{settings.SITE_URL.rstrip("/")}/.well-known/oauth-protected-resource/mcp", scope="rivals:read"'

@@ -1,0 +1,8 @@
+<c-layouts.base title="Check your inbox - RivalSpy">
+  <section class="app-panel app-auth-card mx-auto my-10" aria-labelledby="sent-title">
+    <h1 id="sent-title" class="app-section-title">Check your inbox</h1>
+    <p class="app-lede">{{ message }}</p>
+    <p>The link works once and expires in 10 minutes. You can open it on another device.</p>
+    <p class="app-auth-switch"><a href="{% url 'accounts:login' %}">Try again or use Google</a></p>
+  </section>
+</c-layouts.base>

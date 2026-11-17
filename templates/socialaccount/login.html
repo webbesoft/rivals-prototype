@@ -1,0 +1,10 @@
+<c-layouts.base title="Continue with Google - RivalSpy">
+  <section class="app-panel app-auth-card mx-auto my-10">
+    <h1 class="app-section-title">Continue with Google</h1>
+    <p>Choose your Google account to continue to RivalSpy.</p>
+    <form method="post" class="app-form">
+      {% csrf_token %}<button type="submit" class="app-primary-button">Continue with Google</button>
+    </form>
+    <p class="app-auth-switch"><a href="{% url 'accounts:login' %}">Use an email link instead</a></p>
+  </section>
+</c-layouts.base>

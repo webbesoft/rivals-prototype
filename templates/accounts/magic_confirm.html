@@ -1,0 +1,17 @@
+<c-layouts.base title="Confirm sign-in - RivalSpy">
+  <section class="app-panel app-auth-card mx-auto my-10" aria-labelledby="confirm-title">
+    {% if invalid %}
+    <h1 id="confirm-title" class="app-section-title">Request a new sign-in link</h1>
+    <p>This link has expired, has already been used, or is unavailable in this browser.</p>
+    <p class="app-auth-switch"><a href="{% url 'accounts:login' %}">Get a new link</a></p>
+    {% else %}
+    <h1 id="confirm-title" class="app-section-title">Continue to RivalSpy</h1>
+    <p>Confirm to sign in as {{ email }} on this device.</p>
+    <form method="post" class="app-form">
+      {% csrf_token %}
+      <input type="hidden" name="challenge_id" value="{{ challenge_id }}">
+      <button type="submit" class="app-primary-button">Confirm sign-in <span aria-hidden="true">↗</span></button>
+    </form>
+    {% endif %}
+  </section>
+</c-layouts.base>

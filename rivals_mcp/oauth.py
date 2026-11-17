@@ -18,6 +18,10 @@ def resource_url():
 
 class RivalsOAuthValidator(OAuth2Validator):
     def save_authorization_code(self, client_id, code, request, *args, **kwargs):
+        from accounts.onboarding import has_fpl_setup
+
+        if settings.PASSWORDLESS_AUTH_ENABLED and not has_fpl_setup(request.user):
+            raise InvalidGrantError()
         if not request.user.is_active or not request.user.is_verified:
             raise InvalidGrantError()
         if request.resource != [resource_url()]:
@@ -35,6 +39,10 @@ class RivalsOAuthValidator(OAuth2Validator):
             )
 
     def _save_bearer_token(self, token, request, *args, **kwargs):
+        from accounts.onboarding import has_fpl_setup
+
+        if settings.PASSWORDLESS_AUTH_ENABLED and not has_fpl_setup(request.user):
+            raise InvalidGrantError()
         connection = (
             Connection.objects.select_for_update()
             .filter(

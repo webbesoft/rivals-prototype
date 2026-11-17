@@ -1,4 +1,5 @@
 import requests
+import unicodedata
 from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -152,6 +153,22 @@ class LoginForm(AuthenticationForm):
 
 
 class PasswordResetForm(DjangoPasswordResetForm):
+    def get_users(self, email):
+        if settings.PASSWORDLESS_AUTH_ENABLED:
+            return super().get_users(email)
+        # During rollback, active email-link/Google users also need a way to
+        # establish a password. Keep Django's Unicode-safe address comparison.
+        field = User.get_email_field_name()
+        normalized = unicodedata.normalize("NFKC", email).casefold()
+        return (
+            user
+            for user in User._default_manager.filter(
+                **{f"{field}__iexact": email, "is_active": True}
+            )
+            if unicodedata.normalize("NFKC", getattr(user, field)).casefold()
+            == normalized
+        )
+
     email = forms.EmailField(
         widget=forms.EmailInput(
             attrs={
@@ -199,7 +216,14 @@ class UpdateFplIdForm(forms.Form):
             raise forms.ValidationError(
                 "Could not reach the FPL service. Please try again in a moment."
             )
-        if not isinstance(data, dict) or str(data.get("id")) != str(fpl_id):
+        if (
+            not isinstance(data, dict)
+            or str(data.get("id")) != str(fpl_id)
+            or any(
+                not isinstance(data.get(key), str)
+                for key in ("name", "player_first_name", "player_last_name")
+            )
+        ):
             raise forms.ValidationError(
                 "Could not find an FPL team with that ID. Please double-check it."
             )

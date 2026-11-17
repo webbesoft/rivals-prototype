@@ -1,21 +1,25 @@
 from django.contrib.auth.views import (
     PasswordResetCompleteView,
-    PasswordResetConfirmView,
 )
 from django.urls import path, reverse_lazy
 
-from accounts import ai_views, digest_views, views
+from accounts import ai_views, digest_views, views, passwordless_views
 from rivals_mcp.views import settings_view as mcp_settings
 
 from .tokens import password_reset_token_generator
+from .password_reset_views import LegacyPasswordResetConfirmView
 
 app_name = "accounts"
 
 urlpatterns = [
+    path("magic/<str:token>/", passwordless_views.magic_link, name="magic_link"),
+    path("magic-confirm/", passwordless_views.magic_confirm, name="magic_confirm"),
+    path("onboarding/fpl/", passwordless_views.onboarding, name="onboarding"),
+    path("connections/", passwordless_views.connections, name="connections"),
     path("ai/mcp/", mcp_settings, name="mcp"),
     path(
         "reset-password/<uidb64>/<token>/",
-        PasswordResetConfirmView.as_view(
+        LegacyPasswordResetConfirmView.as_view(
             template_name="accounts/password_reset_confirm.html",
             token_generator=password_reset_token_generator,
             success_url=reverse_lazy("accounts:password_reset_complete"),

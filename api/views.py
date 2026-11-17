@@ -17,7 +17,7 @@ from rivals.services.access_service import (
 )
 
 from .pagination import paginated_response
-from .permissions import IsVerified
+from .permissions import IsOnboarded, IsVerified
 from .serializers import (
     GameweekDataSerializer,
     MiniLeagueDetailSerializer,
@@ -42,6 +42,8 @@ class LoginView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
+        if settings.PASSWORDLESS_AUTH_ENABLED:
+            return passwordless_login_response(request)
         email = request.data.get("email")
         password = request.data.get("password")
 
@@ -84,6 +86,8 @@ class SignUpView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
+        if settings.PASSWORDLESS_AUTH_ENABLED:
+            return passwordless_login_response(request)
         from accounts.forms import SignUpForm
 
         from .serializers import SignUpSerializer
@@ -149,7 +153,7 @@ class DashboardView(APIView):
     Returns dashboard data for the authenticated user.
     """
 
-    permission_classes = [IsVerified]
+    permission_classes = [IsOnboarded]
 
     def get(self, request):
         user = request.user
@@ -214,7 +218,7 @@ class LeaguesView(APIView):
     Returns the list of mini-leagues for the authenticated user.
     """
 
-    permission_classes = [IsVerified]
+    permission_classes = [IsOnboarded]
 
     def get(self, request):
         leagues = accessible_leagues(request.user)
@@ -226,7 +230,7 @@ class LeagueDetailView(APIView):
     Returns details and standings for a specific mini-league.
     """
 
-    permission_classes = [IsVerified]
+    permission_classes = [IsOnboarded]
 
     def get(self, request, league_id):
         try:
@@ -287,7 +291,7 @@ class LeagueSyncView(APIView):
     """
 
     rate_limit_action = "refresh"
-    permission_classes = [IsVerified]
+    permission_classes = [IsOnboarded]
 
     def post(self, request, league_id):
         try:
@@ -327,7 +331,7 @@ class TeamDetailView(APIView):
     Returns details for a specific team.
     """
 
-    permission_classes = [IsVerified]
+    permission_classes = [IsOnboarded]
 
     def get(self, request, team_id):
         try:
@@ -347,7 +351,7 @@ class TeamGameweekHistoryView(APIView):
     Returns gameweek history for a specific team.
     """
 
-    permission_classes = [IsVerified]
+    permission_classes = [IsOnboarded]
 
     def get(self, request, team_id):
         try:
@@ -371,7 +375,7 @@ class TeamTransfersView(APIView):
     Returns transfers for a specific team.
     """
 
-    permission_classes = [IsVerified]
+    permission_classes = [IsOnboarded]
 
     def get(self, request, team_id):
         try:
@@ -397,7 +401,7 @@ class TeamSquadView(APIView):
     Returns squad for a specific team and gameweek.
     """
 
-    permission_classes = [IsVerified]
+    permission_classes = [IsOnboarded]
 
     def get(self, request, team_id):
         try:
@@ -435,7 +439,7 @@ class TrackedTeamsView(APIView):
     Returns list of teams tracked by the authenticated user.
     """
 
-    permission_classes = [IsVerified]
+    permission_classes = [IsOnboarded]
 
     def get(self, request):
         tracked = request.user.tracked_teams.filter(active=True).select_related("team")
@@ -450,7 +454,7 @@ class TeamSyncView(APIView):
     """
 
     rate_limit_action = "refresh"
-    permission_classes = [IsVerified]
+    permission_classes = [IsOnboarded]
 
     def post(self, request, team_id):
         try:
@@ -489,7 +493,7 @@ class TeamTrackView(APIView):
     """
 
     rate_limit_action = "refresh"
-    permission_classes = [IsVerified]
+    permission_classes = [IsOnboarded]
 
     def post(self, request, team_id):
         try:
@@ -534,3 +538,67 @@ class TeamTrackView(APIView):
                 "message": "Team untracked successfully.",
             }
         )
+
+
+def passwordless_login_response(request):
+    from collections.abc import Mapping
+    from accounts.passwordless import SENT_MESSAGE, issue_link, safe_next
+    from accounts.passwordless_views import EmailSignInForm
+    from core.rate_limits import reserve_request
+
+    if not isinstance(request.data, Mapping):
+        return Response(
+            {"error": "Expected an object containing an email address."}, status=400
+        )
+    if any(key in request.data for key in ("password", "password1", "password2")):
+        return Response(
+            {"code": "password_login_retired", "login_url": "/accounts/login/"},
+            status=410,
+        )
+    form = EmailSignInForm(request.data)
+    if not form.is_valid():
+        return Response({"errors": form.errors}, status=400)
+    retry = reserve_request(request, "magic_link", identity=form.cleaned_data["email"])
+    if retry:
+        return Response(
+            {"error": "Try again later."},
+            status=429,
+            headers={"Retry-After": str(retry)},
+        )
+    try:
+        issue_link(
+            form.cleaned_data["email"], safe_next(request, request.data.get("next", ""))
+        )
+    except Exception:
+        logger.error("Sign-in email delivery failed")
+    return Response(
+        {"message": SENT_MESSAGE, "login_url": "/accounts/login/"}, status=202
+    )
+
+
+class OnboardingView(APIView):
+    permission_classes = [IsVerified]
+    rate_limit_action = "profile_update"
+
+    def post(self, request):
+        from collections.abc import Mapping
+        from accounts.forms import UpdateFplIdForm
+        from accounts.onboarding import save_fpl_setup
+
+        if not isinstance(request.data, Mapping):
+            return Response(
+                {"error": "Expected an object containing an FPL ID."}, status=400
+            )
+        form = UpdateFplIdForm(request.data)
+        if not form.is_valid():
+            return Response({"errors": form.errors}, status=400)
+        try:
+            user = save_fpl_setup(
+                request.user, form.cleaned_data["fpl_id"], form.fpl_data
+            )
+        except Exception:
+            logger.exception("FPL API onboarding failed for user %s", request.user.pk)
+            return Response(
+                {"error": "Could not save your FPL team. Please try again."}, status=400
+            )
+        return Response(UserSerializer(user).data)

@@ -19,7 +19,15 @@ def sensitive_ai(function):
 def filter_ai_event(event, hint):
     path = urlsplit(event.get("request", {}).get("url", "")).path
     if event.get("tags", {}).get("sensitive_ai") or path.startswith(
-        ("/accounts/gemini/", "/dashboard/decisions/ai/", "/mcp", "/accounts/ai/mcp/")
+        (
+            "/accounts/gemini/",
+            "/dashboard/decisions/ai/",
+            "/mcp",
+            "/accounts/ai/mcp/",
+            "/accounts/magic",
+            "/accounts/google/",
+            "/api/auth/",
+        )
     ):
         return None
     return event
@@ -28,5 +36,9 @@ def filter_ai_event(event, hint):
 def filter_ai_breadcrumb(crumb, hint):
     url = str(crumb.get("data", {}).get("url", ""))
     if "generativelanguage.googleapis.com" in url:
+        return None
+    if any(
+        path in url for path in ("/accounts/magic", "/accounts/google/", "/api/auth/")
+    ):
         return None
     return crumb

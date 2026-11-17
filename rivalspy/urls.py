@@ -18,8 +18,14 @@ Including another URLconf
 from debug_toolbar.toolbar import debug_toolbar_urls
 from django.contrib import admin
 from django.urls import include, path
+from accounts.passwordless_views import admin_login
+from accounts.views import login_view
 
 urlpatterns = [
+    path("admin/login/", admin_login),
+    path("accounts/", include("allauth.socialaccount.providers.google.urls")),
+    # Allauth's social flow uses this reverse name. Local account endpoints stay ours.
+    path("accounts/login/", login_view, name="account_login"),
     path("", include("rivals_mcp.urls", namespace="oauth2_provider")),
     path("admin/", admin.site.urls),
     path("accounts/", include("accounts.urls", namespace="accounts")),

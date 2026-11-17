@@ -11,7 +11,7 @@ from rivals.models import PlannedTransfer, TransferPlan
 from rivals.services.decision_engine import DecisionEngine, DecisionUnavailable
 
 from .pagination import BoundedPagination
-from .permissions import IsVerified
+from .permissions import IsOnboarded
 from .serializers import PlannedTransferSerializer, TransferPlanSerializer
 
 logger = logging.getLogger(__name__)
@@ -22,7 +22,7 @@ class TransferPlanListCreateView(generics.ListCreateAPIView):
 
     serializer_class = TransferPlanSerializer
     pagination_class = BoundedPagination
-    permission_classes = [IsVerified]
+    permission_classes = [IsOnboarded]
 
     def get_queryset(self):
         return TransferPlan.objects.filter(user=self.request.user)
@@ -40,7 +40,7 @@ class TransferPlanDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     serializer_class = TransferPlanSerializer
     pagination_class = BoundedPagination
-    permission_classes = [IsVerified]
+    permission_classes = [IsOnboarded]
 
     def get_queryset(self):
         return TransferPlan.objects.filter(user=self.request.user)
@@ -50,7 +50,7 @@ class PlannedTransferCreateView(generics.CreateAPIView):
     """Add a transfer to a plan"""
 
     serializer_class = PlannedTransferSerializer
-    permission_classes = [IsVerified]
+    permission_classes = [IsOnboarded]
 
     def perform_create(self, serializer):
         plan_id = self.kwargs.get("plan_id")
@@ -83,7 +83,7 @@ class PlannedTransferDeleteView(generics.DestroyAPIView):
     """Remove a transfer from a plan"""
 
     queryset = PlannedTransfer.objects.all()
-    permission_classes = [IsVerified]
+    permission_classes = [IsOnboarded]
 
     def get_queryset(self):
         # Ensure user owns the plan
@@ -93,7 +93,7 @@ class PlannedTransferDeleteView(generics.DestroyAPIView):
 class ProjectionsView(views.APIView):
     """Evaluate the manager's current squad, applying an owned, current-season plan."""
 
-    permission_classes = [IsVerified]
+    permission_classes = [IsOnboarded]
     rate_limit_action = "analysis"
     rate_limit_methods = ("GET",)
 
@@ -157,7 +157,7 @@ class ProjectionsView(views.APIView):
 
 
 class SuggestionsView(views.APIView):
-    permission_classes = [IsVerified]
+    permission_classes = [IsOnboarded]
     rate_limit_action = "analysis"
     rate_limit_methods = ("GET",)
 

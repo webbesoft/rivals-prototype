@@ -530,6 +530,26 @@ wheels = [
 ]
 
 [[package]]
+name = "django-allauth"
+version = "65.22.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "asgiref" },
+    { name = "django" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/20/d7/fd2e9622eeb6f2dffd005fc478a3de22e4bd9e91518dca33c145ce0f514b/django_allauth-65.22.1.tar.gz", hash = "sha256:b05e20b8f511066c97ed98491520a2ca0319ef16d7f27feed9f688cc6877a8ba", size = 2352989, upload-time = "2026-11-13T09:25:16.184Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7e/15/f7bd5323ed1f83869f902033faa1630eb1d4e24d220ac5372e82f7600474/django_allauth-65.22.1-py3-none-any.whl", hash = "sha256:08f7a3ddbd5ff7f1000d685dee9c0678d0da2057e18bed473a6eb2de18bd04e4", size = 2116758, upload-time = "2026-11-13T09:25:13.281Z" },
+]
+
+[package.optional-dependencies]
+socialaccount = [
+    { name = "oauthlib" },
+    { name = "pyjwt", extra = ["crypto"] },
+    { name = "requests" },
+]
+
+[[package]]
 name = "django-background-tasks"
 version = "1.2.8"
 source = { registry = "https://pypi.org/simple" }
@@ -1172,6 +1192,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "cryptography" },
     { name = "django" },
+    { name = "django-allauth", extra = ["socialaccount"] },
     { name = "django-background-tasks" },
     { name = "django-cors-headers" },
     { name = "django-cotton" },
@@ -1201,6 +1222,7 @@ dev = [
 requires-dist = [
     { name = "cryptography", specifier = ">=46.0.0" },
     { name = "django", specifier = ">=6.1.3" },
+    { name = "django-allauth", extras = ["socialaccount"], specifier = ">=65.22.1,<66" },
     { name = "django-background-tasks", specifier = ">=1.2.8" },
     { name = "django-cors-headers", specifier = ">=4.9.0" },
     { name = "django-cotton", specifier = ">=2.8.0" },

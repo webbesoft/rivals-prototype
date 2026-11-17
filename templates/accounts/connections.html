@@ -1,0 +1,21 @@
+<c-layouts.base title="Sign-in methods - RivalSpy">
+  <section class="app-panel app-auth-card mx-auto my-10">
+    <h1 class="app-section-title">Sign-in methods</h1>
+    {% include 'partials/account_messages.html' %}
+    <p>You can always request a sign-in link at {{ user.email }}.</p>
+    {% for connection in connections %}
+    <p>Google connected.</p>
+    <form method="post" class="app-form">
+      {% csrf_token %}<input type="hidden" name="account" value="{{ connection.pk }}">
+      <button type="submit">Disconnect Google</button>
+    </form>
+    {% empty %}
+    {% if google_enabled %}
+    <form method="post" action="{% url 'google_login' %}?process=connect" class="app-form">
+      {% csrf_token %}<button type="submit" class="app-primary-button">Connect Google</button>
+    </form>
+    {% endif %}
+    {% endfor %}
+    <p class="app-auth-switch"><a href="{% url 'accounts:profile' %}">Back to profile</a></p>
+  </section>
+</c-layouts.base>

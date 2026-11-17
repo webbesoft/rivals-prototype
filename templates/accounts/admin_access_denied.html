@@ -1,0 +1,9 @@
+<c-layouts.base title="Administrator access required - RivalSpy">
+  <section class="app-panel app-auth-card mx-auto my-10">
+    <h1 class="app-section-title">Administrator access required</h1>
+    <p>{{ user.email }} does not have access to administration.</p>
+    <form method="post" action="{% url 'accounts:logout' %}" class="app-form">
+      {% csrf_token %}<button type="submit" class="app-primary-button">Sign out to use another account</button>
+    </form>
+  </section>
+</c-layouts.base>

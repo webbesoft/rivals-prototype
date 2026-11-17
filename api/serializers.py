@@ -18,6 +18,13 @@ User = get_user_model()
 
 
 class UserSerializer(serializers.ModelSerializer):
+    onboarding_required = serializers.SerializerMethodField()
+
+    def get_onboarding_required(self, user):
+        from accounts.onboarding import has_fpl_setup
+
+        return not has_fpl_setup(user)
+
     class Meta:
         model = User
         fields = [
@@ -28,6 +35,7 @@ class UserSerializer(serializers.ModelSerializer):
             "team_name",
             "fpl_id",
             "is_verified",
+            "onboarding_required",
             "active",
             "created_at",
         ]

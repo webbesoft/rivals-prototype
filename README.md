@@ -20,6 +20,8 @@ The architecture is based on my Django starter, with a separate `accounts` app f
 
 See [deployment safeguards](docs/deployment.md) for production environment requirements and the release gate. The default Docker web command validates configuration and completes migrations before accepting traffic. Start from `.env.production.example` when preparing deployment settings.
 
+Google and email-link sign-in are available behind `PASSWORDLESS_AUTH_ENABLED`, with required FPL onboarding before dashboard access. See [authentication rollout](docs/authentication.md) for configuration, account migration and API changes.
+
 ## Progressive web app
 
 RivalSpy supports browser installation and a connection message when opened

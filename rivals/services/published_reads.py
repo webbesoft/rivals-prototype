@@ -10,6 +10,7 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.core import signing
+from django.conf import settings
 from django.db.models import F, Max, OuterRef, Q, Subquery
 from django.urls import reverse
 from django.utils import timezone
@@ -55,6 +56,11 @@ class PublishedReads:
     def __init__(self, user):
         if not user.is_active or not user.is_verified:
             raise ReadUnavailable("A verified active Rivals account is required.")
+        if settings.PASSWORDLESS_AUTH_ENABLED:
+            from accounts.onboarding import has_fpl_setup
+
+            if not has_fpl_setup(user):
+                raise ReadUnavailable("Connect your FPL team in Rivals before continuing.")
         self.user = user
         self.context = GameweekContextService.cached()
         self.season = self.context["season"]

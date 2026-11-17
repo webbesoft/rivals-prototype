@@ -22,6 +22,10 @@ User = get_user_model()
 
 @rate_limit("signup")
 def signup_view(request):
+    if settings.PASSWORDLESS_AUTH_ENABLED:
+        from .passwordless_views import sign_in
+
+        return sign_in(request)
     if request.user.is_authenticated:
         return redirect("rivals:dashboard")
 
@@ -44,6 +48,10 @@ def signup_view(request):
 
 @rate_limit("login", identity_field="username")
 def login_view(request):
+    if settings.PASSWORDLESS_AUTH_ENABLED:
+        from .passwordless_views import sign_in
+
+        return sign_in(request)
     if request.user.is_authenticated:
         return redirect("rivals:dashboard")
 
@@ -90,6 +98,8 @@ def logout_view(request):
 
 @rate_limit("password_reset", identity_field="email")
 def password_reset_view(request):
+    if settings.PASSWORDLESS_AUTH_ENABLED:
+        return redirect("accounts:login")
     if request.method == "POST":
         form = PasswordResetForm(request.POST)
         if form.is_valid():
@@ -124,6 +134,9 @@ def password_reset_view(request):
 
 
 def verify_email(request, uidb64, token):
+    if settings.PASSWORDLESS_AUTH_ENABLED:
+        messages.info(request, "Please request a new sign-in link to continue.")
+        return redirect("accounts:login")
     try:
         uid = force_str(urlsafe_base64_decode(uidb64))
         user = User.objects.get(pk=uid)
@@ -147,6 +160,8 @@ def verify_email(request, uidb64, token):
 
 
 def verification_pending_view(request):
+    if settings.PASSWORDLESS_AUTH_ENABLED:
+        return redirect("accounts:login")
     """
     Show verification pending page with option to resend email.
     """
@@ -163,6 +178,8 @@ def verification_pending_view(request):
 
 @rate_limit("resend", session_field="pending_verification_email")
 def resend_verification_email(request):
+    if settings.PASSWORDLESS_AUTH_ENABLED:
+        return redirect("accounts:login")
     """
     Resend verification email to the user.
     """
@@ -230,6 +247,7 @@ def profile_view(request):
         {
             "form": form,
             "new_season_available": new_season_available,
+            "passwordless_enabled": settings.PASSWORDLESS_AUTH_ENABLED,
         },
     )
 
@@ -247,6 +265,28 @@ def update_fpl_id_view(request):
 
     form = UpdateFplIdForm(request.POST)
     if form.is_valid():
+        if settings.PASSWORDLESS_AUTH_ENABLED:
+            from .onboarding import save_fpl_setup
+
+            try:
+                save_fpl_setup(request.user, form.cleaned_data["fpl_id"], form.fpl_data)
+            except Exception:
+                form.add_error(
+                    None,
+                    "Could not update your FPL team. Your previous settings have been preserved.",
+                )
+                return render(
+                    request,
+                    "accounts/profile.html",
+                    {
+                        "form": form,
+                        "passwordless_enabled": settings.PASSWORDLESS_AUTH_ENABLED,
+                    },
+                )
+            messages.success(
+                request, "FPL team updated. Your leagues and stats are being refreshed."
+            )
+            return redirect("rivals:dashboard")
         from django.db import transaction
 
         fpl_data = form.fpl_data
@@ -292,4 +332,8 @@ def update_fpl_id_view(request):
             return redirect("accounts:profile")
 
     # Form invalid — re-render profile page with errors
-    return render(request, "accounts/profile.html", {"form": form})
+    return render(
+        request,
+        "accounts/profile.html",
+        {"form": form, "passwordless_enabled": settings.PASSWORDLESS_AUTH_ENABLED},
+    )

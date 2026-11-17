@@ -47,6 +47,7 @@
           <div>
             <span class="text-xs uppercase font-bold text-muted block">Email</span>
             <span class="font-bold text-text-main">{{ user.email }}</span>
+            {% if passwordless_enabled %}<a class="block underline mt-2" href="{% url 'accounts:connections' %}">Manage sign-in methods</a>{% endif %}
           </div>
 
           <div>
@@ -86,6 +87,7 @@
 
         <form method="POST" action="{% url 'accounts:update_fpl_id' %}" class="space-y-6">
           {% csrf_token %}
+          {{ form.non_field_errors }}
 
           <div>
             <label for="id_fpl_id_update" class="block text-xs font-bold uppercase tracking-wide text-text-main mb-2">
