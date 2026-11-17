@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="x-apple-disable-message-reformatting">
+  <title>{% block title %}RivalSpy{% endblock %}</title>
+  <style>
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    @media only screen and (max-width: 600px) {
+      .email-outer { padding: 16px 8px !important; }
+      .email-gutter { padding-left: 20px !important; padding-right: 20px !important; }
+      .email-heading { font-size: 34px !important; }
+      .email-player { padding-left: 2px !important; padding-right: 2px !important; font-size: 10px !important; }
+      .email-player-name { font-size: 11px !important; }
+      .email-edition { font-size: 9px !important; letter-spacing: 1px !important; }
+    }
+  </style>
+</head>
+<body bgcolor="#f1f2e9" style="margin:0;padding:0;width:100%;background-color:#f1f2e9;color:#17372e;font-family:Arial,Helvetica,sans-serif;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;">
+  <div style="display:none;font-size:1px;line-height:1px;color:#f1f2e9;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;">{% block preheader %}Your team, your rivals, your next move.{% endblock %}</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f1f2e9" style="width:100%;background-color:#f1f2e9;">
+    <tr><td align="center" class="email-outer" style="padding:32px 12px;">
+      <!--[if mso]><table role="presentation" width="640" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:640px;">
+        <tr><td bgcolor="#142e29" class="email-gutter" style="padding:26px 32px;background-color:#142e29;border-top:4px solid #f0d66a;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+              <td style="color:#fafbf4;font-size:27px;font-weight:800;letter-spacing:-1.2px;line-height:1.2;">RivalSpy<span style="color:#f0d66a;">.</span></td>
+              <td align="right" class="email-edition" style="color:#c3ceb8;font-family:'Courier New',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;">{% block edition %}Your account{% endblock %}</td>
+            </tr>
+          </table>
+        </td></tr>
+        <tr><td bgcolor="#142e29" class="email-gutter" style="padding:8px 32px 32px;background-color:#142e29;">{% block hero %}{% endblock %}</td></tr>
+        <tr><td bgcolor="#fafbf4" class="email-gutter" style="padding:32px;background-color:#fafbf4;border-right:1px solid #ccd2c3;border-left:1px solid #ccd2c3;font-size:14px;line-height:1.7;">{% block content %}{% endblock %}</td></tr>
+        <tr><td bgcolor="#e8ecdf" class="email-gutter" style="padding:24px 32px;background-color:#e8ecdf;border:1px solid #ccd2c3;">
+          {% block footer_links %}{% endblock %}
+          <p style="margin:0 0 6px;color:#17372e;font-size:14px;font-weight:700;">Every point has a story.</p>
+          <p style="margin:0;color:#58685c;font-size:11px;line-height:1.7;">&copy; {% now "Y" %} RivalSpy &middot; An independent FPL companion.</p>
+        </td></tr>
+      </table>
+      <!--[if mso]></td></tr></table><![endif]-->
+    </td></tr>
+  </table>
+</body>
+</html>

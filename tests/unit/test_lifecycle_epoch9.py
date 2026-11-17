@@ -117,6 +117,12 @@ def test_password_recovery_round_trip(client, manager):
     assert response.url == reverse("accounts:login")
     assert len(mail.outbox) == 1
     link = re.search(r"https://rivals.example.org(/\S+)", mail.outbox[0].body).group(1)
+    assert len(mail.outbox[0].alternatives) == 1
+    assert mail.outbox[0].alternatives[0].mimetype == "text/html"
+    assert (
+        f'href="https://rivals.example.org{link}"'
+        in mail.outbox[0].alternatives[0].content
+    )
     response = client.get(link)
     assert response.status_code == 302  # Django removes the token from the URL.
     confirm = response.url

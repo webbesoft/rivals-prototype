@@ -78,6 +78,10 @@ def test_email_request_defers_account_creation_and_requires_confirmation(client)
     assert response.status_code == 200
     assert not User.objects.exists()
     path = emailed_path()
+    message = mail.outbox[-1]
+    assert len(message.alternatives) == 1
+    assert message.alternatives[0].mimetype == "text/html"
+    assert f'href="http://testserver{path}"' in message.alternatives[0].content
     raw_secret = path.split("/")[-2]
     challenge = SignInLink.objects.get()
     assert challenge.digest == token_digest(raw_secret)

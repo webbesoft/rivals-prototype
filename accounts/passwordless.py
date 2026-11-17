@@ -10,6 +10,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from django.db import transaction
+from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -66,6 +67,9 @@ def issue_link(email, redirect_to):
             settings.DEFAULT_FROM_EMAIL,
             [email],
             fail_silently=False,
+            html_message=render_to_string(
+                "accounts/emails/sign_in.html", {"sign_in_url": url}
+            ),
         )
     except Exception:
         # Failed deliveries must not leave a usable credential behind.

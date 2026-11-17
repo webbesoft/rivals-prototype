@@ -58,6 +58,11 @@ def test_signup_sends_verification_email(monkeypatch):
     sent = mail.outbox[0]
     assert "Verify your email" in sent.subject
     assert "/accounts/verify-email/" in sent.body
+    assert len(sent.alternatives) == 1
+    assert sent.alternatives[0].mimetype == "text/html"
+    link = next(line for line in sent.body.splitlines() if line.startswith("http"))
+    assert f'href="{link}"' in sent.alternatives[0].content
+    assert "<style>" not in sent.body and "mso-table" not in sent.body
 
 
 @pytest.mark.django_db

@@ -115,6 +115,7 @@ def password_reset_view(request):
                     use_https=origin.scheme == "https",
                     from_email=settings.DEFAULT_FROM_EMAIL,
                     email_template_name="accounts/emails/password_reset.txt",
+                    html_email_template_name="accounts/emails/password_reset.html",
                     subject_template_name="accounts/emails/password_reset_subject.txt",
                     token_generator=password_reset_token_generator,
                 )

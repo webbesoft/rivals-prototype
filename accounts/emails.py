@@ -2,7 +2,6 @@ import logging
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
-from django.utils.html import strip_tags
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +12,7 @@ class EmailService:
         """
         Send a verification email to the user with HTML content.
         """
-        subject = "Verify your email - Rivalspy"
+        subject = "Verify your email - RivalSpy"
         from_email = settings.DEFAULT_FROM_EMAIL
         to_email = user.email
 
@@ -24,8 +23,7 @@ class EmailService:
 
         # Render HTML content
         html_content = render_to_string("accounts/emails/verify_email.html", context)
-        # Create plain text alternative
-        text_content = strip_tags(html_content)
+        text_content = render_to_string("accounts/emails/verify_email.txt", context)
 
         try:
             msg = EmailMultiAlternatives(subject, text_content, from_email, [to_email])

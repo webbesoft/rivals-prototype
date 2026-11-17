@@ -1,0 +1,12 @@
+RivalSpy
+
+Hi {{ name }},
+
+Welcome to RivalSpy. Verify your email to start following your squad, your rivals and the race for first:
+
+{{ verify_url }}
+
+If you didn't create an account, you can ignore this email.
+
+The RivalSpy team
+Every point has a story.

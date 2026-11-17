@@ -1,8 +1,8 @@
-<td align="center" valign="top" style="padding:8px 2px;font-size:12px;line-height:1.45;word-break:break-word;">
-  <strong style="display:block;color:#153f32;">{{ player.name }}</strong>
-  <span style="color:#485a51;">{{ player.club }} · {{ player.position }}</span><br>
-  {% if player.is_captain %}<strong style="color:#153f32;">C · Captain</strong><br>{% elif player.is_vice_captain %}<strong style="color:#153f32;">V · Vice</strong><br>{% endif %}
-  {% for opponent in player.fixture.opponents %}<span>{{ opponent }}</span><br>{% empty %}<strong style="color:#9f341c;">Blank</strong><br>{% endfor %}
-  <strong>{{ player.fixture.points }} est. pts</strong>
-  {% if player.risk_label %}<br><strong style="color:#9f341c;">! {{ player.risk_label }}</strong>{% endif %}
+<td align="center" valign="top" class="email-player" style="padding:12px 4px;color:#17372e;font-size:11px;line-height:1.6;word-wrap:break-word;overflow-wrap:anywhere;">
+  <strong class="email-player-name" style="display:block;margin-bottom:2px;color:#17372e;font-size:13px;line-height:1.4;">{{ player.name }}</strong>
+  <span style="color:#58685c;">{{ player.club }} &middot; {{ player.position }}</span><br>
+  {% if player.is_captain %}<strong style="display:inline-block;margin:4px 0;padding:1px 5px;background-color:#f0d66a;color:#17372e;font-size:10px;">C &middot; Captain</strong><br>{% elif player.is_vice_captain %}<strong style="display:inline-block;margin:4px 0;padding:1px 5px;background-color:#d3dcc8;color:#17372e;font-size:10px;">V &middot; Vice</strong><br>{% endif %}
+  {% for opponent in player.fixture.opponents %}<span style="color:#58685c;">{{ opponent }}</span><br>{% empty %}<strong style="color:#9f341c;">Blank</strong><br>{% endfor %}
+  <strong style="display:inline-block;margin-top:4px;">{{ player.fixture.points }} <span style="font-size:10px;font-weight:400;">est. pts</span></strong>
+  {% if player.risk_label %}<br><strong style="color:#9f341c;font-size:10px;">! {{ player.risk_label }}</strong>{% endif %}
 </td>
