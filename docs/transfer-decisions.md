@@ -20,6 +20,8 @@ This version compares normal transfers, without a chip. It supports two moves at
 
 The selected horizon is 3–6 actual gameweeks, shortened at the end of the season. Fixtures are indexed by club and event. A blank has zero fixtures; a double sums both matches. Unscheduled fixtures are not silently assigned to a gameweek.
 
+Recommendations and route comparisons show a visible keep-versus-buy fixture strip for the next five gameweeks, shortened at GW38 and independent of the points forecast horizon. Each match shows the opponent, home/away and the published FPL difficulty for that player's club (1 easiest to 5 hardest). Doubles show both matches, blanks stay in their gameweek, and missing ratings are marked unavailable rather than assigned a default rating.
+
 For each player and fixture, the baseline is 60% FPL form and 40% points per game. It is adjusted by home/away fixture difficulty, season minutes divided by scoring-gameweeks × 70 (capped at one), and the current availability percentage. Non-available status gives a zero projection. The model holds availability constant over the forecast window; it does not invent recovery dates. These coefficients are an explicit heuristic, not a fitted or validated probability model.
 
 Each scenario independently selects the highest-projected legal XI and captain for each week. Bench points are not added, and captain points count twice. Net gain is scenario squad points minus the unchanged-squad forecast minus the transfer hit. The hold scenario is always present, with zero relative gain and no points cost. The potential future benefit of rolling is represented by retained free transfers, not fabricated future points.

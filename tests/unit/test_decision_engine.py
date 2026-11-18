@@ -163,6 +163,74 @@ def form_data(engine):
 
 
 @pytest.mark.django_db
+def test_fixture_difficulty_uses_club_ratings_and_keeps_blanks_and_doubles(
+    manager, api
+):
+    fixtures = api.fetch_fixtures_data.return_value
+    fixtures[:] = [f for f in fixtures if not (f["event"] == 12 and f["team_h"] == 1)]
+    fixtures[0].update(team_h_difficulty=2, team_a_difficulty=5)
+    fixtures.append({"event": 13, "team_h": 3, "team_a": 1, "team_a_difficulty": 4})
+    fixtures.append({"event": None, "team_h": 1, "team_a": 4})
+    next(f for f in fixtures if f["event"] == 14 and f["team_h"] == 1).pop(
+        "team_h_difficulty"
+    )
+    engine = DecisionEngine(manager, api).load()
+    engine.prepare(confirmed(engine, horizon=3))
+    schedule = engine.fixture_difficulty_schedule(1)
+    assert [week["gameweek"] for week in schedule] == [11, 12, 13, 14, 15]
+    assert schedule[0]["matches"] == [
+        {"opponent": "Club 2", "venue": "H", "difficulty": 2}
+    ]
+    assert engine.fixture_difficulty_schedule(4)[0]["matches"] == [
+        {"opponent": "Club 1", "venue": "A", "difficulty": 5}
+    ]
+    assert schedule[1]["matches"] == []
+    assert [match["difficulty"] for match in schedule[2]["matches"]] == [3, 4]
+    assert schedule[2]["matches"][1]["venue"] == "A"
+    assert schedule[3]["matches"][0]["difficulty"] is None
+    assert engine.weeks == [11, 12, 13]
+
+    html = render_to_string(
+        "partials/decision_fixtures.html",
+        {
+            "option": {
+                "moves": [
+                    {
+                        "out_name": "Old <player>",
+                        "in_name": "New player",
+                        "out_fdr_schedule": schedule,
+                        "in_fdr_schedule": schedule,
+                    }
+                ]
+            }
+        },
+    )
+    assert "Old &lt;player&gt;" in html
+    assert "Blank" in html and "GW15" in html
+    assert "decision-fdr--4" in html and "decision-fdr--unknown" in html
+    assert 'aria-label="FPL difficulty unavailable"' in html
+    assert "Club 3 (A)" in html
+
+
+@pytest.mark.django_db
+def test_all_displayed_transfer_routes_include_five_week_fdr(manager, api):
+    engine = DecisionEngine(manager, api).load()
+    report = engine.report(confirmed(engine, horizon=3))
+    options = report["options"] + [report["best"], report["short_term"]]
+    options += [option for slot in report["alternatives"] for option in slot["options"]]
+    moves = [move for option in options for move in option["moves"]]
+    assert moves
+    for move in moves:
+        assert len(move["in_fdr_schedule"]) == len(move["out_fdr_schedule"]) == 5
+    html = render_to_string("partials/decision_summary.html", {"report": report})
+    assert "Fixture difficulty" in html and "GW15" in html
+    route_html = render_to_string(
+        "partials/decision_route.html", {"report": report, "option": report["best"]}
+    )
+    assert route_html.index("Fixture difficulty") < route_html.index("<details")
+
+
+@pytest.mark.django_db
 def test_horizon_counts_blanks_and_doubles_instead_of_next_five_matches(manager, api):
     engine = DecisionEngine(manager, api).load()
     api.fetch_fixtures_data.return_value[:] = [
@@ -412,6 +480,7 @@ def test_points_window_ends_at_gw38_and_has_no_invented_later_outlook(manager, a
     assert report["horizon"] == 1 and report["end_gameweek"] == 38
     assert len(report["best"]["weekly"]) == 1
     assert not any(player["fixtures_improve"] for player in report["player_outlooks"])
+    assert engine.fixture_difficulty_schedule(1) == [{"gameweek": 38, "matches": []}]
 
 
 @pytest.mark.django_db

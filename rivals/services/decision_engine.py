@@ -46,7 +46,7 @@ def digest(value):
 
 
 class DecisionEngine:
-    VERSION = "decision-v8-price-warnings"
+    VERSION = "decision-v9-fixture-difficulty"
 
     def __init__(self, user, api=None, *, fresh_squad=False):
         self.fresh_squad = fresh_squad
@@ -281,6 +281,31 @@ class DecisionEngine:
                 )
             self.projections[pid] = weekly
             self.player_fixtures[pid] = schedule
+
+    def fixture_difficulty_schedule(self, pid):
+        """Five gameweeks of published FPL ratings, independent of forecast horizon."""
+        start = self.context["decision_gameweek"]
+        schedule = []
+        for week in range(start, min(39, start + 5)):
+            matches = []
+            for fixture, home in self.fixture_index.get(
+                (self.players[pid]["team"], week), []
+            ):
+                difficulty = number(
+                    fixture.get("team_h_difficulty" if home else "team_a_difficulty")
+                )
+                opponent = fixture["team_a"] if home else fixture["team_h"]
+                matches.append(
+                    {
+                        "opponent": self.club_names.get(opponent, "?"),
+                        "venue": "H" if home else "A",
+                        "difficulty": (
+                            int(difficulty) if difficulty in (1, 2, 3, 4, 5) else None
+                        ),
+                    }
+                )
+            schedule.append({"gameweek": week, "matches": matches})
+        return schedule
 
     def evaluate(self, ids):
         key = tuple(sorted(ids))
@@ -1005,6 +1030,8 @@ class DecisionEngine:
                 outgoing, incoming = move["out"], move["in"]
                 move.update(
                     out_schedule=self.player_fixtures[outgoing],
+                    out_fdr_schedule=self.fixture_difficulty_schedule(outgoing),
+                    in_fdr_schedule=self.fixture_difficulty_schedule(incoming),
                     out_next_points=round(self.projections[outgoing][self.weeks[0]], 1),
                     in_next_points=round(self.projections[incoming][self.weeks[0]], 1),
                     out_points=round(sum(self.projections[outgoing].values()), 1),

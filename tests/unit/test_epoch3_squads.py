@@ -585,7 +585,10 @@ def test_own_squad_initial_render_has_no_upstream_requests_and_finite_panel_load
     html = response.content.decode()
     assert "hx-request='{\"timeout\":18000}'" in html
     assert "js/team-panels.js" in html
-    assert "Plan transfers" in html and "decisions/summary/" in html
+    assert 'aria-label="Loading transfer outlook"' in html
+    assert "Open transfer planner" in html
+    assert f'href="{reverse("rivals:decisions.workspace")}"' in html
+    assert f'hx-get="{reverse("rivals:decisions.summary")}"' in html
     assert "let availableGameweeks" not in html
     assert "data-panel-status" in html
 

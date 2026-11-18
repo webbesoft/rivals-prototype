@@ -1,0 +1,17 @@
+{% for move in option.moves %}
+{% if move.in_fdr_schedule %}
+<div class="decision-fixture-comparison">
+  <div class="decision-fixture-scroll" role="region" aria-label="Fixture difficulty: keep {{ move.out_name }} or buy {{ move.in_name }}" tabindex="0">
+    <table class="decision-fixture-table">
+      <caption>Next {{ move.in_fdr_schedule|length }} gameweek{{ move.in_fdr_schedule|length|pluralize }} · Fixture difficulty</caption>
+      <thead><tr><th scope="col">Player</th>{% for week in move.in_fdr_schedule %}<th scope="col">GW{{ week.gameweek }}</th>{% endfor %}</tr></thead>
+      <tbody>
+        <tr><th scope="row"><span>Keep</span>{{ move.out_name }}</th>{% for week in move.out_fdr_schedule %}<td>{% include "partials/decision_fixture_cell.html" %}</td>{% endfor %}</tr>
+        <tr><th scope="row"><span>Buy</span>{{ move.in_name }}</th>{% for week in move.in_fdr_schedule %}<td>{% include "partials/decision_fixture_cell.html" %}</td>{% endfor %}</tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="decision-fixture-key">FPL FDR: 1 easiest → 5 hardest · H home / A away · — rating unavailable. Blank = no scheduled fixture.</p>
+</div>
+{% endif %}
+{% endfor %}

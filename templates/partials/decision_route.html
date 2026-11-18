@@ -2,6 +2,7 @@
   <p class="rv-eyebrow">{% if option.key == report.best.key %}Suggested for GW{{ report.gameweek }}–{{ report.end_gameweek }}{% elif option.key == report.short_term.key %}Best for GW{{ report.gameweek }}{% elif option.moves %}Change the squad{% else %}The baseline / Keep the squad{% endif %}</p>
   <h3 class="font-bold">{% if report.manual and option.key == report.manual.key %}Your route · {% endif %}{% if option.moves %}{% for move in option.moves %}{{ move.out_name }} → {{ move.in_name }}{% if not forloop.last %} + {% endif %}{% endfor %}{% else %}Hold / roll{% endif %}</h3>
   {% include "partials/price_timing.html" %}
+  {% include "partials/decision_fixtures.html" %}
   <div class="rv-plan-metrics">
     <p class="rv-plan-gain {% if option.immediate.net_gain > 0 %}rv-plan-positive{% endif %}">GW{{ report.gameweek }} gain vs hold<br><strong>{% if option.immediate.net_gain != None %}{% if option.immediate.net_gain > 0 %}+{% endif %}{{ option.immediate.net_gain|floatformat:1 }}{% else %}—{% endif %}</strong></p>
     <p class="rv-plan-gain {% if option.net_gain > 0 %}rv-plan-positive{% endif %}">GW{{ report.gameweek }}–{{ report.end_gameweek }} gain vs hold<br><strong>{% if option.net_gain != None %}{% if option.net_gain > 0 %}+{% endif %}{{ option.net_gain|floatformat:1 }}{% else %}—{% endif %}</strong></p>
