@@ -1,17 +1,62 @@
 {% if report.chip_advice %}
-<section class="app-panel border border-gray-200 bg-white p-5 mb-6" aria-labelledby="chip-advice-heading">
-  <h2 id="chip-advice-heading" class="text-lg font-bold mb-3">Chip advice</h2>
-  <p class="text-sm text-gray-600 mb-4">Based on your current squad if you hold, across the next {{ report.horizon }} gameweeks. Chip usage is checked against your squad ledger for the current half of the season. Unrecorded usage or a chip selected before the next deadline may not appear yet. Check in FPL before playing; only one chip can be used in a gameweek.</p>
-  <p class="text-sm mb-4"><strong>Chip window: through GW{{ report.chip_advice.0.expiry_gameweek }}.</strong> First-half chips must be played by the GW19 deadline; a fresh set is available from GW20. Unused chips do not carry over. Opportunities below stay within the current chip window.{% if report.chip_advice.0.deadlines_remaining <= 4 %} <strong>Only {{ report.chip_advice.0.deadlines_remaining }} deadline{{ report.chip_advice.0.deadlines_remaining|pluralize }} left, including this one. Prioritise your remaining chips across separate gameweeks.</strong>{% endif %}</p>
-  <div class="space-y-4">
+<section class="app-panel chip-advice p-5 mb-6" aria-labelledby="chip-advice-heading">
+  <header class="chip-advice-header">
+    <div><h2 id="chip-advice-heading" class="text-lg font-bold">Chip advice</h2><p class="chip-caption">Your squad · Next {{ report.horizon }} gameweeks</p></div>
+    <span class="chip-window">Use by <strong>GW{{ report.chip_advice.0.expiry_gameweek }}</strong></span>
+  </header>
+  {% if report.chip_advice.0.deadlines_remaining <= 4 %}<p class="chip-expiry" role="status">Only {{ report.chip_advice.0.deadlines_remaining }} deadline{{ report.chip_advice.0.deadlines_remaining|pluralize }} left, including this one. Prioritise your remaining chips across separate gameweeks.</p>{% endif %}
+  <div class="chip-grid">
     {% for advice in report.chip_advice %}
-    <article>
-      <h3 class="font-bold">{{ advice.chip }} · {{ advice.status }} <span class="text-sm text-gray-600">· GW{{ advice.gameweek }}</span></h3>
-      <p class="text-sm mt-1">{{ advice.detail }}</p>
+    <article class="chip-tile{% if advice.status == 'Used' %} chip-tile-used{% elif advice.status != 'Hold for now' %} chip-tile-opportunity{% endif %}">
+      <div class="chip-tile-heading">
+        <span class="chip-symbol" aria-hidden="true">{% if advice.chip == 'Triple Captain' %}3×{% elif advice.chip == 'Bench Boost' %}▦{% elif advice.chip == 'Free Hit' %}⇄{% else %}✦{% endif %}</span>
+        <h3>{{ advice.chip }}</h3>
+      </div>
+      <span class="chip-status">{% if advice.status == 'Used' %}<span aria-hidden="true">✓ </span>{% endif %}{{ advice.status }}</span>
+      {% if advice.status == 'Used' %}
+        <div class="chip-used-mark" aria-hidden="true">✓</div>
+        <p class="chip-used-week">Played in <strong>GW{{ advice.used_gameweek }}</strong></p>
+        <p class="chip-caption">{% if advice.expiry_gameweek == 19 %}Refreshes GW20{% else %}Used for this half{% endif %}</p>
+      {% else %}
+        <p class="chip-week">GW<span>{{ advice.gameweek }}</span><span class="chip-week-label">{% if advice.chip == 'Wildcard' %}Squad check{% else %}Best in this window{% endif %}</span></p>
+        <div class="chip-evidence">
+        {% if advice.chip == 'Triple Captain' %}
+          <p class="chip-metric">{{ advice.projected_points|floatformat:1 }} <span>player pts</span></p>
+          <meter min="0" max="{% if advice.projected_points > 10 %}{{ advice.projected_points }}{% else %}10{% endif %}" value="{{ advice.projected_points }}" aria-label="Captain projected points; opportunity target 10"></meter>
+          <p class="chip-caption">{{ advice.player }} · Target 10 pts</p>
+          <p class="chip-small-note">{{ advice.extra_points|floatformat:1 }} extra pts vs captaincy</p>
+        {% elif advice.chip == 'Bench Boost' %}
+          <p class="chip-metric">{{ advice.projected_points|floatformat:1 }} <span>bench pts</span></p>
+          <meter min="0" max="{% if advice.projected_points > 15 %}{{ advice.projected_points }}{% else %}15{% endif %}" value="{{ advice.projected_points }}" aria-label="Bench projected points; opportunity target 15"></meter>
+          <p class="chip-caption">Target: 15 pts + four fit players</p>
+          <p class="chip-small-note">Before automatic substitutions</p>
+        {% elif advice.chip == 'Free Hit' %}
+          {% if advice.projected_gain != None %}
+          <p class="chip-metric">{% if advice.projected_gain > 0 %}+{% endif %}{{ advice.projected_gain|floatformat:1 }} <span>pt gap</span></p>
+          <div class="chip-comparison"><span>Your XI</span><meter min="0" max="{% if advice.squad_points > advice.benchmark_points %}{{ advice.squad_points }}{% else %}{{ advice.benchmark_points }}{% endif %}" value="{{ advice.squad_points }}" aria-label="Your XI projected points"></meter><strong>{{ advice.squad_points|floatformat:1 }}</strong></div>
+          <div class="chip-comparison chip-comparison-benchmark"><span>Best XI</span><meter min="0" max="{% if advice.squad_points > advice.benchmark_points %}{{ advice.squad_points }}{% else %}{{ advice.benchmark_points }}{% endif %}" value="{{ advice.benchmark_points }}" aria-label="Benchmark XI projected points"></meter><strong>{{ advice.benchmark_points|floatformat:1 }}</strong></div>
+          <p class="chip-small-note">Benchmark has no budget cap</p>
+          {% else %}<p class="chip-caption">No complete benchmark XI available.</p>{% endif %}
+        {% else %}
+          <p class="chip-metric">{{ advice.concern_count }}<span> / 15 concerns</span></p>
+          <div class="chip-squad-dots" aria-hidden="true">{% for concern in advice.squad_health %}<i{% if concern %} class="has-concern"{% endif %}></i>{% endfor %}</div>
+          <p class="chip-caption">Persistent squad concerns</p>
+          <p class="chip-small-note">Review a rebuild at 4+ over 2+ weeks</p>
+        {% endif %}
+        </div>
+      {% endif %}
+      <details class="chip-reason"><summary>Why this advice</summary><p>{{ advice.detail }}</p></details>
     </article>
     {% endfor %}
   </div>
-  <p class="text-xs text-gray-500 mt-4">These are planning signals, not guaranteed returns. Future fixtures and availability can change. Chip gains are separate from the transfer comparison and are not included in its totals.</p>
-  <details class="text-sm text-gray-600 mt-3"><summary class="cursor-pointer">How chip opportunities are flagged</summary><p class="mt-2">Triple Captain: at least 10 projected player points, with full reported availability and no flagged minutes risk. Bench Boost: at least 15 bench points, with fixtures and the same checks for all four substitutes. Free Hit: at least a 15-point projected gap to the team-of-the-week benchmark in the first half. In the second half, also require at least three blank-fixture XI slots, falling to at most one the following week. The benchmark has no budget cap; an affordable full squad must still be checked. Wildcard: at least four squad concerns persisting across two or more forecast gameweeks. These thresholds are planning heuristics. The best week shown is within this window; later opportunities may be better.</p></details>
+  <footer class="chip-footer">
+    <p class="chip-caption">Forecasts, not guarantees · One chip per gameweek · Check in FPL before playing</p>
+    <details class="chip-method"><summary>Chip rules &amp; forecast notes</summary>
+      <p>Based on your current squad if you hold. Chip usage is checked against your squad ledger for the current half of the season. Unrecorded usage or a chip selected before the next deadline may not appear yet.</p>
+      <p>First-half chips must be played by the GW19 deadline; a fresh set is available from GW20. Second-half chips expire at the GW38 deadline. Unused chips do not carry over. Opportunities stay within the current chip window.</p>
+      <p>Future fixtures and availability can change. Chip gains are separate from the transfer comparison and are not included in its totals.</p>
+      <p>Triple Captain: at least 10 projected player points, with full reported availability and no flagged minutes risk. Bench Boost: at least 15 bench points, with fixtures and the same checks for all four substitutes. Free Hit: at least a 15-point projected gap to the team-of-the-week benchmark in the first half. In the second half, also require at least three blank-fixture XI slots, falling to at most one the following week. The benchmark has no budget cap; an affordable full squad must still be checked. Wildcard: at least four squad concerns persisting across two or more forecast gameweeks. These thresholds are planning heuristics. Later opportunities may be better.</p>
+    </details>
+  </footer>
 </section>
 {% endif %}

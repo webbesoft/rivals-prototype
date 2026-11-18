@@ -81,6 +81,13 @@ def chip_advice(engine, baseline):
                 else "Hold for now"
             ),
             "gameweek": tc["week"],
+            "player": player,
+            "projected_points": round(tc["captain_points"], 1),
+            "extra_points": round(
+                2 * tc["captain_points"]
+                - tc.get("baseline_captain_points", tc["captain_points"]),
+                1,
+            ),
             "detail": (
                 f"{player} projects {tc['captain_points']:.1f} points against "
                 f"{', '.join(fixtures) or 'no scheduled opponent'}: "
@@ -114,6 +121,7 @@ def chip_advice(engine, baseline):
                 else "Hold for now"
             ),
             "gameweek": bb["week"],
+            "projected_points": round(bb["bench_points"], 1),
             "detail": (
                 f"Your forecast bench ({', '.join(engine.name(pid) for pid in bb['bench'])}) "
                 f"totals {bb['bench_points']:.1f} points. "
@@ -174,6 +182,10 @@ def chip_advice(engine, baseline):
             ),
             "gameweek": opportunity["week"] if opportunity else current,
             "projected_gain": round(opportunity["gain"], 1) if opportunity else None,
+            "squad_points": round(opportunity["points"], 1) if opportunity else None,
+            "benchmark_points": (
+                round(opportunity["benchmark_points"], 1) if opportunity else None
+            ),
             "detail": (
                 (
                     f"The team-of-the-week benchmark projects {opportunity['benchmark_points']:.1f} "
@@ -206,6 +218,8 @@ def chip_advice(engine, baseline):
             "chip": "Wildcard",
             "status": "Review now" if rebuild else "Hold for now",
             "gameweek": current,
+            "concern_count": len(persistent),
+            "squad_health": [pid in persistent for pid in engine.ids],
             "detail": (
                 f"{len(persistent)} of your 15 players have availability, minutes or blank-fixture concerns throughout this window. "
                 + (

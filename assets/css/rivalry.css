@@ -1193,3 +1193,55 @@
 .mcp-question-list li, .mcp-connection { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid #e5e5e5; }
 .mcp-return-address { overflow-wrap: anywhere; }
 @media (max-width: 600px) { .mcp-connection, .mcp-question-list li { align-items: flex-start; flex-direction: column; } }
+
+/* Chip planning: status first, evidence second, explanations on demand. */
+.chip-advice-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 20px; }
+.chip-caption { color: var(--soft-ink); font-size: 12px; line-height: 1.5; }
+.chip-window { flex-shrink: 0; padding: 7px 10px; border: 1px solid var(--rule); font-size: 12px; }
+.chip-window strong { margin-left: 5px; }
+.chip-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.chip-tile { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; padding: 16px; border: 1px solid var(--rule); border-top: 3px solid #8a9886; background: var(--surface); }
+.chip-tile-opportunity { border-top-color: var(--ink); background: #eef2df; }
+.chip-tile-used { background: #f0f1eb; border-top-color: #ccd2c3; }
+.chip-tile-heading { display: flex; align-items: center; gap: 9px; margin-bottom: 12px; }
+.chip-tile-heading h3 { font-size: 14px; font-weight: 700; }
+.chip-symbol { display: grid; place-items: center; width: 30px; height: 30px; border: 1px solid var(--rule); font-size: 21px; font-weight: 700; line-height: 1; }
+.chip-status { display: inline-flex; padding: 3px 8px; background: #e4e8dd; color: var(--ink); font-size: 11px; font-weight: 700; border-radius: 3px; }
+.chip-tile-opportunity .chip-status { background: var(--ink); color: #f4f7e8; }
+.chip-tile-used .chip-status { color: var(--soft-ink); }
+.chip-week { display: flex; align-items: baseline; gap: 3px; width: 100%; margin: 18px 0; font-size: 12px; font-weight: 600; }
+.chip-week > span:first-child { font-size: 34px; line-height: 1; letter-spacing: -.05em; }
+.chip-week-label { max-width: 75px; margin-left: auto; color: var(--soft-ink); font-size: 10px; line-height: 1.4; text-align: right; font-weight: 400; }
+.chip-evidence { width: 100%; margin-bottom: 16px; }
+.chip-metric { margin-bottom: 8px; font-size: 26px; font-weight: 700; line-height: 1.2; letter-spacing: -.03em; }
+.chip-metric span { font-size: 12px; font-weight: 400; letter-spacing: 0; }
+.chip-evidence meter { display: block; width: 100%; height: 8px; margin: 8px 0; border: none; border-radius: 0; background: #dbe0d2; appearance: none; }
+.chip-evidence meter::-webkit-meter-bar { height: 8px; background: #dbe0d2; border: 0; border-radius: 0; }
+.chip-evidence meter::-webkit-meter-optimum-value { background: #748964; border-radius: 0; }
+.chip-evidence meter::-moz-meter-bar { background: #748964; }
+.chip-tile-opportunity meter::-webkit-meter-optimum-value { background: var(--ink); }
+.chip-tile-opportunity meter::-moz-meter-bar { background: var(--ink); }
+.chip-small-note { margin-top: 8px; color: var(--soft-ink); font-size: 10px; line-height: 1.5; }
+.chip-comparison { display: grid; grid-template-columns: 40px minmax(0, 1fr) 30px; align-items: center; gap: 6px; font-size: 10px; }
+.chip-comparison strong { text-align: right; font-variant-numeric: tabular-nums; }
+.chip-comparison-benchmark meter::-webkit-meter-optimum-value { background: var(--ink); }
+.chip-comparison-benchmark meter::-moz-meter-bar { background: var(--ink); }
+.chip-squad-dots { display: grid; grid-template-columns: repeat(15, minmax(0, 1fr)); gap: 3px; margin: 12px 0; }
+.chip-squad-dots i { height: 14px; background: #dbe0d2; border-radius: 2px; }
+.chip-squad-dots .has-concern { background: #a76537; }
+.chip-used-mark { display: grid; place-items: center; width: 48px; height: 48px; margin: 26px auto 12px; border: 1px solid #bec8b8; border-radius: 50%; color: #6a7e62; font-size: 25px; }
+.chip-used-week { align-self: center; margin-bottom: 4px; font-size: 13px; color: var(--soft-ink); }
+.chip-tile-used > .chip-caption { align-self: center; margin-bottom: 26px; }
+.chip-reason { margin-top: auto; width: 100%; border-top: 1px solid var(--rule); padding-top: 10px; font-size: 11px; }
+.chip-reason summary, .chip-method summary { cursor: pointer; color: var(--soft-ink); }
+.chip-reason p, .chip-method p { margin-top: 10px; line-height: 1.6; }
+.chip-footer { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+.chip-method { font-size: 12px; }
+.chip-method[open] { flex-basis: 100%; }
+.chip-expiry { padding: 10px 12px; margin-bottom: 16px; border-left: 3px solid #a76537; background: #f4ecdb; font-size: 12px; }
+@media (max-width: 1000px) { .chip-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 480px) {
+  .chip-grid { grid-template-columns: minmax(0, 1fr); }
+  .chip-advice-header { align-items: flex-start; }
+  .chip-tile { padding: 14px; }
+}
