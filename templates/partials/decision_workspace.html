@@ -2,11 +2,11 @@
 <div class="app-panel border border-gray-200 p-5"><p role="status">{{ decision_error }}</p><a class="app-secondary-button mt-3" href="{% url 'rivals:decisions' %}">Try again</a></div>
 {% else %}
 {% if report %}
-{% include "partials/decision_summary.html" %}
-{% if not results_only %}
+{% if not results_only or show_pitch %}
 <div class="mb-4"><p class="text-sm text-gray-600">GW{{ report.gameweek }} · Deadline {{ decision_deadline|date:"D j M H:i T" }}</p></div>
 {% include "partials/planner_pitch.html" %}
 {% endif %}
+{% include "partials/decision_summary.html" %}
 {% include "partials/chip_advice.html" %}
 {% if ai_enabled %}<div data-remote-panel><div id="gemini-briefing" class="app-panel ai-briefing-slot p-5 mb-6" hx-get="{% url 'rivals:decisions.ai' %}?fingerprint={{ report.fingerprint|urlencode }}" hx-trigger="load" hx-swap="outerHTML" hx-request='{"timeout":10000}'>{% include "partials/loading_skeleton.html" with kind="ai" label="Loading AI priorities" %}</div></div>{% endif %}
 {% endif %}

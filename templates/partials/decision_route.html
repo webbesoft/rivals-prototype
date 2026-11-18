@@ -1,6 +1,7 @@
 <article class="rv-plan-route {% if not option.moves %}rv-plan-hold{% endif %}">
   <p class="rv-eyebrow">{% if option.key == report.best.key %}Suggested for GW{{ report.gameweek }}–{{ report.end_gameweek }}{% elif option.key == report.short_term.key %}Best for GW{{ report.gameweek }}{% elif option.moves %}Change the squad{% else %}The baseline / Keep the squad{% endif %}</p>
   <h3 class="font-bold">{% if report.manual and option.key == report.manual.key %}Your route · {% endif %}{% if option.moves %}{% for move in option.moves %}{{ move.out_name }} → {{ move.in_name }}{% if not forloop.last %} + {% endif %}{% endfor %}{% else %}Hold / roll{% endif %}</h3>
+  {% if report.lineup_mode == 'planned' %}<p class="text-sm mt-2">GW{{ report.gameweek }} keeps your planned XI and captain. Each incoming player inherits the outgoing player's starting or bench place and armband.</p>{% endif %}
   {% include "partials/price_timing.html" %}
   {% include "partials/decision_fixtures.html" %}
   <div class="rv-plan-metrics">

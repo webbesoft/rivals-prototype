@@ -1,8 +1,8 @@
 <div class="mb-4"><p class="text-sm text-gray-600">GW{{ report.gameweek }} · Deadline {{ decision_deadline|date:"D j M H:i T" }}</p></div>
-<section data-remote-panel data-loading-message="Comparing your transfer options…" data-error-message="We couldn't load the comparison. Use the planner link below to try again." data-timeout-message="Comparing transfers took too long. Your squad forecast is still available below.">
+{% include "partials/planner_pitch.html" %}
+<section data-remote-panel data-loading-message="Comparing your transfer options…" data-error-message="We couldn't load the comparison. Use the planner link below to try again." data-timeout-message="Comparing transfers took too long. Your squad forecast is still available above.">
   <p data-panel-status role="status" hidden class="my-4 text-sm"></p>
-  <div id="decision-results" hx-get="{% url 'rivals:decisions.workspace' %}?results=1" hx-trigger="load" hx-request='{"timeout":120000}' hx-sync="closest [data-remote-panel]:replace">
+  <div id="decision-results" hx-get="{% url 'rivals:decisions.workspace' %}?results=1" hx-trigger="load" hx-request='{"timeout":120000}' hx-sync="#decision-workspace:replace">
     {% include "partials/loading_skeleton.html" with kind="results" label="Loading transfer comparison" %}
   </div>
 </section>
-{% include "partials/planner_pitch.html" %}

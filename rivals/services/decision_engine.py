@@ -14,6 +14,7 @@ from rivals.services.chip_advice_service import chip_advice
 from rivals.services.fpl_api_service import FplApiService
 from rivals.services.gameweek_context_service import GameweekContextService
 from rivals.services.planning_defaults_service import PlanningDefaults
+from rivals.services.planned_lineup import replace_lineup, validate_lineup
 from rivals.services.price_change_service import (
     PRICE_FIELDS,
     price_warning,
@@ -46,7 +47,7 @@ def digest(value):
 
 
 class DecisionEngine:
-    VERSION = "decision-v9-fixture-difficulty"
+    VERSION = "decision-v10-planned-lineup"
 
     def __init__(self, user, api=None, *, fresh_squad=False):
         self.fresh_squad = fresh_squad
@@ -207,11 +208,20 @@ class DecisionEngine:
                 self.user, context, self.players, self.public_entry_history
             )
             self.default_values = self.defaults_service.values(ids)
+        lineup = record.planned_lineup if record else {}
+        lineup_warning = ""
+        try:
+            validate_lineup(lineup, ids, self.players)
+        except (ValueError, KeyError) as error:
+            lineup = {}
+            lineup_warning = f"Your saved XI could not be applied: {error} Using the optimised XI instead."
         return {
             "ids": ids,
             "confirmed": True,
             **self.default_values,
             "manual": list(record.manual_moves) if record else [],
+            "lineup": lineup,
+            "lineup_warning": lineup_warning,
             "horizon": previous.horizon if previous else 5,
             "strategy": previous.strategy if previous else "protect",
             "league_id": previous.target_league_id if previous else None,
@@ -224,6 +234,9 @@ class DecisionEngine:
         self.inputs_used = inputs
         self.ids = list(inputs["ids"])
         self.validate_squad(self.ids)
+        self.planned_lineup = inputs.get("lineup") or {}
+        self.lineup_warning = inputs.get("lineup_warning", "")
+        validate_lineup(self.planned_lineup, self.ids, self.players)
         self.weeks = list(
             range(
                 self.context["decision_gameweek"],
@@ -307,8 +320,11 @@ class DecisionEngine:
             schedule.append({"gameweek": week, "matches": matches})
         return schedule
 
-    def evaluate(self, ids):
-        key = tuple(sorted(ids))
+    def evaluate(self, ids, *, lineup=None):
+        # Never apply the manager's XI to a rival, even if they share all 15 players.
+        if lineup is None:
+            lineup = self.planned_lineup if set(ids) == set(self.ids) else {}
+        key = (tuple(sorted(ids)), digest(lineup))
         if key in self._evaluations:
             return self._evaluations[key]
         groups = {
@@ -343,6 +359,11 @@ class DecisionEngine:
                 (pid for pid in xi if pid != captain),
                 key=lambda pid: (self.projections[pid][week], -pid),
             )
+            if lineup and week == self.weeks[0]:
+                xi = list(lineup["xi"])
+                captain, vice = lineup["captain"], lineup["vice"]
+                points = sum(self.projections[pid][week] for pid in xi)
+                points += self.projections[captain][week]
             total += points
             weekly_points[week] = points
             lineups.append(
@@ -352,6 +373,9 @@ class DecisionEngine:
                     "captain": captain,
                     "vice": vice,
                     "points": round(points, 2),
+                    "selection": (
+                        "planned" if lineup and week == self.weeks[0] else "optimised"
+                    ),
                 }
             )
         result = {"points": total, "lineups": lineups, "weekly_points": weekly_points}
@@ -389,7 +413,10 @@ class DecisionEngine:
         # Unknown selling prices are upper bounds, never confirmed spending power.
         if bank is not None and purchase > bank + sale_value:
             return None
-        projection = self.evaluate(ids)
+        lineup = (
+            replace_lineup(self.planned_lineup, moves) if self.planned_lineup else {}
+        )
+        projection = self.evaluate(ids, lineup=lineup)
         hits = (
             0
             if not moves
@@ -497,6 +524,7 @@ class DecisionEngine:
                 else None
             ),
             "lineups": projection["lineups"],
+            "lineup": lineup,
             "objective": objective,
         }
 
@@ -675,7 +703,7 @@ class DecisionEngine:
                 "rival": rival.team.team_name,
                 "unavailable": True,
             }
-        projection = self.evaluate(rival_ids)
+        projection = self.evaluate(rival_ids, lineup={})
         shared = set(self.ids) & set(rival_ids)
         differentials = []
         for side, ids in (
@@ -841,7 +869,9 @@ class DecisionEngine:
     def weekly_comparison(self, choice, baseline):
         """Charge this deadline's hit once, in the first gameweek."""
         comparison, cumulative = [], 0.0
-        projected = self.evaluate(choice["ids"])["weekly_points"]
+        projected = self.evaluate(choice["ids"], lineup=choice.get("lineup", {}))[
+            "weekly_points"
+        ]
         for index, line in enumerate(choice["lineups"]):
             week = line["gameweek"]
             points, hold_points = projected[week], baseline["weekly_points"][week]
@@ -870,6 +900,8 @@ class DecisionEngine:
             "deadline": self.context["next_deadline"].isoformat(),
             "baseline": self.evaluate(self.ids),
             "players": self.player_forecasts(),
+            "lineup_mode": "planned" if self.planned_lineup else "optimised",
+            "lineup_warning": self.lineup_warning,
         }
 
     def chip_usage(self):
@@ -919,7 +951,7 @@ class DecisionEngine:
         rival = self.rival_context(data, baseline)
         if rival and "ids" in rival:
             self._rival_weights = self.lineup_weights(
-                self.evaluate(rival["ids"])["lineups"]
+                self.evaluate(rival["ids"], lineup={})["lineups"]
             )
         choices = self.options(baseline)
         manual_option = self.candidate(manual, baseline) if manual else None
@@ -1058,6 +1090,8 @@ class DecisionEngine:
             "manual": manual_option,
             "alternatives": alternatives[:5],
             "risks": risks[:5],
+            "lineup_mode": "planned" if self.planned_lineup else "optimised",
+            "lineup_warning": self.lineup_warning,
             "price_warnings": [
                 {"id": pid, "name": self.name(pid), **warning}
                 for pid in self.ids
@@ -1067,12 +1101,14 @@ class DecisionEngine:
             "rival": rival,
             "captain": (
                 self.name(first["captain"])
-                if self.projections[first["captain"]][self.weeks[0]] > 0
+                if self.planned_lineup
+                or self.projections[first["captain"]][self.weeks[0]] > 0
                 else None
             ),
             "vice": (
                 self.name(first["vice"])
-                if self.projections[first["vice"]][self.weeks[0]] > 0
+                if self.planned_lineup
+                or self.projections[first["vice"]][self.weeks[0]] > 0
                 else None
             ),
             "captain_id": first["captain"],
@@ -1084,7 +1120,13 @@ class DecisionEngine:
             "weeks": self.weeks,
             "model": {
                 "version": self.VERSION,
-                "method": "Form and points per game, adjusted for season minutes, current availability and each scheduled fixture. Availability stays constant; blanks score zero and doubles count each match. Best legal XI and captain are selected separately each week. Ranges are sensitivity estimates, not confidence intervals. No chips or automatic substitutions are assumed.",
+                "method": "Form and points per game, adjusted for season minutes, current availability and each scheduled fixture. Availability stays constant; blanks score zero and doubles count each match. "
+                + (
+                    "Your planned XI and captain are kept for the next gameweek; incoming players inherit the outgoing player's place and armband. Later gameweeks select the best legal XI and captain. "
+                    if self.planned_lineup
+                    else "Best legal XI and captain are selected separately each week. "
+                )
+                + "Ranges are sensitivity estimates, not confidence intervals. No chips or automatic substitutions are assumed.",
             },
         }
         cache.set(cache_key, result, 120)

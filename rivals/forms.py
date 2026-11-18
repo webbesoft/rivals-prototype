@@ -14,6 +14,89 @@ class PlanningInputForm(forms.Form):
     )
 
 
+class LineupInputForm(forms.Form):
+    season = forms.CharField(widget=forms.HiddenInput)
+    gameweek = forms.IntegerField(widget=forms.HiddenInput)
+    mode = forms.ChoiceField(
+        label="Compare transfers against",
+        choices=[
+            ("planned", "My planned XI and captain"),
+            ("optimised", "Best projected XI and captain"),
+        ],
+    )
+
+    def __init__(self, *args, engine, initial_lineup, **kwargs):
+        from rivals.services.decision_engine import POSITIONS
+
+        kwargs.setdefault("auto_id", "lineup_%s")
+        super().__init__(*args, **kwargs)
+        self.engine = engine
+        data = engine.inputs()
+        choices = [
+            (
+                pid,
+                f"{engine.name(pid)} · {POSITIONS[engine.players[pid]['element_type']]}",
+            )
+            for pid in data["ids"]
+        ]
+        lineup = data.get("lineup") or initial_lineup
+        self.fields["starters"] = forms.TypedMultipleChoiceField(
+            label="Starting XI",
+            choices=choices,
+            coerce=int,
+            required=False,
+            widget=forms.CheckboxSelectMultiple,
+        )
+        for name, label in (("captain", "Captain"), ("vice", "Vice-captain")):
+            self.fields[name] = forms.TypedChoiceField(
+                label=label,
+                choices=choices,
+                coerce=int,
+                required=False,
+                empty_value=None,
+            )
+        self.initial.update(
+            season=engine.context["season"],
+            gameweek=engine.context["decision_gameweek"],
+            mode="planned" if data.get("lineup") else "optimised",
+            starters=lineup["xi"],
+            captain=lineup["captain"],
+            vice=lineup["vice"],
+        )
+        if self.is_bound and self.data.get(self.add_prefix("mode")) == "optimised":
+            # Ignore stale player IDs before Django runs individual choice validators.
+            self.data = self.data.copy()
+            for name in ("starters", "captain", "vice"):
+                self.data.pop(self.add_prefix(name), None)
+
+    def clean(self):
+        from rivals.services.planned_lineup import validate_lineup
+
+        cleaned = super().clean()
+        if (
+            cleaned.get("season") != self.engine.context["season"]
+            or cleaned.get("gameweek") != self.engine.context["decision_gameweek"]
+        ):
+            raise forms.ValidationError(
+                "The deadline has changed. Reload before choosing your XI."
+            )
+        lineup = {}
+        if cleaned.get("mode") == "planned":
+            lineup = {
+                "xi": cleaned.get("starters", []),
+                "captain": cleaned.get("captain"),
+                "vice": cleaned.get("vice"),
+            }
+            try:
+                validate_lineup(
+                    lineup, self.engine.inputs()["ids"], self.engine.players
+                )
+            except ValueError as error:
+                raise forms.ValidationError(str(error))
+        cleaned["lineup"] = lineup
+        return cleaned
+
+
 class DecisionInputForm(PlanningInputForm):
     season = forms.CharField(widget=forms.HiddenInput)
     gameweek = forms.IntegerField(widget=forms.HiddenInput)

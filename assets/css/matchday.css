@@ -746,6 +746,35 @@
 }
 
 /* The planner uses the same pitch, with local gameweek switching. */
+.planner-panel [hidden] { display: none !important; }
+.planner-lineup-editor { max-width: 760px; margin: 0 auto 20px; border: 1px solid var(--rule); border-radius: 6px; padding: 16px; background: #f2f4eb; }
+.planner-editor-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+.planner-editor-heading h3 { font-size: 16px; font-weight: 800; }
+.planner-lineup-count { padding: 6px 10px; border: 1px solid #bbc9b1; border-radius: 20px; background: #e2ecd8; font-size: 12px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.planner-lineup-editor select { max-width: 100%; padding: 8px; border: 1px solid var(--rule); border-radius: 4px; }
+.planner-lineup-mode { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; font-size: 12px; font-weight: 700; }
+.planner-selection-status { margin-top: 14px; font-size: 13px; line-height: 1.6; font-weight: 650; }
+.planner-selection-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.planner-lineup-editor:has([data-lineup-actions]:not([hidden])) { position: sticky; top: 76px; z-index: 4; box-shadow: 0 8px 24px #183f3026; }
+.planner-selection-actions button, .planner-editor-footer [data-lineup-undo] { min-height: 44px; padding: 8px 12px; border: 1px solid #99a990; border-radius: 5px; background: #fffef8; color: #17372e; font-size: 12px; font-weight: 750; cursor: pointer; }
+.planner-lineup-error { margin-top: 16px; padding: 16px; border: 2px solid #b52b24; border-left-width: 6px; border-radius: 6px; background: #fff0ed; color: #8a1b15; font-size: 14px; line-height: 1.6; }
+.matchday-app .app-content .planner-lineup-error, .matchday-app .app-content .planner-lineup-error * { color: #8a1b15; }
+.planner-lineup-error strong { display: block; margin-bottom: 6px; font-size: 16px; }
+.planner-lineup-error p { margin-top: 8px; font-size: 12px; }
+.planner-lineup-error:focus { outline: 3px solid #b52b24; outline-offset: 3px; }
+.planner-player-select { position: absolute; inset: -3px; z-index: 2; width: calc(100% + 6px); border: 2px solid transparent; border-radius: 6px; background: transparent; cursor: pointer; }
+.planner-player-select:hover, .planner-player-select:focus-visible { border-color: #f0d66a; outline: 2px solid #17372e; outline-offset: 2px; }
+.planner-swap-icon { position: absolute; top: 1px; left: 1px; display: grid; place-items: center; width: 24px; height: 24px; background: #fffef8; color: #17372e; border: 1px solid #bbc9b1; border-radius: 50%; font-size: 17px; font-weight: 900; }
+.is-selected .planner-player-select { border: 3px solid #f0d66a; box-shadow: 0 0 0 3px #17372e; }
+.is-swap-target .planner-player-select { border: 3px solid #63dba0; background: #63dba012; }
+.is-swap-target .planner-swap-icon { background: #63dba0; }
+.is-swap-blocked { opacity: .48; }
+.planner-panel .lineup-formation .planner-xi-label { border: 0; padding: 0; font-size: 18px; font-weight: 800; letter-spacing: 0; }
+.planner-editor-footer { max-width: 760px; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 0; }
+.planner-editor-footer p { flex: 1 1 240px; }
+.planner-editor-footer p > span { display: block; margin-top: 4px; color: var(--soft-ink); font-size: 12px; line-height: 1.6; }
+.planner-editor-footer > div { display: flex; flex-wrap: wrap; gap: 8px; }
+.planner-editor-footer .is-unsaved { color: #875009; background: #fff0c2; border-radius: 4px; padding: 4px 8px; }
 .planner-week-switcher { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .planner-week-toggle { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 .planner-week-label { order: 0; display: grid; place-items: center; min-height: 44px; min-width: 56px; padding: 8px 12px; border: 1px solid var(--rule); border-radius: 4px; color: var(--ink); font-size: 12px; font-weight: 800; cursor: pointer; }

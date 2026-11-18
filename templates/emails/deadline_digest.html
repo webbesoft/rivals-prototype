@@ -81,7 +81,7 @@
     {% endif %}
     <p style="margin:0 0 6px;color:#58685c;font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;">The armband</p>
     <p style="margin:0 0 8px;font-size:16px;font-weight:700;">Captain: {{ report.captain|default:"No clear option" }} &middot; Vice: {{ report.vice|default:"No clear option" }}</p>
-    <p style="margin:0;color:#58685c;font-size:12px;line-height:1.7;">These follow the next gameweek's fixture and playing-time estimates; check player availability in <a href="https://fantasy.premierleague.com/" style="color:#17372e;text-decoration:underline;">Fantasy Premier League</a> near the deadline.</p>
+    <p style="margin:0;color:#58685c;font-size:12px;line-height:1.7;">{% if report.lineup_mode == 'planned' %}These are your planned armbands. GW{{ report.gameweek }} keeps your planned XI; transfers inherit the outgoing player's place and armband. Later gameweeks use optimised lineups.{% else %}These follow the next gameweek's fixture and playing-time estimates.{% endif %} Check player availability in <a href="https://fantasy.premierleague.com/" style="color:#17372e;text-decoration:underline;">Fantasy Premier League</a> near the deadline.</p>
 
     {% if report.rival %}
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:24px;border:1px solid #ccd2c3;"><tr><td style="padding:16px;">

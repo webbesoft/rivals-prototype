@@ -43,6 +43,12 @@ def evidence_for(report):
                 " This is a longer-term move; it has no immediate points advantage."
             )
     evidence = [{"id": "route", "title": title, "detail": detail}]
+    selection_note = (
+        f" GW{report['gameweek']} keeps your planned XI and captain; transfers inherit the outgoing player's place and armband. Later gameweeks use optimised legal lineups."
+        if report.get("lineup_mode") == "planned"
+        else " Each gameweek uses an optimised legal XI and captain, which may differ from your FPL selection."
+    )
+    evidence[0]["detail"] += selection_note
     if best.get("price_notes"):
         evidence[0]["detail"] += (
             " Price timing: "
@@ -88,7 +94,12 @@ def evidence_for(report):
             {
                 "id": "captain",
                 "title": f'Captain {report["captain"]}',
-                "detail": f'Vice-captain: {report["vice"]}. These choices use the next gameweek projection; check availability near the deadline.',
+                "detail": f'Vice-captain: {report["vice"]}. '
+                + (
+                    "These are your planned armbands; check availability near the deadline."
+                    if report.get("lineup_mode") == "planned"
+                    else "These choices use the next gameweek projection; check availability near the deadline."
+                ),
             }
         )
     if report["risks"]:

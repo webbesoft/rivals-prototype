@@ -976,7 +976,8 @@ def test_preview_renders_squad_without_running_transfer_search(manager, api):
     html = response.content.decode()
     assert "Fixtures and playing-time risks" in html
     assert "decision-results" in html and "?results=1" in html
-    assert "<select" not in html
+    assert 'name="starters"' in html and 'name="captain"' in html
+    assert 'name="owned_0"' not in html and 'name="bank"' not in html
     assert "planner;dur=" in response["Server-Timing"]
 
 
@@ -1696,7 +1697,20 @@ def test_planner_opens_with_results_and_no_confirmation_tasks(manager, api):
     html = response.content.decode()
     assert html.index("Before the next deadline") < html.index("Adjust estimates")
     assert "Needs confirmation" not in html and "Confirm your squad" not in html
-    assert 'type="checkbox"' not in html
+    assert 'name="starters"' in html
+    from html.parser import HTMLParser
+
+    class CheckboxParser(HTMLParser):
+        names = []
+
+        def handle_starttag(self, tag, attrs):
+            attrs = dict(attrs)
+            if tag == "input" and attrs.get("type") == "checkbox":
+                self.names.append(attrs.get("name"))
+
+    parser = CheckboxParser()
+    parser.feed(html)
+    assert "squad_confirmed" not in parser.names
     assert len(response.context["report"]["inputs"]["sales"]) == 15
 
 

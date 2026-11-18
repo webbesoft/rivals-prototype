@@ -15,12 +15,13 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET, require_POST
 from django.views.decorators.gzip import gzip_page
 
-from rivals.forms import DecisionInputForm
+from rivals.forms import DecisionInputForm, LineupInputForm
 from core.rate_limits import rate_limit
 from rivals.services.planner_presentation import planner_pitch_weeks
 from rivals.services.ai_credentials import configured
 from rivals.models import DecisionRecord, Team, TeamPlanningInput
 from rivals.services.decision_engine import DecisionEngine, DecisionUnavailable, digest
+from rivals.services.planned_lineup import remap_squad_lineup, validate_lineup
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +57,70 @@ def report_context(report, user):
         "decision_deadline": parse_datetime(report["deadline"]),
         "decision_prepared": parse_datetime(report["created_at"]),
     }
+
+
+def lineup_context(engine, report):
+    return {
+        "lineup_form": LineupInputForm(
+            engine=engine, initial_lineup=report["baseline"]["lineups"][0]
+        ),
+    }
+
+
+def planning_record(engine, inputs):
+    record, _ = TeamPlanningInput.objects.get_or_create(
+        user=engine.user,
+        team=engine.team,
+        season=engine.context["season"],
+        gameweek=engine.context["decision_gameweek"],
+        defaults={
+            "horizon": inputs["horizon"],
+            "strategy": inputs["strategy"],
+            "target_league_id": inputs["league_id"],
+            "target_rival_id": inputs["rival_id"],
+        },
+    )
+    return record
+
+
+def update_planning_record(record, values):
+    # A single conditional UPDATE also works on SQLite, where row locks are unavailable.
+    updated = TeamPlanningInput.objects.filter(
+        pk=record.pk,
+        updated_at=record.updated_at,
+        squad_ids=record.squad_ids,
+        planned_lineup=record.planned_lineup,
+    ).update(**values, updated_at=timezone.now())
+    if updated:
+        record.refresh_from_db()
+    return bool(updated)
+
+
+def lineup_preview_response(request, engine, *, form=None, error=None):
+    report = engine.preview()
+    return render(
+        request,
+        "partials/decision_preview.html",
+        {
+            "report": report,
+            "planner_weeks": planner_pitch_weeks(report),
+            "decision_deadline": parse_datetime(report["deadline"]),
+            "lineup_form": form
+            or LineupInputForm(
+                engine=engine, initial_lineup=report["baseline"]["lineups"][0]
+            ),
+            "lineup_error": error,
+        },
+    )
+
+
+def planning_conflict_response(request, engine):
+    engine.load()
+    return lineup_preview_response(
+        request,
+        engine,
+        error="Your squad or lineup changed while this plan was being saved. Review the current XI and try again. No changes were saved.",
+    )
 
 
 def financial_defaults(engine, data):
@@ -124,7 +189,8 @@ def summary(request):
 @rate_limit("analysis", methods=("GET",))
 def preview(request):
     try:
-        report = DecisionEngine(request.user).load().preview()
+        engine = DecisionEngine(request.user).load()
+        report = engine.preview()
         return render(
             request,
             "partials/decision_preview.html",
@@ -132,6 +198,7 @@ def preview(request):
                 "report": report,
                 "planner_weeks": planner_pitch_weeks(report),
                 "decision_deadline": parse_datetime(report["deadline"]),
+                **lineup_context(engine, report),
             },
         )
     except DecisionUnavailable as error:
@@ -211,6 +278,7 @@ def workspace(request):
         report = None
         if request.method == "POST" and form.is_valid():
             data = form.cleaned_data
+            original = engine.inputs()
             inputs = {
                 "ids": data["ids"],
                 "sales": data["sales"],
@@ -224,28 +292,43 @@ def workspace(request):
                 ),
                 "rival_id": data["target_rival"].pk if data["target_rival"] else None,
                 "manual": data["manual"],
+                "lineup": remap_squad_lineup(
+                    original["lineup"], original["ids"], data["ids"], engine.players
+                ),
             }
             try:
                 report = engine.report(inputs)
             except ValueError as error:
                 form.add_error(None, str(error))
             else:
-                TeamPlanningInput.objects.update_or_create(
-                    user=request.user,
-                    team=request.user.team,
-                    season=engine.context["season"],
-                    gameweek=engine.context["decision_gameweek"],
-                    defaults={
-                        **financial_defaults(engine, data),
-                        "squad_ids": data["ids"],
-                        "squad_confirmed": data["squad_confirmed"],
-                        "horizon": data["horizon"],
-                        "strategy": data["strategy"],
-                        "target_league": data["target_league"],
-                        "target_rival": data["target_rival"],
-                        "manual_moves": data["manual"],
-                    },
-                )
+                record = planning_record(engine, inputs)
+                current_ids = record.squad_ids or engine.public_ids
+                if set(current_ids) != set(original["ids"]):
+                    return planning_conflict_response(request, engine)
+                engine.saved = record
+                values = {
+                    **financial_defaults(engine, data),
+                    "squad_ids": data["ids"],
+                    "squad_confirmed": data["squad_confirmed"],
+                    "horizon": data["horizon"],
+                    "strategy": data["strategy"],
+                    "target_league": data["target_league"],
+                    "target_rival": data["target_rival"],
+                    "manual_moves": data["manual"],
+                }
+                if set(data["ids"]) != set(original["ids"]):
+                    latest_lineup = record.planned_lineup
+                    try:
+                        validate_lineup(latest_lineup, current_ids, engine.players)
+                    except (ValueError, KeyError):
+                        latest_lineup = {}
+                    values["planned_lineup"] = remap_squad_lineup(
+                        latest_lineup, current_ids, data["ids"], engine.players
+                    )
+                if not update_planning_record(record, values):
+                    return planning_conflict_response(request, engine)
+                engine.__dict__.pop("default_values", None)
+                report = engine.report()
         elif request.method == "GET":
             report = engine.report()
         context = {
@@ -255,6 +338,7 @@ def workspace(request):
         }
         if report:
             context.update(report_context(report, request.user))
+            context.update(lineup_context(engine, report))
         return render(request, "partials/decision_workspace.html", context)
     except DecisionUnavailable as error:
         return render(
@@ -266,6 +350,55 @@ def workspace(request):
             request,
             "partials/decision_workspace.html",
             {"decision_error": "We couldn't prepare your plan. Please try again."},
+        )
+
+
+@login_required
+@require_POST
+@never_cache
+@rate_limit("analysis", methods=("POST",))
+def update_lineup(request):
+    try:
+        engine = DecisionEngine(request.user).load()
+        # A cheap baseline supplies initial choices; invalid submissions never run a search.
+        preview_report = engine.preview()
+        form = LineupInputForm(
+            request.POST,
+            engine=engine,
+            initial_lineup=preview_report["baseline"]["lineups"][0],
+        )
+        if not form.is_valid():
+            return lineup_preview_response(request, engine, form=form)
+        inputs = engine.inputs()
+        inputs["lineup"] = form.cleaned_data["lineup"]
+        report = engine.report(inputs)
+        record = planning_record(engine, inputs)
+        if set(record.squad_ids or engine.public_ids) != set(inputs["ids"]):
+            return planning_conflict_response(request, engine)
+        values = {"planned_lineup": inputs["lineup"]}
+        for amount, timestamp in (
+            ("bank", "bank_recorded_at"),
+            ("free_transfers", "free_transfers_recorded_at"),
+        ):
+            if (
+                getattr(record, amount) is not None
+                and getattr(record, timestamp) is None
+            ):
+                values[timestamp] = record.updated_at
+        if not update_planning_record(record, values):
+            return planning_conflict_response(request, engine)
+        context = {
+            **report_context(report, request.user),
+            "results_only": True,
+            "show_pitch": True,
+            "ai_enabled": configured(),
+        }
+        engine.saved = record
+        context.update(lineup_context(engine, report))
+        return render(request, "partials/decision_workspace.html", context)
+    except (DecisionUnavailable, ValueError) as error:
+        return render(
+            request, "partials/decision_workspace.html", {"decision_error": str(error)}
         )
 
 

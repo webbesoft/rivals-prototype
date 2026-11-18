@@ -1,5 +1,5 @@
-<div class="lineup-player{% if player.element_type == 1 %} lineup-player--keeper{% endif %}">
-  {% if on_bench %}<span class="lineup-bench-position">{% if player.element_type == 1 %}GKP{% else %}{{ forloop.counter0 }} · {{ player.position }}{% endif %}</span>{% endif %}
+<div class="lineup-player{% if player.element_type == 1 %} lineup-player--keeper{% endif %}" {% if editable %}data-lineup-player="{{ player.id }}" data-position="{{ player.element_type }}" data-name="{{ player.name }}" data-starting="{% if on_bench %}false{% else %}true{% endif %}" data-points="{{ player.fixture.points }}" data-captain="{{ player.is_captain|yesno:'true,false' }}" data-vice="{{ player.is_vice_captain|yesno:'true,false' }}"{% endif %}>
+  {% if editable or on_bench %}<span class="lineup-bench-position" {% if not on_bench %}hidden{% endif %}>{% if player.element_type == 1 %}GKP{% else %}{{ forloop.counter0 }} · {{ player.position }}{% endif %}</span>{% endif %}
   {% include "partials/lineup_kit.html" %}
   <p class="lineup-player-name" title="{{ player.name }}">{{ player.name }}</p>
   <p class="lineup-player-club">{{ player.club }}</p>
@@ -9,4 +9,5 @@
   </div>
   {% if player.risk_label %}<p class="planner-risk" title="{{ player.news|default:'Check availability and playing time before the deadline.' }}"><span aria-hidden="true">!</span> {{ player.risk_label }}</p>{% endif %}
   {% if player.price_warning %}<p class="planner-risk" title="{{ player.price_warning.detail }}">{{ player.price_warning.label }}</p>{% endif %}
+  {% if editable %}<button type="button" class="planner-player-select" data-lineup-select aria-pressed="false" aria-label="Select {{ player.name }} to substitute or assign captaincy"><span class="planner-swap-icon" aria-hidden="true">↔</span></button>{% endif %}
 </div>

@@ -826,6 +826,7 @@ class TeamPlanningInput(models.Model):
     squad_ids = models.JSONField(default=list)
     squad_confirmed = models.BooleanField(default=False)
     manual_moves = models.JSONField(default=list)
+    planned_lineup = models.JSONField(default=dict, blank=True)
     horizon = models.PositiveSmallIntegerField(default=5)
     strategy = models.CharField(max_length=10, default="protect")
     target_league = models.ForeignKey(

@@ -21,6 +21,7 @@
         <p class="decision-verdict">{% if report.best.moves %}{% if report.best.immediate.net_gain > 0 %}More points now and over {{ report.horizon }} gameweeks.{% elif report.best.immediate.net_gain < 0 %}<strong>A longer-term move.</strong> Holding projects more points this week.{% else %}<strong>A longer-term move.</strong> No points gain this week.{% endif %}{% else %}Keep your flexibility for the next deadline.{% endif %}</p>
         {% if report.best.immediate %}{% include "partials/decision_points_table.html" with compact=True %}{% endif %}
         <p class="decision-table-note">Captaincy included{% if report.best.hits %} · {{ report.best.hits }}-point hit already deducted{% endif %} · Estimates</p>
+        <p class="decision-table-note">{% if report.lineup_mode == 'planned' %}GW{{ report.gameweek }} compares your planned XI and captain, with transfers inheriting the outgoing player's place. Later gameweeks use optimised lineups.{% else %}Compares optimised legal lineups and captains each week, which may differ from your FPL selection.{% endif %}</p>
         {% include "partials/price_timing.html" with option=report.best %}
         {% include "partials/decision_fixtures.html" with option=report.best %}
       </div>
@@ -28,7 +29,7 @@
       <div class="decision-actions">
         <div class="decision-action decision-captain">
           <span class="decision-action-icon" aria-hidden="true">C</span>
-          <div><p class="decision-label">Captain</p><strong>{{ report.captain|default:"No clear option" }}</strong><p class="decision-action-note">Vice: {{ report.vice|default:"not yet clear" }}</p></div>
+          <div><p class="decision-label">{% if report.lineup_mode == 'planned' %}Your captain · if holding{% else %}Captain{% endif %}</p><strong>{{ report.captain|default:"No clear option" }}</strong><p class="decision-action-note">Vice: {{ report.vice|default:"not yet clear" }}</p></div>
         </div>
         {% if report.risks %}
         <div class="decision-action decision-availability">

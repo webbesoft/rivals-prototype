@@ -15,15 +15,16 @@ def planner_pitch_weeks(report):
                     "player_name": player["name"],
                     "fixture": fixture,
                     "is_captain": player["id"] == lineup["captain"]
-                    and fixture["points"] > 0,
+                    and (lineup.get("selection") == "planned" or fixture["points"] > 0),
                     "is_vice_captain": player["id"] == lineup["vice"]
-                    and fixture["points"] > 0,
+                    and (lineup.get("selection") == "planned" or fixture["points"] > 0),
                 }
             )
         starters = [p for p in players if p["id"] in lineup["xi"]]
         rows = [
             {
                 "label": label,
+                "position": kind,
                 "players": [p for p in starters if p["element_type"] == kind],
             }
             for kind, label in (
@@ -36,6 +37,7 @@ def planner_pitch_weeks(report):
         weeks.append(
             {
                 "gameweek": lineup["gameweek"],
+                "selection": lineup.get("selection", "optimised"),
                 "points": round(lineup["points"], 1),
                 "rows": rows,
                 "formation": "-".join(str(len(row["players"])) for row in rows[1:]),
