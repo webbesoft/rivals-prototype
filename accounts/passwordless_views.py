@@ -7,7 +7,7 @@ from allauth.socialaccount.models import SocialAccount
 from django import forms
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import login
+from django.contrib.auth import get_user_model, login
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, HttpResponseGone
 from django.shortcuts import redirect, render
@@ -122,6 +122,20 @@ def magic_confirm(request):
         used_at__isnull=True,
         expires_at__gt=timezone.now(),
     ).first()
+    returning_user = (
+        get_user_model()
+        .objects.select_related("team")
+        .filter(email__iexact=challenge.email, is_active=True, is_verified=True)
+        .first()
+        if challenge
+        else None
+    )
+    auto_sign_in = bool(
+        returning_user
+        and has_fpl_setup(returning_user)
+        and not request.session.get("account_reauthentication_state")
+        and (not request.user.is_authenticated or request.user.pk == returning_user.pk)
+    )
     return render(
         request,
         "accounts/magic_confirm.html",
@@ -129,6 +143,7 @@ def magic_confirm(request):
             "invalid": challenge is None,
             "email": challenge.email if challenge else "",
             "challenge_id": challenge.pk if challenge else "",
+            "auto_sign_in": auto_sign_in,
         },
     )
 

@@ -127,6 +127,66 @@ def test_link_reuses_legacy_account_without_touching_fpl_data(client, user):
     assert not user.has_usable_password()
 
 
+def test_returning_email_link_auto_submits_without_consuming_on_get(client, user):
+    connect_team(user)
+    issue_link(user.email, "/dashboard/")
+    path = emailed_path()
+    scanner = Client()
+    assert scanner.get(path, follow=True).status_code == 200
+    assert SignInLink.objects.get().used_at is None
+    assert "_auth_user_id" not in scanner.session
+
+    page = client.get(path, follow=True)
+    assert page.context["auto_sign_in"] is True
+    assert b"data-auto-sign-in" in page.content
+    assert b"js/email-sign-in.js" in page.content
+    assert b'name="csrfmiddlewaretoken"' in page.content
+    response = client.post(
+        reverse("accounts:magic_confirm"),
+        {"challenge_id": page.context["challenge_id"]},
+    )
+    assert response.url == reverse("rivals:dashboard")
+    assert client.session["_auth_user_id"] == str(user.pk)
+    assert SignInLink.objects.get().used_at is not None
+
+
+@pytest.mark.parametrize("existing_account", [False, True])
+def test_email_link_keeps_confirmation_until_setup_is_complete(
+    client, existing_account
+):
+    email = "new@example.com"
+    if existing_account:
+        User.objects.create_user(email=email, username="new", is_verified=True)
+    issue_link(email, "/dashboard/")
+    page = client.get(emailed_path(), follow=True)
+    assert page.context["auto_sign_in"] is False
+    assert b"data-auto-sign-in" not in page.content
+    assert b"Confirm sign-in" in page.content
+    assert confirm_sign_in(client).url == reverse("accounts:onboarding")
+
+
+@pytest.mark.parametrize("reason", ["switch_account", "reauthenticate", "disabled"])
+def test_email_link_keeps_explicit_confirmation_for_sensitive_sign_in(
+    client, user, reason
+):
+    connect_team(user)
+    issue_link(user.email, "/dashboard/")
+    if reason == "switch_account":
+        other = User.objects.create_user(email="other@example.com", username="other")
+        client.force_login(other)
+    elif reason == "reauthenticate":
+        client.force_login(user)
+        session = client.session
+        session["account_reauthentication_state"] = {"next": "/accounts/profile/"}
+        session.save()
+    else:
+        user.is_active = False
+        user.save(update_fields=["is_active"])
+    page = client.get(emailed_path(), follow=True)
+    assert page.context["auto_sign_in"] is False
+    assert b"data-auto-sign-in" not in page.content
+
+
 def test_returning_passwordless_sign_in_keeps_other_device_session(client, user):
     connect_team(user)
     issue_link(user.email, "/dashboard/")
