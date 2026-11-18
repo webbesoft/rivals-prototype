@@ -3,7 +3,7 @@
 <div class="max-w-5xl mx-auto px-4 py-8">
   <div class="journal-page-heading">
     <div><p class="lineup-eyebrow">Your season, move by move</p><h1 class="app-page-title text-3xl font-black mt-2">Decision journal</h1></div>
-    <a class="journal-planner-link" href="{% url 'rivals:decisions' %}">Plan your next move <span aria-hidden="true">↗</span></a>
+    <a class="journal-planner-link" href="{% url 'rivals:decisions' %}">Plan your next move <span aria-hidden="true"><c-components.icon name="arrow-up-right" /></span></a>
   </div>
   {% for message in messages %}<p role="status" class="my-4">{{ message }}</p>{% endfor %}
   <p class="text-sm text-gray-600 my-5">Follow each saved plan from forecast to final scores. Reviews use the lineups predicted when you saved it; results don't prove that a decision was good or bad.</p>
@@ -59,7 +59,7 @@
     </div>
   </article>
   {% empty %}
-  <div class="app-panel journal-empty"><span aria-hidden="true">↗</span><h2>Your first move starts here</h2><p>Save a transfer route or a roll. Your forecast, gameweek results and review will build up here.</p><a class="journal-planner-link" href="{% url 'rivals:decisions' %}">Explore your options →</a></div>
+  <div class="app-panel journal-empty"><span aria-hidden="true"><c-components.icon name="arrow-up-right" /></span><h2>Your first move starts here</h2><p>Save a transfer route or a roll. Your forecast, gameweek results and review will build up here.</p><a class="journal-planner-link" href="{% url 'rivals:decisions' %}">Explore your options →</a></div>
   {% endfor %}
   {% include "cotton/components/pagination.html" with page_obj=decisions %}
 </div>

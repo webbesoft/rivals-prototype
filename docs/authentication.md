@@ -47,7 +47,8 @@ Turning the flag off restores legacy routes while diagnosing a rollout problem. 
 
 Users can choose **Delete my account** from their profile or the FPL onboarding
 page. The confirmation page requires their account email and a CSRF-protected
-POST. Deletion signs them out, removes private plans, tracking subscriptions,
+POST. A final browser confirmation lets them cancel before submitting. Deletion
+signs them out, removes private plans, tracking subscriptions,
 briefing history and AI credentials, and revokes API tokens, social sign-ins and
 MCP OAuth grants. Outstanding email sign-in links and legacy account jobs are
 also removed. Other browser sessions lose access on their next request.

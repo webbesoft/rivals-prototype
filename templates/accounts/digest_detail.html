@@ -79,8 +79,8 @@
         <noscript><p class="briefing-detail-live"><a href="{% url 'accounts:digests.detail' digest.id %}">Refresh this page</a> to check your briefing's progress.</p></noscript>
         {% endif %}
         <div class="briefing-detail-actions">
-          {% if digest.report and user.team_id == digest.team_id %}<a class="app-primary-button" href="?email=1" target="_blank" rel="noopener">Open email preview <span aria-hidden="true">↗</span></a>{% endif %}
-          <a class="app-secondary-button" href="{% url 'rivals:decisions' %}">Open transfer plan <span aria-hidden="true">↗</span></a>
+          {% if digest.report and user.team_id == digest.team_id %}<a class="app-primary-button" href="?email=1" target="_blank" rel="noopener">Open email preview <span aria-hidden="true"><c-components.icon name="arrow-up-right" /></span></a>{% endif %}
+          <a class="app-secondary-button" href="{% url 'rivals:decisions' %}">Open transfer plan <span aria-hidden="true"><c-components.icon name="arrow-up-right" /></span></a>
         </div>
       </div>
 
@@ -93,7 +93,7 @@
           <div><dt>Briefing type</dt><dd>{% if digest.kind == 'preview' %}Preview only{% elif digest.kind == 'test' %}Test email{% else %}Deadline email{% endif %}</dd></div>
           {% if digest.sent_at %}<div><dt>Sent</dt><dd>{{ digest.sent_at|date:"D j M, H:i T" }}</dd></div>{% elif digest.prepared_at %}<div><dt>Prepared</dt><dd>{{ digest.prepared_at|date:"D j M, H:i T" }}</dd></div>{% endif %}
         </dl>
-        <div class="briefing-edition-contents"><h3>In your briefing</h3><ul><li>Forecast XI &amp; bench</li><li>Captain options &amp; squad risks</li><li>Your transfer priorities</li></ul></div>
+        <div class="briefing-edition-contents"><h3>In your briefing</h3><ul><li><c-components.icon name="arrow-up-right" />Forecast XI &amp; bench</li><li><c-components.icon name="arrow-up-right" />Captain options &amp; squad risks</li><li><c-components.icon name="arrow-up-right" />Your transfer priorities</li></ul></div>
       </aside>
     </section>
   </div>

@@ -16,7 +16,7 @@
           <p id="team-id-help" class="app-field-help">Open your team’s Points page on the FPL website. Your ID is the number after /entry/ in the address.</p>
           {% if form.fpl_id.errors %}<div id="fpl-id-errors" class="app-field-error">{{ form.fpl_id.errors }}</div>{% endif %}
         </div>
-        <button type="submit" class="app-primary-button">Connect team and continue <span aria-hidden="true">↗</span></button>
+        <button type="submit" class="app-primary-button">Connect team and continue <span aria-hidden="true"><c-components.icon name="arrow-up-right" /></span></button>
       </form>
       <p class="app-auth-switch">Your leagues and stats will refresh after connecting.</p>
       {% if user.onboarding_expires_at %}

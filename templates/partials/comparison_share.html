@@ -16,12 +16,12 @@
     data-rival-form="{{ comparison.momentum.rival.average|floatformat:1|default:'—' }}"
     data-my-forecast="{{ comparison.projected_gw_outcome.my_expected|floatformat:1|default:'—' }}"
     data-rival-forecast="{{ comparison.projected_gw_outcome.rival_expected|floatformat:1|default:'—' }}"
-    hidden>Share comparison ↗</button>
+    hidden>Share comparison <c-components.icon name="arrow-up-right" /></button>
 </div>
 <dialog class="rv-share-dialog" aria-labelledby="comparison-share-title">
   <div class="rv-share-dialog-heading"><h2 id="comparison-share-title">Share your comparison</h2><form method="dialog"><button type="submit" class="app-secondary-button" aria-label="Close share preview">Close ×</button></form></div>
   <p>Save the infographic or share it with your rival.</p>
   <p data-share-status role="status" aria-live="polite"></p>
   <img data-share-preview alt="Comparison infographic with both teams’ season points, captain choices, recent form and next gameweek forecasts." hidden>
-  <div class="rv-share-actions"><a class="app-secondary-button" data-share-save hidden>Save PNG ↓</a><button type="button" class="app-secondary-button" data-share-native hidden>Share image ↗</button></div>
+  <div class="rv-share-actions"><a class="app-secondary-button" data-share-save hidden>Save PNG ↓</a><button type="button" class="app-secondary-button" data-share-native hidden>Share image <c-components.icon name="arrow-up-right" /></button></div>
 </dialog>

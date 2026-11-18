@@ -22,7 +22,7 @@
           <input type="password" id="password" name="password" autocomplete="current-password" required {% if form.password.errors %}aria-invalid="true" aria-describedby="password-errors"{% endif %}>
           {% if form.password.errors %}<div id="password-errors" class="app-field-error">{{ form.password.errors }}</div>{% endif %}
         </div>
-        <button type="submit" class="app-primary-button">Log in <span aria-hidden="true">↗</span></button>
+        <button type="submit" class="app-primary-button">Log in <span aria-hidden="true"><c-components.icon name="arrow-up-right" /></span></button>
       </form>
       <p class="app-auth-switch"><a href="{% url 'accounts:password_reset' %}">Forgot your password?</a></p>
       <p class="app-auth-switch">New to the league? <a href="{% url 'accounts:signup' %}">Create an account</a></p>

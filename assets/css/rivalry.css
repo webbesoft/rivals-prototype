@@ -438,9 +438,9 @@
   font-size: 13px;
   line-height: 1.8;
 }
-.rv-insights li::before {
-  content: "↗";
+.rv-insights li > .app-icon {
   position: absolute;
+  top: 21px;
   left: 0;
 }
 .rv-details {

@@ -33,7 +33,7 @@
           <input type="password" id="password2" name="password2" autocomplete="new-password" required {% if form.password2.errors %}aria-invalid="true" aria-describedby="password2-errors"{% endif %}>
           {% if form.password2.errors %}<div id="password2-errors" class="app-field-error">{{ form.password2.errors }}</div>{% endif %}
         </div>
-        <button type="submit" class="app-primary-button">Start tracking rivals <span aria-hidden="true">↗</span></button>
+        <button type="submit" class="app-primary-button">Start tracking rivals <span aria-hidden="true"><c-components.icon name="arrow-up-right" /></span></button>
       </form>
       <details class="app-team-id-help"><summary>Where do I find my team ID?</summary><p>Open your team’s Points page on the FPL website. In the address, the number after <strong>/entry/</strong> is your team ID.</p></details>
       <p class="app-auth-switch">Already have an account? <a href="{% url 'accounts:login' %}">Log in</a></p>

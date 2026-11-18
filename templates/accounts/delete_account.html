@@ -9,7 +9,7 @@
       <h2 id="delete-title" class="app-section-title">This cannot be undone</h2>
       <p>Your saved transfer plans, tracked rivals, league subscriptions, briefing history and saved AI key will be deleted. Connected assistants and API tokens will lose access.</p>
       <p class="app-field-help">Your Fantasy Premier League account is unaffected. Public FPL team and league records shared with other managers remain available. Signing up again creates a new RivalSpy account.</p>
-      <form method="post" action="{% url 'accounts:delete_account' %}" class="app-form">
+      <form method="post" action="{% url 'accounts:delete_account' %}" class="app-form" onsubmit="return window.confirm('Permanently delete your RivalSpy account? This cannot be undone.');">
         {% csrf_token %}
         <div>
           <label for="{{ form.confirmation_email.id_for_label }}">{{ form.confirmation_email.label }}</label>

@@ -46,6 +46,6 @@
 <section class="app-panel briefing-settings-card" aria-labelledby="briefing-history-heading">
   <div class="briefing-settings-heading"><div><h2 id="briefing-history-heading" class="app-section-title">Recent briefings</h2></div></div>
   <ul class="briefing-history">{% for digest in digests %}
-    <li><div><a href="{% url 'accounts:digests.detail' digest.id %}">GW{{ digest.gameweek }} <span>↗</span></a><p>{{ digest.season }} · {{ digest.kind|title }}</p>{% if digest.notice %}<p class="briefing-history-notice">{{ digest.notice }}</p>{% endif %}</div><span class="briefing-delivery-badge">{{ digest.status_label }}</span></li>
+    <li><div><a href="{% url 'accounts:digests.detail' digest.id %}">GW{{ digest.gameweek }} <span><c-components.icon name="arrow-up-right" /></span></a><p>{{ digest.season }} · {{ digest.kind|title }}</p>{% if digest.notice %}<p class="briefing-history-notice">{{ digest.notice }}</p>{% endif %}</div><span class="briefing-delivery-badge">{{ digest.status_label }}</span></li>
     {% empty %}<li class="briefing-history-empty">Your briefings will appear here once you prepare a preview or enable delivery.</li>{% endfor %}</ul>
 </section>

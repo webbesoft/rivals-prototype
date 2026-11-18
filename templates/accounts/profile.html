@@ -10,7 +10,7 @@
     <div class="mb-8 space-y-4">
       {% for message in messages %}
       <div class="p-4 rounded-xl border-l-4 text-sm font-bold shadow-sm flex items-center gap-3 {% if message.tags == 'error' %} bg-white text-danger border-danger {% endif %} {% if message.tags == 'success' %} bg-white text-success border-success {% endif %}">
-        {% if message.tags == 'success' %}<span>⚽</span>{% else %}<span>🚩</span>{% endif %}
+        {% if message.tags == 'success' %}<span><c-components.icon name="check" /></span>{% else %}<span><c-components.icon name="info" /></span>{% endif %}
         {{ message }}
       </div>
       {% endfor %}
@@ -20,7 +20,7 @@
     {% if new_season_available %}
     <div class="mb-8 p-6 rounded-2xl bg-amber-500/10 border-2 border-amber-500/30 text-amber-900 shadow-md">
       <div class="flex items-start gap-4">
-        <span class="text-3xl">🏆</span>
+        <span class="text-3xl"><c-components.icon name="trophy" /></span>
         <div>
           <h3 class="text-lg font-black uppercase tracking-tight text-amber-700">New FPL Season Detected!</h3>
           <p class="text-sm font-medium mt-1 text-amber-800">

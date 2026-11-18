@@ -136,7 +136,7 @@
                   {% else %}<strong>0</strong><span>level on points</span>{% endif %}
                 {% else %}<strong>—</strong><span>Not available</span>{% endif %}
               </div>
-              <div class="rv-watch-actions"><a href="{% url 'rivals:teams.compare' team.team.id %}">Compare ↗</a><form method="POST" action="{% url 'rivals:teams.untrack' team.team.id %}">{% csrf_token %}<button type="submit" aria-label="Stop tracking {{ team.team.team_name }}">Remove</button></form></div>
+              <div class="rv-watch-actions"><a href="{% url 'rivals:teams.compare' team.team.id %}">Compare <c-components.icon name="arrow-up-right" /></a><form method="POST" action="{% url 'rivals:teams.untrack' team.team.id %}">{% csrf_token %}<button type="submit" aria-label="Stop tracking {{ team.team.team_name }}">Remove</button></form></div>
             </li>{% endfor %}
           </ul>
 

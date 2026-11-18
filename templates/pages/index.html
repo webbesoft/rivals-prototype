@@ -6,8 +6,8 @@
       <span class="rs-header-note">The league within your league.</span>
       <nav aria-label="Main navigation">
         <a class="rs-briefing-link" href="#scouting-feed">FPL briefing</a>
-        {% if user.is_authenticated %}<a class="rs-nav-action" href="{% url 'rivals:dashboard' %}">My dashboard <span aria-hidden="true">↗</span></a>
-        {% else %}<a href="{% url 'accounts:login' %}">Log in</a><a class="rs-nav-action" href="{% url 'accounts:signup' %}">Join the chase <span aria-hidden="true">↗</span></a>{% endif %}
+        {% if user.is_authenticated %}<a class="rs-nav-action" href="{% url 'rivals:dashboard' %}">My dashboard <span aria-hidden="true"><c-components.icon name="arrow-up-right" /></span></a>
+        {% else %}<a href="{% url 'accounts:login' %}">Log in</a><a class="rs-nav-action" href="{% url 'accounts:signup' %}">Join the chase <span aria-hidden="true"><c-components.icon name="arrow-up-right" /></span></a>{% endif %}
       </nav>
     </header>
 
@@ -43,7 +43,7 @@
         <div class="rs-insight-copy"><span class="rs-kicker">The different players</span><h3>The shared picks cancel.<br>The differences count.</h3><p>The rest of your shared players score equally. Your different players return 9 points against Jamie’s 6. Another 3 points in your favour.</p></div>
         <div class="rs-comparison"><div><span class="rs-comparison-owner">Your different players</span><p>The edge</p><span class="rs-comparison-bar rs-comparison-bar-you" style="--bar:100%"></span><strong>9 <small>pts</small></strong></div><div><span class="rs-comparison-owner">Jamie’s different players</span><p>The opposition</p><span class="rs-comparison-bar" style="--bar:67%"></span><strong>6 <small>pts</small></strong></div></div>
       </div>
-      <div class="rs-case-foot"><p>Alex 72 · Jamie 58 after hits. Example names and scores; your own league will tell a different story.</p><a href="#your-rivalry">Now follow your own rivalry <span aria-hidden="true">↗</span></a></div>
+      <div class="rs-case-foot"><p>Alex 72 · Jamie 58 after hits. Example names and scores; your own league will tell a different story.</p><a href="#your-rivalry">Now follow your own rivalry <span aria-hidden="true"><c-components.icon name="arrow-up-right" /></span></a></div>
     </section>
 
     <section class="rs-xi rs-wrap" id="best-xi" aria-labelledby="best-xi-title">
@@ -77,7 +77,7 @@
     </section>
 
     <section class="rs-start rs-wrap" id="your-rivalry" aria-labelledby="start-title">
-      <div class="rs-start-title"><span class="rs-kicker">Your mini-league is personal.</span><h2 id="start-title">So is your <br>next move.</h2><a class="rs-button" href="{% if user.is_authenticated %}{% url 'rivals:dashboard' %}{% else %}{% url 'accounts:signup' %}{% endif %}">{% if user.is_authenticated %}Open my dashboard{% else %}Find my rivals{% endif %}<span aria-hidden="true">↗</span></a><p>Start with an account and your FPL team ID.</p></div>
+      <div class="rs-start-title"><span class="rs-kicker">Your mini-league is personal.</span><h2 id="start-title">So is your <br>next move.</h2><a class="rs-button" href="{% if user.is_authenticated %}{% url 'rivals:dashboard' %}{% else %}{% url 'accounts:signup' %}{% endif %}">{% if user.is_authenticated %}Open my dashboard{% else %}Find my rivals{% endif %}<span aria-hidden="true"><c-components.icon name="arrow-up-right" /></span></a><p>Start with an account and your FPL team ID.</p></div>
       <ol class="rs-route">
         <li><span class="rs-route-number">01</span><div><h3>Choose who matters.</h3><p>Connect your FPL team, add a mini-league and track the managers you want to follow. The runaway leader. The mate one place behind.</p></div></li>
         <li><span class="rs-route-number">02</span><div><h3>Read the rivalry.</h3><p>Compare squads, captain choices and transfers. Separate the players you share from the differences that move the gap.</p></div></li>
@@ -86,7 +86,7 @@
     </section>
 
     <section class="rs-feed rs-wrap" id="scouting-feed" aria-labelledby="feed-title">
-      <header class="rs-feed-heading"><div><span class="rs-kicker">Outside your mini-league</span><h2 id="feed-title">The scouting feed<span aria-hidden="true">↘</span></h2></div><p>Public FPL data{% if current_gameweek %} · GW {{ current_gameweek }}{% endif %}</p></header>
+      <header class="rs-feed-heading"><div><span class="rs-kicker">Outside your mini-league</span><h2 id="feed-title">The scouting feed<span aria-hidden="true"><c-components.icon name="arrow-down-right" /></span></h2></div><p>Public FPL data{% if current_gameweek %} · GW {{ current_gameweek }}{% endif %}</p></header>
       <div class="rs-feed-layout">
         <div class="rs-feed-main">
           <section class="rs-feed-section" aria-labelledby="ownership-title">
@@ -109,7 +109,7 @@
         </aside>
       </div>
     </section>
-    <footer class="rs-footer rs-wrap"><a class="rs-brand" href="{% url 'core:index' %}">RivalSpy<span class="rs-copyright">© {% now 'Y' %}</span></a><p>An independent FPL companion. Not affiliated with the Premier League.</p><a href="https://tawandamunongo.dev">Built by Tawanda Munongo ↗</a></footer>
+    <footer class="rs-footer rs-wrap"><a class="rs-brand" href="{% url 'core:index' %}">RivalSpy<span class="rs-copyright">© {% now 'Y' %}</span></a><p>An independent FPL companion. Not affiliated with the Premier League.</p><a href="https://tawandamunongo.dev">Built by Tawanda Munongo <c-components.icon name="arrow-up-right" /></a></footer>
   </div>
   <script src="{% static 'js/landing.js' %}" defer></script>
 </c-layouts.base>
