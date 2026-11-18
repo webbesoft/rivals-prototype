@@ -12,6 +12,7 @@ from .password_reset_views import LegacyPasswordResetConfirmView
 app_name = "accounts"
 
 urlpatterns = [
+    path("reauthenticate/", passwordless_views.reauthenticate, name="reauthenticate"),
     path("magic/<str:token>/", passwordless_views.magic_link, name="magic_link"),
     path("magic-confirm/", passwordless_views.magic_confirm, name="magic_confirm"),
     path("onboarding/fpl/", passwordless_views.onboarding, name="onboarding"),

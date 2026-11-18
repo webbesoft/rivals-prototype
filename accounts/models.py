@@ -1,3 +1,5 @@
+import uuid
+
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.db.models.functions import Lower
@@ -89,3 +91,17 @@ class SignInLink(models.Model):
     expires_at = models.DateTimeField(db_index=True)
     used_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+class PasskeyChallenge(models.Model):
+    class Purpose(models.TextChoices):
+        REGISTER = "register"
+        LOGIN = "login"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    session_digest = models.CharField(max_length=64)
+    user = models.ForeignKey(User, null=True, on_delete=models.CASCADE)
+    purpose = models.CharField(max_length=8, choices=Purpose.choices)
+    state = models.JSONField()
+    expires_at = models.DateTimeField(db_index=True)
+    used_at = models.DateTimeField(null=True)

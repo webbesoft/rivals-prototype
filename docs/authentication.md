@@ -1,6 +1,6 @@
 # Passwordless authentication rollout
 
-RivalSpy supports Google sign-in and single-use email links behind `PASSWORDLESS_AUTH_ENABLED`. The flag defaults to `False` so the existing password routes remain available during staging. Enable it to switch browser login/signup to passwordless and reject password-based API login/signup requests.
+RivalSpy supports passkeys, Google sign-in and single-use email links behind `PASSWORDLESS_AUTH_ENABLED`. The flag defaults to `False` so the existing password routes remain available during staging. Enable it to switch browser login/signup to passwordless and reject password-based API login/signup requests.
 
 ## Configuration
 
@@ -18,7 +18,21 @@ Kamal forwards all three new environment variables through `config/deploy.yml` a
 
 ## Account and FPL behavior
 
-Email requests do not create accounts. A successful email challenge creates or reuses the case-insensitive email identity, verifies it and removes its usable password. Google creates new accounts only with a verified email. If Google matches an existing local email, first sign in by email link and connect Google from **Profile → Manage sign-in methods**. Google connections must use the same verified email. Disconnecting Google leaves email-link access available.
+Email requests do not create accounts. A successful email challenge creates or reuses the case-insensitive email identity, verifies it and removes its usable password. Google can automatically create or link an account only with a verified `@gmail.com` address or a verified Google Workspace address whose returned `hd` claim matches its email domain (ignoring case). Matching an existing local email signs into that same account and connects Google, preserving the FPL team, tracked rivals and memberships. These restrictions run before allauth’s email lookup; global email authentication remains disabled for other providers.
+
+For other email addresses, Google’s `email_verified` flag can reflect an old ownership check. Those users must first sign in or register with an email link, then explicitly connect Google from **Profile → Manage sign-in methods** in the authenticated account. Connection requires the same verified email, and an identity already connected to another account cannot be reassigned. Subsequent Google sign-ins use the saved Google user ID (`sub`) to select the linked account, including for non-Gmail addresses, and also require Google's verified email to match the account's local email. A changed Workspace email address can therefore prevent sign-in even when the UID is unchanged; email-link recovery remains available for the local address. An unconnected Google identity cannot gain access by presenting the same external email. Unverified provider emails and disabled accounts cannot link or sign in. OAuth request parameters, including an `hd` hint, never establish ownership. This follows [Google’s guidance on authoritative email claims](https://developers.google.com/identity/gsi/web/guides/verify-google-id-token) using [allauth’s provider-scoped email authentication](https://docs.allauth.org/en/latest/socialaccount/configuration.html). Disconnecting Google leaves email-link and passkey access available.
+
+## Passkeys
+
+After signing in, choose **Profile → Manage sign-in methods → Add a passkey**. Name the passkey and confirm with a device PIN, fingerprint or face. The login page’s **Sign in with a passkey** button works without entering an email. Multiple passkeys can be saved and removed individually. Passkeys are an alternative sign-in method. Email links remain available for recovery, including after removing the last passkey.
+
+Fresh-session regression tests with a registered passkey and locked `django-allauth==65.22.1` confirm Google (mocked provider callback) and email links both establish a session without an MFA prompt or a `mfa_authenticate` redirect. Our `AccountAdapter.get_login_stages()` removes allauth’s MFA authentication/trust stages from Google sign-in; email-link confirmation uses Django’s `login()` directly.
+
+Registration and removal require a sign-in within the past five minutes. Older sessions are sent through an email confirmation and returned to the relevant form. Reauthentication always emails the current account’s address, and sensitive POST requests are never replayed automatically. Allauth handles challenge validation, origin/RP checks, public-key storage and signature verification; passkeys require resident credentials and PIN/biometric user verification. CSRF protection and sign-in rate limits remain enabled. Credentials belong to the account and are removed when the account is deleted.
+
+Each enrollment and login attempt carries its own `challenge_id`. Challenges expire after five minutes (`PASSKEY_CHALLENGE_TTL_SECONDS`), are bound to the issuing browser session and purpose, and enrollment additionally binds to the account. A database transaction atomically claims the challenge before cryptographic verification; failed verification also consumes it. Separate enrollment tabs can finish independently, and concurrent submissions of the same challenge cannot both verify. Expired records receive bounded cleanup when new challenges are issued. Apply `accounts.0010_passkeychallenge` before starting updated web processes; authentication-related schema changes remain additive.
+
+The `mfa` extra on `django-allauth` supplies `fido2`; `allauth.mfa` supplies its own database migrations. Run `uv sync --locked` and `uv run python manage.py migrate` before starting the updated application. No new environment credentials are needed. Production needs HTTPS and a consistent sign-in hostname: passkeys are scoped to the hostname where they were created. For local development use `http://localhost:8000` rather than an IP address; insecure-origin bypasses are disabled. A compatible browser and JavaScript are required; unavailable/cancelled device prompts leave email and Google sign-in available. See [allauth’s passkey configuration](https://docs.allauth.org/en/latest/mfa/configuration.html).
 
 Accounts without a matching FPL ID and linked team must finish `/accounts/onboarding/fpl/` before reaching dashboard pages, fragments, actions or MCP consent. The API enforces the same rule after session/token authentication. The onboarding page validates the FPL entry, publishes the team link atomically, reconciles memberships and queues refresh work. Full league/stat imports do not block entry to the dashboard. Validation or initialization failure leaves setup incomplete; failed team changes preserve the previous team.
 
@@ -86,7 +100,7 @@ Existing DRF bearer tokens remain supported, subject to verification and FPL gat
 ```sh
 uv run python manage.py check
 uv run python manage.py makemigrations --check --dry-run
-uv run python -m pytest tests/unit/test_passwordless.py
+uv run python -m pytest tests/unit/test_passwordless.py tests/unit/test_passkeys.py
 ```
 
 The new tests enable the rollout flag explicitly. Existing auth tests continue to cover the flag-off path. Run the full release checks in `docs/deployment.md` before deployment.

@@ -24,6 +24,7 @@ from accounts.views import login_view
 urlpatterns = [
     path("admin/login/", admin_login),
     path("accounts/", include("allauth.socialaccount.providers.google.urls")),
+    path("accounts/passkeys/", include("accounts.passkey_urls")),
     # Allauth's social flow uses this reverse name. Local account endpoints stay ours.
     path("accounts/login/", login_view, name="account_login"),
     path("", include("rivals_mcp.urls", namespace="oauth2_provider")),

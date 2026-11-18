@@ -1,0 +1,13 @@
+<c-layouts.base title="Confirm it’s you - RivalSpy">
+  <section class="app-panel app-auth-card mx-auto my-10" aria-labelledby="reauth-title">
+    <h1 id="reauth-title" class="app-section-title">Confirm it’s you</h1>
+    <p>Before changing your passkeys, confirm your sign-in with a link sent to {{ user.email }}.</p>
+    {% if delivery_error %}<p class="app-notice app-notice-error" role="alert">{{ delivery_error }}</p>{% endif %}
+    <form method="post" class="app-form">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ next }}">
+      <button type="submit" class="app-primary-button">Email me a confirmation link</button>
+    </form>
+    <p class="app-auth-switch"><a href="{% url 'accounts:connections' %}">Back to sign-in methods</a></p>
+  </section>
+</c-layouts.base>

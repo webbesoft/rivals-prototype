@@ -1,0 +1,11 @@
+<c-layouts.base title="Remove a passkey - RivalSpy">
+  <section class="app-panel app-auth-card mx-auto my-10" aria-labelledby="remove-passkey-title">
+    <h1 id="remove-passkey-title" class="app-section-title">Remove this passkey?</h1>
+    <p>You’ll no longer be able to sign in using {{ object }}. You can still use Google, another passkey or an email link.</p>
+    <form method="post" class="app-form">
+      {% csrf_token %}
+      <button type="submit" class="app-secondary-button app-button-danger">Remove passkey</button>
+    </form>
+    <p class="app-auth-switch"><a href="{% url 'accounts:connections' %}">Keep this passkey</a></p>
+  </section>
+</c-layouts.base>

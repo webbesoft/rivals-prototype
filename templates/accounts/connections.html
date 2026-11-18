@@ -3,19 +3,40 @@
     <h1 class="app-section-title">Sign-in methods</h1>
     {% include 'partials/account_messages.html' %}
     <p>You can always request a sign-in link at {{ user.email }}.</p>
-    {% for connection in connections %}
-    <p>Google connected.</p>
-    <form method="post" class="app-form">
-      {% csrf_token %}<input type="hidden" name="account" value="{{ connection.pk }}">
-      <button type="submit">Disconnect Google</button>
-    </form>
-    {% empty %}
-    {% if google_enabled %}
-    <form method="post" action="{% url 'google_login' %}?process=connect" class="app-form">
-      {% csrf_token %}<button type="submit" class="app-primary-button">Connect Google</button>
-    </form>
+    <div class="app-signin-method">
+      <h2 class="app-section-title">Passkeys</h2>
+      <p>Skip the inbox. Use your fingerprint, face or device PIN to sign in.</p>
+      {% for passkey in passkeys %}
+      <div class="app-passkey-row">
+        <div>
+          <p class="app-passkey-name">{{ passkey }}</p>
+          <p class="app-field-help">Added {{ passkey.created_at|date:"j M Y" }}{% if passkey.last_used_at %} · Last used {{ passkey.last_used_at|date:"j M Y" }}{% endif %}</p>
+        </div>
+        <a href="{% url 'mfa_remove_webauthn' passkey.pk %}" class="app-secondary-button" aria-label="Remove {{ passkey }}">Remove</a>
+      </div>
+      {% empty %}
+      <p class="app-field-help">No passkeys saved yet.</p>
+      {% endfor %}
+      <a href="{% url 'mfa_add_webauthn' %}" class="app-secondary-button">Add a passkey</a>
+    </div>
+    {% if google_enabled or connections %}
+    <div class="app-signin-method">
+      <h2 class="app-section-title">Google</h2>
+      {% for connection in connections %}
+      <p>Google connected.</p>
+      <form method="post" class="app-form">
+        {% csrf_token %}<input type="hidden" name="account" value="{{ connection.pk }}">
+        <button type="submit" class="app-secondary-button">Disconnect Google</button>
+      </form>
+      {% empty %}
+      {% if google_enabled %}
+      <form method="post" action="{% url 'google_login' %}?process=connect" class="app-form">
+        {% csrf_token %}<button type="submit" class="app-primary-button">Connect Google</button>
+      </form>
+      {% endif %}
+      {% endfor %}
+    </div>
     {% endif %}
-    {% endfor %}
     <p class="app-auth-switch"><a href="{% url 'accounts:profile' %}">Back to profile</a></p>
   </section>
 </c-layouts.base>

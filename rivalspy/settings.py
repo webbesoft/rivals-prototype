@@ -99,6 +99,7 @@ THIRD_PARTY_APPS = [
     "allauth.account",
     "allauth.socialaccount",
     "allauth.socialaccount.providers.google",
+    "allauth.mfa",
     "django_cotton",
     "debug_toolbar",
     "rest_framework",
@@ -280,13 +281,20 @@ SOCIALACCOUNT_ADAPTER = "accounts.adapters.SocialAccountAdapter"
 ACCOUNT_LOGIN_METHODS = {"email"}
 ACCOUNT_SIGNUP_FIELDS = ["email*"]
 ACCOUNT_EMAIL_VERIFICATION = "mandatory"
+ACCOUNT_REAUTHENTICATION_TIMEOUT = 300
+MFA_SUPPORTED_TYPES = ["webauthn"]
+MFA_PASSKEY_LOGIN_ENABLED = True
+MFA_WEBAUTHN_USER_VERIFICATION = "required"
+PASSKEY_CHALLENGE_TTL_SECONDS = 300
 SOCIALACCOUNT_EMAIL_AUTHENTICATION = False
-SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = False
+SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
 SOCIALACCOUNT_STORE_TOKENS = False
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
 SOCIALACCOUNT_PROVIDERS = {
     "google": {
+        # The adapter restricts email matching to Gmail and verified Workspace.
+        "EMAIL_AUTHENTICATION": True,
         "SCOPE": ["profile", "email"],
         "AUTH_PARAMS": {"access_type": "online"},
         "OAUTH_PKCE_ENABLED": True,

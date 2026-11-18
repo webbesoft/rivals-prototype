@@ -1,13 +1,41 @@
+import time
+
 from allauth.account.adapter import DefaultAccountAdapter
+from allauth.account.internal.flows.login import get_authentication_records
 from allauth.account.models import EmailAddress
 from allauth.core.exceptions import ImmediateHttpResponse
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import get_user_model
 from django.shortcuts import redirect
+from django.urls import reverse
 
 from .passwordless import destination
+
+
+def _google_owns_email(sociallogin, email):
+    """Use claims returned by Google, never an OAuth request's `hd` hint."""
+    if sociallogin.account.provider != "google":
+        return False
+    claims = sociallogin.account.extra_data
+    provider_email = claims.get("email")
+    email = email.casefold()
+    if not isinstance(provider_email, str) or provider_email.casefold() != email:
+        return False
+    if not any(
+        address.verified and address.email.casefold() == email
+        for address in sociallogin.email_addresses
+    ):
+        return False
+    domain = email.rpartition("@")[2]
+    if domain == "gmail.com":
+        return True
+    hosted_domain = claims.get("hd")
+    return (
+        bool(domain)
+        and isinstance(hosted_domain, str)
+        and hosted_domain.casefold() == domain
+    )
 
 
 class AccountAdapter(DefaultAccountAdapter):
@@ -21,10 +49,46 @@ class AccountAdapter(DefaultAccountAdapter):
             return redirect(destination(request, user, response.url))
         return response
 
+    def get_login_stages(self):
+        # Passkeys are an alternative sign-in method. Registering a key must
+        # not add another challenge to Google sign-in or email recovery.
+        return [
+            stage
+            for stage in super().get_login_stages()
+            if not stage.startswith("allauth.mfa.stages.")
+        ]
+
+    def is_reauthentication_required(self, *, app, **kwargs):
+        if app == "allauth.mfa" and self.request.user.is_authenticated:
+            records = get_authentication_records(self.request, self.request.user)
+            return not any(
+                record.get("method") in {"code", "socialaccount", "mfa"}
+                and time.time() - record["at"]
+                < settings.ACCOUNT_REAUTHENTICATION_TIMEOUT
+                for record in records
+            )
+        return super().is_reauthentication_required(app=app, **kwargs)
+
+    def get_reauthentication_methods(self, user):
+        if settings.PASSWORDLESS_AUTH_ENABLED and user.is_authenticated:
+            return [{"url": reverse("accounts:reauthenticate")}]
+        return super().get_reauthentication_methods(user)
+
 
 class SocialAccountAdapter(DefaultSocialAccountAdapter):
     def is_open_for_signup(self, request, sociallogin):
         return settings.PASSWORDLESS_AUTH_ENABLED
+
+    def can_authenticate_by_email(self, login, email):
+        # Allauth performs email lookup before pre_social_login(). Restrict
+        # that lookup itself so a stale third-party email claim cannot log in.
+        if not settings.PASSWORDLESS_AUTH_ENABLED or not (
+            settings.GOOGLE_CLIENT_ID and settings.GOOGLE_CLIENT_SECRET
+        ):
+            return False
+        return _google_owns_email(login, email) and super().can_authenticate_by_email(
+            login, email
+        )
 
     def pre_social_login(self, request, sociallogin):
         if not settings.PASSWORDLESS_AUTH_ENABLED or not (
@@ -53,17 +117,6 @@ class SocialAccountAdapter(DefaultSocialAccountAdapter):
                     "Connect a Google account with the same verified email as your RivalSpy account.",
                 )
                 raise ImmediateHttpResponse(redirect("accounts:login"))
-        elif (
-            not sociallogin.is_existing
-            and get_user_model()
-            .objects.filter(email__iexact=sociallogin.user.email)
-            .exists()
-        ):
-            messages.info(
-                request,
-                "Sign in with an email link first, then connect Google from your profile.",
-            )
-            raise ImmediateHttpResponse(redirect("accounts:login"))
         elif sociallogin.is_existing:
             if not sociallogin.user.is_active:
                 raise ImmediateHttpResponse(redirect("accounts:login"))
@@ -74,6 +127,14 @@ class SocialAccountAdapter(DefaultSocialAccountAdapter):
                 email=sociallogin.user.email,
                 defaults={"verified": True, "primary": True},
             )
+        elif not _google_owns_email(sociallogin, sociallogin.user.email):
+            # This also covers first-time signups, so an old Google account
+            # cannot register someone else's reassigned third-party address.
+            messages.info(
+                request,
+                "For this address, sign in with an email link first, then connect Google from your profile.",
+            )
+            raise ImmediateHttpResponse(redirect("accounts:login"))
 
     def save_user(self, request, sociallogin, form=None):
         sociallogin.user.email = sociallogin.user.email.strip().lower()

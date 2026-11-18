@@ -436,4 +436,5 @@ def test_migration_preserves_existing_fpl_accounts_and_grants_full_grace():
         for user in (linked, previous, team_only):
             assert NewUser.objects.get(pk=user.pk).onboarding_expires_at is None
     finally:
-        MigrationExecutor(connection).migrate([after])
+        executor = MigrationExecutor(connection)
+        executor.migrate(executor.loader.graph.leaf_nodes("accounts"))

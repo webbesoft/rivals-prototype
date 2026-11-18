@@ -1,0 +1,30 @@
+{% load static %}
+<c-layouts.base title="Add a passkey - RivalSpy">
+  <section class="app-panel app-auth-card mx-auto my-10" aria-labelledby="passkey-title">
+    <h1 id="passkey-title" class="app-section-title">Add a passkey</h1>
+    <p>Save a passkey for {{ user.email }}. Next time, sign in with your fingerprint, face or device PIN.</p>
+    {% include 'partials/account_messages.html' %}
+    <form method="post" class="app-form" data-passkey-form="register">
+      {% csrf_token %}
+      {% if form.non_field_errors %}<div class="app-field-error" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+      {{ form.credential }}
+      {{ form.passwordless }}
+      <input type="hidden" name="challenge_id" value="{{ js_data.challenge_id }}">
+      {% if form.challenge_id.errors %}<p class="app-field-error" role="alert">This passkey request is unavailable. Please try again.</p>{% endif %}
+      {% if form.credential.errors or form.passwordless.errors %}<p class="app-field-error" role="alert">We couldn’t save that passkey. Please try again.</p>{% endif %}
+      <div>
+        <label for="{{ form.name.id_for_label }}">Passkey name</label>
+        <input type="text" id="{{ form.name.id_for_label }}" name="name" value="{{ form.name.value|default:'' }}" maxlength="100" placeholder="My phone or laptop">
+        <p class="app-field-help">A name to help you recognise this passkey later.</p>
+        {% if form.name.errors %}<div class="app-field-error">{{ form.name.errors }}</div>{% endif %}
+      </div>
+      <button type="submit" class="app-primary-button" disabled>Save a passkey</button>
+      <p class="app-field-help" data-passkey-status role="status" aria-live="polite">Your device will ask you to confirm.</p>
+      <noscript><p class="app-field-help">Enable JavaScript to save a passkey.</p></noscript>
+    </form>
+    <p class="app-auth-switch"><a href="{% url 'accounts:connections' %}">Back to sign-in methods</a></p>
+  </section>
+  {{ js_data|json_script:"passkey-options" }}
+  <script src="{% static 'mfa/js/webauthn-json.js' %}" defer></script>
+  <script src="{% static 'js/passkeys.js' %}" defer></script>
+</c-layouts.base>

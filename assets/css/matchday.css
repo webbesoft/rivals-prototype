@@ -437,6 +437,20 @@
 .app-auth-intro .app-lede { max-width: 330px; }
 .app-auth-note { margin-top: 36px; padding-top: 20px; border-top: 1px solid var(--rule); font: italic 19px/1.6 Georgia, serif; }
 .app-auth-card { padding: 30px; }
+.app-content > .app-auth-card {
+  width: min(480px, calc(100% - 40px));
+  margin: clamp(32px, 8vh, 80px) auto;
+  overflow-wrap: anywhere;
+}
+.app-auth-card > p { margin-top: 16px; }
+.app-signin-method { margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--rule); }
+.app-signin-method > p { margin-block: 16px; }
+.app-signin-method > .app-secondary-button { margin-top: 16px; }
+.app-passkey-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 20px; }
+.app-passkey-row > div { min-width: 0; }
+.app-passkey-name { font-weight: 650; }
+.app-auth-card .app-field-help { font-size: 12px; line-height: 1.6; color: var(--soft-ink); }
+.app-auth-card button:disabled { opacity: .6; cursor: default; }
 .app-auth-card h2 { margin-bottom: 22px; }
 .app-content:has(> .app-auth-login) { display: grid; align-items: center; }
 .app-auth.app-auth-login {

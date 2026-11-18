@@ -2,7 +2,7 @@ import re
 from io import StringIO
 from datetime import timedelta
 from unittest.mock import patch
-from urllib.parse import parse_qs, urlsplit
+from urllib.parse import parse_qs, urlencode, urlsplit
 
 import pytest
 import requests
@@ -37,6 +37,7 @@ def passwordless(settings):
     settings.GOOGLE_CLIENT_SECRET = "google-secret"
     settings.SOCIALACCOUNT_PROVIDERS = {
         "google": {
+            "EMAIL_AUTHENTICATION": True,
             "OAUTH_PKCE_ENABLED": True,
             "APPS": [{"client_id": "google-client", "secret": "google-secret"}],
         }
@@ -51,6 +52,13 @@ def user():
         password="Legacy-password-123",
         is_verified=True,
     )
+
+
+@pytest.fixture
+def gmail_user(user):
+    user.email = "manager@gmail.com"
+    user.save(update_fields=["email"])
+    return user
 
 
 def connect_team(user):
@@ -398,20 +406,30 @@ def test_api_can_complete_onboarding(client, user):
     assert response.json()["onboarding_required"] is False
 
 
-def google_callback(client, email, uid="google-user", verified=True, process="login"):
-    start = client.post(reverse("google_login") + f"?process={process}")
+def google_callback(
+    client,
+    email,
+    uid="google-user",
+    verified=True,
+    process="login",
+    hosted_domain=None,
+    domain_hint=None,
+):
+    query = {"process": process}
+    if domain_hint:
+        query["auth_params"] = urlencode({"hd": domain_hint})
+    start = client.post(reverse("google_login") + "?" + urlencode(query))
     assert start.status_code == 302
     params = parse_qs(urlsplit(start.url).query)
     assert params["code_challenge_method"] == ["S256"]
-    sociallogin = SocialLogin(
-        user=User(email=email),
-        account=SocialAccount(provider="google", uid=uid),
-        email_addresses=[EmailAddress(email=email, verified=verified, primary=True)],
-    )
+    if domain_hint:
+        assert params["hd"] == [domain_hint]
 
     def complete_login(adapter, request, app, token, **kwargs):
-        sociallogin.provider = adapter.get_provider()
-        return sociallogin
+        claims = {"sub": uid, "email": email, "email_verified": verified}
+        if hosted_domain is not None:
+            claims["hd"] = hosted_domain
+        return adapter.get_provider().sociallogin_from_response(request, claims)
 
     with (
         patch(
@@ -430,8 +448,57 @@ def google_callback(client, email, uid="google-user", verified=True, process="lo
         )
 
 
-def test_google_signup_creates_verified_account_and_requires_fpl(client):
-    response = google_callback(client, "google@example.com")
+@pytest.mark.parametrize("local_verified", [False, True])
+@pytest.mark.parametrize(
+    "hosted_domain",
+    [None, "", "other.example", False, ["example.com"], {"domain": "example.com"}],
+)
+def test_google_external_email_requires_account_confirmation(
+    client, user, local_verified, hosted_domain
+):
+    user.is_verified = local_verified
+    user.save(update_fields=["is_verified"])
+    password = user.password
+    response = google_callback(client, user.email, hosted_domain=hosted_domain)
+    assert response.url == reverse("accounts:login")
+    assert "_auth_user_id" not in client.session
+    assert not SocialAccount.objects.exists()
+    assert User.objects.count() == 1
+
+    user.refresh_from_db()
+    assert user.is_verified is local_verified
+    assert user.password == password
+    assert b"email link first" in client.get(response.url).content
+
+
+@pytest.mark.parametrize(
+    "email,hosted_domain",
+    [
+        ("new@example.com", None),
+        ("new@example.com", "other.example"),
+        ("new@gmail.com.evil.example", None),
+        ("new@sub.gmail.com", None),
+        ("new@fakegmail.com", None),
+    ],
+)
+def test_google_external_email_requires_confirmation_before_signup(
+    client, email, hosted_domain
+):
+    response = google_callback(client, email, hosted_domain=hosted_domain)
+    assert response.url == reverse("accounts:login")
+    assert "_auth_user_id" not in client.session
+    assert not User.objects.exists()
+    assert not SocialAccount.objects.exists()
+
+
+@pytest.mark.parametrize(
+    "email,hosted_domain",
+    [("google@gmail.com", None), ("google@company.example", "company.example")],
+)
+def test_google_signup_creates_verified_account_and_requires_fpl(
+    client, email, hosted_domain
+):
+    response = google_callback(client, email, hosted_domain=hosted_domain)
     assert response.status_code == 302
     assert response.url == reverse("accounts:onboarding")
     account = User.objects.get()
@@ -440,18 +507,221 @@ def test_google_signup_creates_verified_account_and_requires_fpl(client):
     assert SocialAccount.objects.get().uid == "google-user"
 
 
-def test_google_matching_email_does_not_take_over_existing_account(client, user):
-    response = google_callback(client, user.email)
-    assert response.url == reverse("accounts:login")
+@pytest.mark.parametrize(
+    "email,hosted_domain",
+    [
+        ("manager@gmail.com", None),
+        ("manager@company.example", "company.example"),
+        ("manager@company.example", "COMPANY.EXAMPLE"),
+    ],
+)
+def test_google_verified_matching_email_links_existing_account(
+    client, user, email, hosted_domain
+):
+    user.email = email
+    user.save(update_fields=["email"])
+    team = connect_team(user)
+    response = google_callback(client, user.email.upper(), hosted_domain=hosted_domain)
+    assert response.url == reverse("rivals:dashboard")
     assert User.objects.count() == 1
+    assert SocialAccount.objects.get().user_id == user.pk
+    assert client.session["_auth_user_id"] == str(user.pk)
+    user.refresh_from_db()
+    assert user.team_id == team.pk and user.fpl_id == "123"
+
+
+@pytest.mark.parametrize("verified", [False, "false", "FALSE", 0, None])
+@pytest.mark.parametrize("hosted_domain", [None, "gmail.com"])
+def test_google_unverified_matching_email_cannot_link_existing_account(
+    client, gmail_user, verified, hosted_domain
+):
+    response = google_callback(
+        client, gmail_user.email, verified=verified, hosted_domain=hosted_domain
+    )
+    assert response.url == reverse("accounts:login")
     assert not SocialAccount.objects.exists()
     assert "_auth_user_id" not in client.session
 
 
-def test_google_unverified_email_cannot_create_account(client):
-    response = google_callback(client, "google@example.com", verified=False)
+def test_google_matching_email_verifies_existing_account_and_requires_setup(
+    client, gmail_user
+):
+    user = gmail_user
+    user.is_verified = False
+    user.save(update_fields=["is_verified"])
+    response = google_callback(client, user.email)
+    assert response.url == reverse("accounts:onboarding")
+    user.refresh_from_db()
+    assert user.is_verified
+    assert EmailAddress.objects.get(user=user).verified
+    assert SocialAccount.objects.get().user_id == user.pk
+    assert User.objects.count() == 1
+    assert authenticate(username=user.email, password="Legacy-password-123") is None
+
+
+def test_google_matching_email_cannot_link_disabled_account(client, gmail_user):
+    user = gmail_user
+    user.is_active = False
+    user.save(update_fields=["is_active"])
+    response = google_callback(client, user.email)
+    assert response.url == reverse("accounts:login")
+    assert not SocialAccount.objects.exists()
+    assert "_auth_user_id" not in client.session
+
+
+def test_google_remains_an_alternative_after_saving_a_passkey(client, gmail_user):
+    from allauth.mfa.models import Authenticator
+
+    user = gmail_user
+    connect_team(user)
+    Authenticator.objects.create(
+        user=user, type=Authenticator.Type.WEBAUTHN, data={"name": "Saved key"}
+    )
+    response = google_callback(client, user.email)
+    assert response.url == reverse("rivals:dashboard")
+    assert client.session["_auth_user_id"] == str(user.pk)
+    # A recent Google sign-in also permits opening passkey removal confirmation.
+    assert (
+        client.get(
+            reverse("mfa_remove_webauthn", args=[Authenticator.objects.get().pk])
+        ).status_code
+        == 200
+    )
+
+
+@pytest.mark.parametrize("hosted_domain", [None, "company.example"])
+def test_google_unverified_email_cannot_create_account(client, hosted_domain):
+    response = google_callback(
+        client, "google@company.example", verified=False, hosted_domain=hosted_domain
+    )
     assert response.url == reverse("accounts:login")
     assert not User.objects.exists()
+
+
+def test_google_domain_hint_cannot_establish_email_ownership(client, user):
+    response = google_callback(client, user.email, domain_hint="example.com")
+    assert response.url == reverse("accounts:login")
+    assert "_auth_user_id" not in client.session
+    assert not SocialAccount.objects.exists()
+
+
+@pytest.mark.parametrize(
+    "provider_enabled,global_enabled",
+    [(True, False), (False, True)],
+    ids=["provider-only", "global-only"],
+)
+@pytest.mark.parametrize("email", ["manager@example.com", "manager@gmail.com"])
+def test_google_ownership_restriction_with_email_auth_enabled(
+    client, user, settings, provider_enabled, global_enabled, email
+):
+    user.email = email
+    user.save(update_fields=["email"])
+    settings.SOCIALACCOUNT_EMAIL_AUTHENTICATION = global_enabled
+    settings.SOCIALACCOUNT_PROVIDERS = {
+        **settings.SOCIALACCOUNT_PROVIDERS,
+        "google": {
+            **settings.SOCIALACCOUNT_PROVIDERS["google"],
+            "EMAIL_AUTHENTICATION": provider_enabled,
+        },
+    }
+    response = google_callback(client, user.email)
+    if email.endswith("@gmail.com"):
+        assert response.url == reverse("accounts:onboarding")
+        assert client.session["_auth_user_id"] == str(user.pk)
+        assert SocialAccount.objects.get().user_id == user.pk
+    else:
+        assert response.url == reverse("accounts:login")
+        assert "_auth_user_id" not in client.session
+        assert not SocialAccount.objects.exists()
+
+
+def test_google_external_email_can_connect_after_email_confirmation(client, user):
+    connect_team(user)
+    user.is_verified = False
+    user.save(update_fields=["is_verified"])
+    assert google_callback(client, user.email).url == reverse("accounts:login")
+    client.post(reverse("accounts:login"), {"email": user.email})
+    client.get(emailed_path())
+    assert confirm_sign_in(client).url == reverse("rivals:dashboard")
+    user.refresh_from_db()
+    assert user.is_verified
+    response = google_callback(client, user.email, process="connect")
+    assert response.url == reverse("accounts:connections")
+    account = SocialAccount.objects.get()
+    assert account.user_id == user.pk
+    assert account.uid == "google-user"
+    client.logout()
+    # Established connections authenticate by Google's user ID without hd.
+    response = google_callback(client, user.email)
+    assert response.url == reverse("rivals:dashboard")
+    assert client.session["_auth_user_id"] == str(user.pk)
+    client.logout()
+    response = google_callback(client, user.email, uid="different-google-user")
+    assert response.url == reverse("accounts:login")
+    assert "_auth_user_id" not in client.session
+    assert SocialAccount.objects.count() == 1
+
+
+def test_google_external_connect_rejects_unverified_provider_email(client, user):
+    client.force_login(user)
+    response = google_callback(client, user.email, verified=False, process="connect")
+    assert response.url == reverse("accounts:login")
+    assert not SocialAccount.objects.exists()
+
+
+def test_google_linked_workspace_uid_still_requires_matching_email(client, user):
+    user.email = "manager@company.example"
+    user.save(update_fields=["email"])
+    assert google_callback(
+        client, user.email, hosted_domain="company.example"
+    ).url == reverse("accounts:onboarding")
+    account = SocialAccount.objects.get()
+    client.logout()
+    response = google_callback(
+        client, "renamed@company.example", hosted_domain="company.example"
+    )
+    assert response.url == reverse("accounts:login")
+    assert "_auth_user_id" not in client.session
+    account.refresh_from_db()
+    user.refresh_from_db()
+    assert account.user_id == user.pk
+    assert account.uid == "google-user"
+    assert user.email == "manager@company.example"
+    assert User.objects.count() == 1
+
+
+@pytest.mark.parametrize("authenticated", [False, True])
+def test_google_external_connection_requires_the_matching_verified_account(
+    client, user, authenticated
+):
+    if authenticated:
+        user.is_verified = False
+        user.save(update_fields=["is_verified"])
+        client.force_login(user)
+    response = google_callback(client, user.email, process="connect")
+    assert response.url == reverse("accounts:login")
+    assert not SocialAccount.objects.exists()
+
+
+def test_google_external_connection_rejects_different_email(client, user):
+    client.force_login(user)
+    response = google_callback(client, "other@example.com", process="connect")
+    assert response.url == reverse("accounts:login")
+    assert not SocialAccount.objects.exists()
+    assert User.objects.count() == 1
+
+
+def test_google_connection_cannot_reassign_an_existing_google_identity(client, user):
+    other = User.objects.create_user(email="other@example.com", username="other")
+    account = SocialAccount.objects.create(
+        user=other, provider="google", uid="google-user"
+    )
+    client.force_login(user)
+    response = google_callback(client, user.email, process="connect")
+    assert response.url == reverse("accounts:login")
+    account.refresh_from_db()
+    assert account.user_id == other.pk
+    assert SocialAccount.objects.count() == 1
 
 
 def test_google_connect_then_return_and_disconnect(client, user):

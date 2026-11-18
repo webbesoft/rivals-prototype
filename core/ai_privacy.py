@@ -26,6 +26,8 @@ def filter_ai_event(event, hint):
             "/accounts/ai/mcp/",
             "/accounts/magic",
             "/accounts/google/",
+            "/accounts/passkeys/",
+            "/accounts/reauthenticate/",
             "/api/auth/",
         )
     ):
@@ -38,7 +40,14 @@ def filter_ai_breadcrumb(crumb, hint):
     if "generativelanguage.googleapis.com" in url:
         return None
     if any(
-        path in url for path in ("/accounts/magic", "/accounts/google/", "/api/auth/")
+        path in url
+        for path in (
+            "/accounts/magic",
+            "/accounts/google/",
+            "/accounts/passkeys/",
+            "/accounts/reauthenticate/",
+            "/api/auth/",
+        )
     ):
         return None
     return crumb

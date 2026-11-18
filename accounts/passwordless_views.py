@@ -1,13 +1,15 @@
 import logging
 from urllib.parse import urlencode
 
+from allauth.account.internal.flows.login import record_authentication
+from allauth.mfa.models import Authenticator
 from allauth.socialaccount.models import SocialAccount
 from django import forms
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponseGone
+from django.http import HttpResponse, HttpResponseGone
 from django.shortcuts import redirect, render
 from django.urls import NoReverseMatch, reverse
 from django.views.decorators.cache import never_cache
@@ -15,7 +17,7 @@ from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_http_methods
 
 from core.ai_privacy import sensitive_ai
-from core.rate_limits import rate_limit
+from core.rate_limits import rate_limit, reserve_request
 
 from .forms import UpdateFplIdForm
 from .models import SignInLink
@@ -105,6 +107,10 @@ def magic_confirm(request):
             request.session.pop("sign_in_digest", None)
             user, next_url = result
             login(request, user, backend=BACKEND)
+            record_authentication(request, user, method="code", reauthenticated=True)
+            # Return to a confirmation form; never replay a sensitive POST
+            # suspended by allauth's reauthentication decorator.
+            request.session.pop("account_reauthentication_state", None)
             return redirect(destination(request, user, next_url))
         return render(
             request, "accounts/magic_confirm.html", {"invalid": True}, status=400
@@ -180,11 +186,51 @@ def connections(request):
         "accounts/connections.html",
         {
             "connections": accounts,
+            "passkeys": Authenticator.objects.filter(
+                user=request.user, type=Authenticator.Type.WEBAUTHN
+            ).order_by("created_at"),
             "google_enabled": bool(
                 settings.GOOGLE_CLIENT_ID and settings.GOOGLE_CLIENT_SECRET
             ),
         },
     )
+
+
+@login_required
+@sensitive_ai
+@never_cache
+@require_http_methods(["GET", "POST"])
+def reauthenticate(request):
+    if not settings.PASSWORDLESS_AUTH_ENABLED or not request.user.is_verified:
+        return redirect("accounts:login")
+    next_url = safe_next(
+        request,
+        request.POST.get("next")
+        or request.GET.get("next")
+        or reverse("accounts:connections"),
+    )
+    if request.method == "POST":
+        retry = reserve_request(request, "magic_link", identity=request.user.email)
+        if retry:
+            response = HttpResponse(
+                "Too many requests. Please try again later.", status=429
+            )
+            response["Retry-After"] = str(retry)
+            return response
+        try:
+            issue_link(request.user.email, next_url)
+        except Exception:
+            logger.error("Sign-in email delivery failed")
+            return render(
+                request,
+                "accounts/reauthenticate.html",
+                {
+                    "next": next_url,
+                    "delivery_error": "Could not send your confirmation email. Please wait a minute and try again.",
+                },
+            )
+        return render(request, "accounts/link_sent.html", {"message": SENT_MESSAGE})
+    return render(request, "accounts/reauthenticate.html", {"next": next_url})
 
 
 def admin_login(request, **kwargs):
