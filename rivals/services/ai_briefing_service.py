@@ -43,6 +43,12 @@ def evidence_for(report):
                 " This is a longer-term move; it has no immediate points advantage."
             )
     evidence = [{"id": "route", "title": title, "detail": detail}]
+    if best.get("price_notes"):
+        evidence[0]["detail"] += (
+            " Price timing: "
+            + " ".join(best["price_notes"])
+            + " Price signals are not guaranteed; weigh timing against waiting for team news."
+        )
     short_term = report.get("short_term")
     if short_term and short_term["key"] != best["key"]:
         route = (
@@ -62,6 +68,8 @@ def evidence_for(report):
                     f'after hits. Across GW{report["gameweek"]}–{end_week}: '
                     f'{short_term["net_gain"]:+.1f} points versus holding. '
                     "The main recommendation ranks the full window and selected risk preference."
+                    + " "
+                    + " ".join(short_term.get("price_notes", []))
                 ),
             }
         )
@@ -90,6 +98,17 @@ def evidence_for(report):
                 "id": "availability",
                 "title": "Watch availability and minutes",
                 "detail": f"{names}: availability or playing-time uncertainty affects the forecast. Later team news could change the plan.",
+            }
+        )
+    if report.get("price_warnings"):
+        evidence.append(
+            {
+                "id": "prices",
+                "title": "Watch squad prices",
+                "detail": "; ".join(
+                    f"{warning['name']}: {warning['label']}. {warning['detail']}"
+                    for warning in report["price_warnings"]
+                ),
             }
         )
     if best.get("free_next") is not None:

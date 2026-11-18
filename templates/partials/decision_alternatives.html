@@ -39,6 +39,7 @@
               <td>{% if option.immediate.net_gain != None %}{% if option.immediate.net_gain > 0 %}+{% endif %}{{ option.immediate.net_gain|floatformat:1 }}{% else %}—{% endif %}</td>
               <td class="{% if option.net_gain > 0 %}decision-gain-positive{% endif %}"><strong>{% if option.net_gain != None %}{% if option.net_gain > 0 %}+{% endif %}{{ option.net_gain|floatformat:1 }}{% else %}—{% endif %}</strong></td>
             </tr>
+            {% if option.price_notes %}<tr><td colspan="4">{% include "partials/price_timing.html" %}</td></tr>{% endif %}
             {% endfor %}
           </tbody>
         </table>

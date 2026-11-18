@@ -21,6 +21,7 @@
         <p class="decision-verdict">{% if report.best.moves %}{% if report.best.immediate.net_gain > 0 %}More points now and over {{ report.horizon }} gameweeks.{% elif report.best.immediate.net_gain < 0 %}<strong>A longer-term move.</strong> Holding projects more points this week.{% else %}<strong>A longer-term move.</strong> No points gain this week.{% endif %}{% else %}Keep your flexibility for the next deadline.{% endif %}</p>
         {% if report.best.immediate %}{% include "partials/decision_points_table.html" with compact=True %}{% endif %}
         <p class="decision-table-note">Captaincy included{% if report.best.hits %} · {{ report.best.hits }}-point hit already deducted{% endif %} · Estimates</p>
+        {% include "partials/price_timing.html" with option=report.best %}
       </div>
 
       <div class="decision-actions">
@@ -35,11 +36,19 @@
           <a class="decision-news-link" href="https://fantasy.premierleague.com/" target="_blank" rel="noopener noreferrer">FPL team news <span aria-hidden="true">↗</span></a>
         </div>
         {% endif %}
+        {% if report.price_warnings %}
+        <div class="decision-action decision-availability">
+          <p class="decision-label">Price watch</p>
+          <ul class="text-sm" aria-label="Player price warnings">{% for warning in report.price_warnings %}<li title="{{ warning.detail }}"><strong>{{ warning.name }}</strong>: {{ warning.label }}</li>{% endfor %}</ul>
+          <p class="decision-action-note">Near means at least 90% of the rise or fall threshold. Changes are not guaranteed.</p>
+        </div>
+        {% endif %}
         {% if report.short_term and report.short_term.key != report.best.key %}
         <div class="decision-action decision-immediate">
           <div class="decision-immediate-heading"><p class="decision-label">Best for GW{{ report.gameweek }} only</p><strong>{% if report.short_term.immediate.net_gain > 0 %}+{% endif %}{{ report.short_term.immediate.net_gain|floatformat:1 }} <span>pts</span></strong></div>
           <p class="decision-immediate-route">{% if report.short_term.moves %}{% for move in report.short_term.moves %}{{ move.out_name }} → {{ move.in_name }}{% if not forloop.last %}<br>{% endif %}{% endfor %}{% else %}Hold / roll{% endif %}</p>
           <p class="decision-action-note">{% if report.short_term.net_gain > 0 %}+{% endif %}{{ report.short_term.net_gain|floatformat:1 }} pts over GW{{ report.gameweek }}–{{ report.end_gameweek }} · after hits</p>
+          {% include "partials/price_timing.html" with option=report.short_term %}
         </div>
         {% endif %}
         <div class="decision-flexibility">

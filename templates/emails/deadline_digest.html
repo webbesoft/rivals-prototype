@@ -65,6 +65,9 @@
     <p style="margin:0 0 8px;color:#58685c;font-family:'Courier New',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;">02 &middot; The next move</p>
     <h2 style="margin:0 0 14px;font-size:25px;font-weight:700;letter-spacing:-0.8px;line-height:1.25;">Before the deadline</h2>
     {% include "partials/decision_outlooks.html" %}
+    {% if report.price_warnings %}<h3>Price watch</h3><ul>{% for warning in report.price_warnings %}<li><strong>{{ warning.name }}</strong>: {{ warning.label }}. {{ warning.detail }}</li>{% endfor %}</ul>{% endif %}
+    {% include "partials/price_timing.html" with option=report.best %}
+    {% if report.short_term.key != report.best.key %}{% include "partials/price_timing.html" with option=report.short_term %}{% endif %}
     {% if ai_cards %}
     <p style="margin:0 0 20px;color:#58685c;font-size:13px;line-height:1.7;">AI selected these priorities from your transfer plan. Figures remain estimates.</p>
     {% for card in ai_cards %}

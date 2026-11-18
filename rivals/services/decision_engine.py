@@ -14,6 +14,11 @@ from rivals.services.chip_advice_service import chip_advice
 from rivals.services.fpl_api_service import FplApiService
 from rivals.services.gameweek_context_service import GameweekContextService
 from rivals.services.planning_defaults_service import PlanningDefaults
+from rivals.services.price_change_service import (
+    PRICE_FIELDS,
+    price_warning,
+    transfer_timing,
+)
 
 POSITIONS = {1: "GKP", 2: "DEF", 3: "MID", 4: "FWD"}
 SQUAD_SHAPE = {1: 2, 2: 5, 3: 5, 4: 3}
@@ -41,7 +46,7 @@ def digest(value):
 
 
 class DecisionEngine:
-    VERSION = "decision-v7-precise-immediate-gains"
+    VERSION = "decision-v8-price-warnings"
 
     def __init__(self, user, api=None, *, fresh_squad=False):
         self.fresh_squad = fresh_squad
@@ -136,7 +141,7 @@ class DecisionEngine:
             "chance_of_playing_next_round",
             "news",
             "removed",
-        )
+        ) + PRICE_FIELDS
         fixture_fields = (
             "event",
             "team_h",
@@ -735,6 +740,7 @@ class DecisionEngine:
                 "element_type": self.players[pid]["element_type"],
                 "club": self.club_names.get(self.players[pid]["team"], "—"),
                 "news": self.players[pid].get("news", ""),
+                "price_warning": price_warning(self.players[pid]),
                 "risk_label": (
                     "Check news"
                     if self.players[pid].get("status", "a") not in ("a", "d")
@@ -994,6 +1000,7 @@ class DecisionEngine:
         outlook_by_id = {item["id"]: item for item in outlooks}
         for choice in {choice["key"]: choice for choice in displayed}.values():
             choice["weekly"] = self.weekly_comparison(choice, baseline)
+            choice["price_notes"] = transfer_timing(choice, self.players)
             for move in choice["moves"]:
                 outgoing, incoming = move["out"], move["in"]
                 move.update(
@@ -1024,6 +1031,11 @@ class DecisionEngine:
             "manual": manual_option,
             "alternatives": alternatives[:5],
             "risks": risks[:5],
+            "price_warnings": [
+                {"id": pid, "name": self.name(pid), **warning}
+                for pid in self.ids
+                if (warning := price_warning(self.players[pid]))
+            ],
             "chip_advice": chip_advice(self, baseline),
             "rival": rival,
             "captain": (

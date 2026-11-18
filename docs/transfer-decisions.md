@@ -34,6 +34,28 @@ Player outlook notes distinguish scheduled fixture improvement from observed wea
 
 The main list prioritises different outgoing players and covers different positions when positive opportunities exist. Automatic routes do not repeat the same outgoing player across the list. Further replacements for one player are grouped as alternatives for that slot. The engine does not insert a losing trade just to fill a position. An explicitly requested manual route and a differing immediate-points choice can appear separately for comparison.
 
+## Price-change warnings
+
+The official FPL bootstrap player fields supply price progress and projections.
+Squad price warnings appear beside availability warnings, on the forecast pitch,
+and in deadline emails. Route timing notes also cover incoming players and feed
+the evidence used for AI briefings. Price signals do not change points forecasts
+or transfer rankings.
+
+The watch threshold is our heuristic: at least 90% of a rise or fall threshold.
+The next-update projection (`offset: 0`) takes precedence over current progress;
+later projections are not treated as imminent changes. At 100% projected progress
+the label becomes “Price rise/fall projected”. These are threshold percentages,
+not probabilities or guaranteed price changes. Missing, non-finite, calibrating,
+or currently locked data do not produce actionable warnings. Changed price fields
+invalidate the report cache and saved-choice fingerprint.
+
+Purchase timing notes compare a hypothetical £0.1m rise for each flagged incoming
+player with the route's estimated remaining bank. Selling-price changes are not
+invented: a market drop may be absorbed by FPL's profit rules, so the manager is
+asked to check the actual selling value. Price timing should be weighed against
+waiting for availability news.
+
 ## Mini-league scenarios
 
 Managers can select an active subscribed league and a rival listed in that league's current-season standings. The comparison shows the points gap, shared players, unique-player forecasts, a possible rival captain, and a scenario in which the rival keeps the last published squad. Rival future transfers, free transfers, and captain choices are not known. Incomplete rival data produces an unavailable comparison rather than an invented squad or gap.

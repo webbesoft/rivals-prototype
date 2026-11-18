@@ -1,0 +1,7 @@
+{% if option.price_notes %}
+<div class="text-sm mt-3">
+  <p><strong>Price timing</strong></p>
+  <ul>{% for note in option.price_notes %}<li>{{ note }}</li>{% endfor %}</ul>
+  <p>FPL price signals are a guide. Weigh the budget risk against waiting for team news.</p>
+</div>
+{% endif %}

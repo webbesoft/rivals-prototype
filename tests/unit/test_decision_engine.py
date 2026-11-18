@@ -840,6 +840,46 @@ def test_cache_is_input_sensitive_and_reports_correct_fixture_window(manager, ap
 
 
 @pytest.mark.django_db
+def test_price_warnings_refresh_reports_without_changing_rankings(manager, api):
+    engine = DecisionEngine(manager, api).load()
+    data = confirmed(engine)
+    first = engine.report(data)
+    outgoing = first["best"]["moves"][0]["out"]
+    incoming = first["best"]["moves"][0]["in"]
+    for player in api.fetch_bootstrap_static.return_value["elements"]:
+        if player["id"] == outgoing:
+            player["price_change_percent"] = "-101"
+        elif player["id"] == incoming:
+            player["price_change_projections"] = [
+                {"offset": 0, "projected_percent": "105", "likelihood": 5}
+            ]
+    updated = DecisionEngine(manager, api).load().report(data)
+    assert first["fingerprint"] != updated["fingerprint"]
+    assert first["best"]["key"] == updated["best"]["key"]
+    assert first["best"]["points"] == updated["best"]["points"]
+    assert updated["price_warnings"][0]["id"] == outgoing
+    assert any("more expensive" in note for note in updated["best"]["price_notes"])
+    forecast = next(p for p in updated["players"] if p["id"] == outgoing)
+    assert forecast["price_warning"]["direction"] == "fall"
+    html = render_to_string("partials/decision_summary.html", {"report": updated})
+    assert "Price watch" in html and "Price timing" in html
+    assert "Near price fall" in html
+    route = render_to_string(
+        "partials/decision_route.html", {"report": updated, "option": updated["best"]}
+    )
+    assert "more expensive" in route
+    for template in ("emails/deadline_digest.html", "emails/deadline_digest.txt"):
+        email = render_to_string(template, {"report": updated})
+        assert "Near price fall" in email
+        assert "more expensive" in email
+    from rivals.services.ai_briefing_service import evidence_for
+
+    evidence = evidence_for(updated)
+    assert "Price timing" in evidence[0]["detail"]
+    assert any(card["id"] == "prices" for card in evidence)
+
+
+@pytest.mark.django_db
 def test_dashboard_and_planner_shells_do_not_wait_for_fpl(manager):
     client = Client()
     client.force_login(manager)

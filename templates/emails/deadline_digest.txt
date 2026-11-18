@@ -31,6 +31,14 @@ PLANNING WINDOW (UNCHANGED SQUAD)
 {% for week in outlook %}GW{{ week.gameweek }}: {{ week.points|floatformat:1 }} XI est. pts including captaincy; {{ week.blanks }} blanks; {{ week.doubles }} doubles; {{ week.risks }} risk flags across all 15 players.
 {% endfor %}
 BEFORE THE DEADLINE
+{% if report.price_warnings %}PRICE WATCH
+{% for warning in report.price_warnings %}{{ warning.name }}: {{ warning.label }}. {{ warning.detail }}
+{% endfor %}{% endif %}{% if report.best.price_notes %}Suggested route price timing:
+{% for note in report.best.price_notes %}{{ note }}
+{% endfor %}FPL price signals are a guide. Weigh the budget risk against waiting for team news.
+{% endif %}{% if report.short_term.key != report.best.key %}{% if report.short_term.price_notes %}Immediate route price timing:
+{% for note in report.short_term.price_notes %}{{ note }}
+{% endfor %}{% endif %}{% endif %}
 {% for player in report.player_outlooks %}{{ player.name }} · {{ player.label }}: {{ player.detail }}
 {% endfor %}
 {% if ai_cards %}AI selected these priorities from your transfer plan. Figures remain estimates.

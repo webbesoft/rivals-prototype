@@ -8,4 +8,5 @@
     <p class="planner-estimate">{{ player.fixture.points }} <span>est. pts</span></p>
   </div>
   {% if player.risk_label %}<p class="planner-risk" title="{{ player.news|default:'Check availability and playing time before the deadline.' }}"><span aria-hidden="true">!</span> {{ player.risk_label }}</p>{% endif %}
+  {% if player.price_warning %}<p class="planner-risk" title="{{ player.price_warning.detail }}">{{ player.price_warning.label }}</p>{% endif %}
 </div>

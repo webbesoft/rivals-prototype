@@ -36,6 +36,7 @@
       <article class="planner-schedule-card">
         <h3>{{ player.name }} <span>{{ player.club }} · {{ player.position }}</span></h3>
         {% if player.risk_label %}<p class="planner-schedule-risk">{{ player.risk_label }}: {{ player.news|default:'Check availability and playing time before the deadline.' }}</p>{% elif player.news %}<p>{{ player.news }}</p>{% endif %}
+        {% if player.price_warning %}<p class="planner-schedule-risk">{{ player.price_warning.label }}: {{ player.price_warning.detail }}</p>{% endif %}
         <ul>{% for fixture in player.schedule %}<li><strong>GW{{ fixture.gameweek }}</strong><span>{{ fixture.opponents|join:", "|default:"Blank" }}</span><span>{{ fixture.points }} est. pts</span></li>{% endfor %}</ul>
       </article>
       {% endfor %}
