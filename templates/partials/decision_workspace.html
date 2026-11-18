@@ -2,11 +2,11 @@
 <div class="app-panel border border-gray-200 p-5"><p role="status">{{ decision_error }}</p><a class="app-secondary-button mt-3" href="{% url 'rivals:decisions' %}">Try again</a></div>
 {% else %}
 {% if report %}
+{% include "partials/decision_summary.html" %}
 {% if not results_only %}
 <div class="mb-4"><p class="text-sm text-gray-600">GW{{ report.gameweek }} · Deadline {{ decision_deadline|date:"D j M H:i T" }}</p></div>
 {% include "partials/planner_pitch.html" %}
 {% endif %}
-{% include "partials/decision_summary.html" %}
 {% include "partials/chip_advice.html" %}
 {% if ai_enabled %}<div data-remote-panel><div id="gemini-briefing" hx-get="{% url 'rivals:decisions.ai' %}?fingerprint={{ report.fingerprint|urlencode }}" hx-trigger="load" hx-swap="outerHTML" hx-request='{"timeout":10000}'></div></div>{% endif %}
 {% endif %}
@@ -27,23 +27,13 @@
     <p class="text-sm text-gray-600 mb-4">{% if report.strategy == 'protect' %}Protecting a lead favours gains with less uncertainty.{% else %}Chasing a gap gives more weight to upside, while still requiring a positive estimated gain after transfer costs.{% endif %} These are possible outcomes, not guarantees.</p>
     <div class="rv-plan-routes">
     {% for option in report.options %}
-      <article class="rv-plan-route {% if not option.moves %}rv-plan-hold{% endif %}">
-        <p class="rv-eyebrow">{% if option.moves %}Change the squad{% else %}The baseline / Keep the squad{% endif %}</p>
-        <h3 class="font-bold">{% if report.manual and option.key == report.manual.key %}Your route · {% endif %}{% if option.moves %}{% for move in option.moves %}{{ move.out_name }} → {{ move.in_name }}{% if not forloop.last %} + {% endif %}{% endfor %}{% else %}Hold / roll{% endif %}</h3>
-        <div class="rv-plan-metrics">
-          <p>Forecast squad points<br><strong>{{ option.points }}</strong></p>
-          <p>Points cost<br><strong>{{ option.hits|default_if_none:"—" }}</strong></p>
-          <p class="rv-plan-gain {% if option.net_gain > 0 %}rv-plan-positive{% endif %}">Gain versus hold<br><strong>{% if option.net_gain != None %}{% if option.net_gain > 0 %}+{% endif %}{{ option.net_gain }}{% else %}{{ option.gain_low }} to {{ option.gain_high }}{% endif %}</strong></p>
-          <p>Gain sensitivity<br><strong>{{ option.gain_low }} to {{ option.gain_high }}</strong></p>
-        </div>
-        {% for move in option.moves %}<details class="my-3 text-sm"><summary class="cursor-pointer">{{ move.in_name }} · £{{ move.buy_price }}m · fixtures and news</summary><p class="mt-2">{% for fixture in move.schedule %}GW{{ fixture.gameweek }}: {{ fixture.opponents|join:", "|default:"Blank" }} ({{ fixture.points }} est. pts){% if not forloop.last %} · {% endif %}{% endfor %}</p>{% if move.news %}<p class="mt-2">{{ move.news }}</p>{% endif %}{% if move.minutes_risk %}<p>Limited season minutes make this projection less certain.</p>{% endif %}</details>{% endfor %}
-        {% if option.moves %}<p class="text-sm mt-3">Estimated bank after moves: £{{ option.bank_after }}m.</p>{% endif %}
-        {% if option.free_next != None %}<p class="text-xs text-gray-600 mt-2">{{ option.free_next }} free transfer{{ option.free_next|pluralize }} next gameweek if the normal allowance applies. The forecast assumes you keep the resulting squad for the whole window.</p>{% endif %}
-        {% if option.vs_rival != None %}<p class="text-sm mt-2">Estimated points versus your rival's unchanged squad: {{ option.vs_rival }}.</p>{% endif %}
-        <form method="POST" action="{% url 'rivals:decisions.save' %}" class="mt-3">{% csrf_token %}<input type="hidden" name="choice" value="{{ option.save_token }}"><button class="app-primary-button" type="submit">Save this plan</button></form>
-      </article>
+      {% include "partials/decision_route.html" %}
     {% endfor %}
     </div>
+    {% if report.short_term_is_separate %}
+    <h3 class="font-bold mt-6 mb-3">A different route for immediate points</h3>
+    {% include "partials/decision_route.html" with option=report.short_term %}
+    {% endif %}
   </div>
   {% if report.alternatives %}{% include "partials/decision_alternatives.html" %}{% endif %}
   {% if report.rival %}

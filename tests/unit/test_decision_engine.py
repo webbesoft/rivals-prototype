@@ -275,6 +275,146 @@ def test_hit_cost_and_zero_free_transfers_are_applied_once(manager, api):
 
 
 @pytest.mark.django_db
+def test_weekly_points_charge_the_hit_only_at_this_deadline(manager, api):
+    engine = DecisionEngine(manager, api).load()
+    report = engine.report(
+        confirmed(engine, free_transfers=0), manual=[(8, 18), (3, 17)]
+    )
+    plan = report["manual"]
+    assert [week["hits"] for week in plan["weekly"]] == [8, 0, 0]
+    assert plan["immediate"]["points"] == pytest.approx(
+        plan["lineups"][0]["points"] - 8, abs=0.05
+    )
+    assert plan["immediate"]["net_gain"] == pytest.approx(
+        plan["lineups"][0]["points"] - report["baseline"]["lineups"][0]["points"] - 8,
+        abs=0.05,
+    )
+    assert plan["weekly"][-1]["cumulative_gain"] == pytest.approx(
+        plan["net_gain"], abs=0.1
+    )
+    assert plan["net_points"] == pytest.approx(plan["points"] - 8, abs=0.1)
+    assert all(week["net_gain"] == 0 for week in report["baseline"]["weekly"])
+
+
+@pytest.mark.django_db
+def test_unknown_hit_cost_is_not_presented_as_an_immediate_net_gain(manager, api):
+    engine = DecisionEngine(manager, api).load()
+    engine.prepare(confirmed(engine, free_transfers=None))
+    baseline = engine.evaluate(engine.ids)
+    plan = engine.candidate([(3, 17)], baseline)
+    assert plan["immediate"]["points"] is None
+    assert plan["immediate"]["net_gain"] is None and plan["net_points"] is None
+    weekly = engine.weekly_comparison(plan, baseline)
+    assert weekly[0]["net_gain"] is None
+    assert all(week["cumulative_gain"] is None for week in weekly)
+    hold = engine.candidate([], baseline)
+    assert hold["immediate"]["net_gain"] == 0 and hold["hits"] == 0
+
+
+@pytest.mark.django_db
+def test_shortlist_includes_a_one_week_option_outside_the_full_window_leaders(
+    manager, api
+):
+    engine = DecisionEngine(manager, api).load()
+    engine.prepare(confirmed(engine))
+    for pid, player in engine.players.items():
+        value = 8.0 if pid > 15 and player["element_type"] == 2 else 3.0
+        engine.projections[pid] = dict.fromkeys(engine.weeks, value)
+    engine.projections[17] = dict(zip(engine.weeks, [20.0, 0.0, 0.0]))
+    engine.players[17]["now_cost"] = 60
+    choices = engine.options(engine.evaluate(engine.ids))
+    assert any(choice["key"] == "3:17" for choice in choices)
+
+
+def forecast_routes(engine, projections, moves):
+    """Supply contrasting player forecasts while retaining real XI/captain scoring."""
+    prepare = engine.prepare
+
+    def with_forecasts(inputs):
+        prepare(inputs)
+        for pid in engine.projections:
+            values = projections.get(pid, [3.0] * len(engine.weeks))
+            engine.projections[pid] = dict(zip(engine.weeks, values))
+
+    engine.prepare = with_forecasts
+    engine.options = lambda baseline: [
+        engine.candidate(move, baseline) for move in moves
+    ]
+
+
+@pytest.mark.django_db
+def test_immediate_route_can_differ_from_a_longer_term_gain(manager, api):
+    engine = DecisionEngine(manager, api).load()
+    forecast_routes(
+        engine,
+        {17: [1, 12, 12], 21: [10, 1, 1]},
+        [[(3, 17)], [(3, 21)]],
+    )
+    report = engine.report(confirmed(engine, free_transfers=0))
+    assert report["best"]["key"] == "3:17"
+    assert report["best"]["immediate"]["net_gain"] == -4
+    assert report["best"]["net_gain"] > 0
+    assert report["short_term"]["key"] == "3:21"
+    assert report["short_term"]["immediate"]["net_gain"] > 0
+    html = render_to_string("partials/decision_summary.html", {"report": report})
+    assert "A longer-term move" in html and "Holding projects more points" in html
+    assert "Best for GW11" in html and "GW11–13" in html
+
+
+@pytest.mark.django_db
+def test_hold_can_beat_a_one_week_punt_and_punt_can_be_saved(manager, api):
+    engine = DecisionEngine(manager, api).load()
+    forecast_routes(engine, {3: [8, 8, 8], 17: [12, 0, 0]}, [[(3, 17)]])
+    report = engine.report(confirmed(engine))
+    assert report["best"]["key"] == "hold"
+    assert report["short_term"]["key"] == "3:17"
+    assert report["short_term"]["immediate"]["net_gain"] > 0
+    assert report["short_term"]["net_gain"] < 0
+    assert report["short_term_is_separate"]
+    from rivals.views.decision_views import report_context
+
+    report_context(report, manager)
+    client = Client()
+    client.force_login(manager)
+    with patch.object(DecisionEngine, "report", return_value=report):
+        response = client.post(
+            reverse("rivals:decisions.save"),
+            {"choice": report["short_term"]["save_token"]},
+        )
+    assert response.status_code == 302
+    assert DecisionRecord.objects.get(user=manager).snapshot["chosen"]["key"] == "3:17"
+
+
+@pytest.mark.django_db
+def test_outlooks_separate_a_fixture_dip_from_weak_form_and_availability(manager, api):
+    for fixture in api.fetch_fixtures_data.return_value:
+        if fixture["team_h"] == 1:
+            fixture["team_h_difficulty"] = 5 if fixture["event"] == 11 else 2
+    engine = DecisionEngine(manager, api).load()
+    engine.players[1].update(form="6", points_per_game="6")
+    engine.players[8].update(form="1", points_per_game="5")
+    engine.players[9].update(status="i", chance_of_playing_next_round=0)
+    engine.prepare(confirmed(engine))
+    outlooks = {item["id"]: item for item in engine.player_outlooks()}
+    assert outlooks[1]["fixtures_improve"] and not outlooks[1]["weak_form"]
+    assert outlooks[8]["weak_form"] and not outlooks[8]["fixtures_improve"]
+    assert "FPL form 1.0 versus 5.0" in outlooks[8]["detail"]
+    assert outlooks[9]["availability_risk"]
+    assert "no recovery date is assumed" in outlooks[9]["detail"]
+
+
+@pytest.mark.django_db
+def test_points_window_ends_at_gw38_and_has_no_invented_later_outlook(manager, api):
+    engine = DecisionEngine(manager, api).load()
+    engine.context.update(decision_gameweek=38, scoring_gameweek=37)
+    report = engine.report(confirmed(engine, horizon=6))
+    assert report["weeks"] == [38]
+    assert report["horizon"] == 1 and report["end_gameweek"] == 38
+    assert len(report["best"]["weekly"]) == 1
+    assert not any(player["fixtures_improve"] for player in report["player_outlooks"])
+
+
+@pytest.mark.django_db
 def test_defaults_produce_usable_options_without_private_input(manager, api):
     report = DecisionEngine(manager, api).report()
     assert report["inputs"]["free_transfers"] == 1

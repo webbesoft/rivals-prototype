@@ -1,0 +1,35 @@
+<article class="rv-plan-route {% if not option.moves %}rv-plan-hold{% endif %}">
+  <p class="rv-eyebrow">{% if option.key == report.best.key %}Suggested for GW{{ report.gameweek }}–{{ report.end_gameweek }}{% elif option.key == report.short_term.key %}Best for GW{{ report.gameweek }}{% elif option.moves %}Change the squad{% else %}The baseline / Keep the squad{% endif %}</p>
+  <h3 class="font-bold">{% if report.manual and option.key == report.manual.key %}Your route · {% endif %}{% if option.moves %}{% for move in option.moves %}{{ move.out_name }} → {{ move.in_name }}{% if not forloop.last %} + {% endif %}{% endfor %}{% else %}Hold / roll{% endif %}</h3>
+  <div class="rv-plan-metrics">
+    <p class="rv-plan-gain {% if option.immediate.net_gain > 0 %}rv-plan-positive{% endif %}">GW{{ report.gameweek }} gain vs hold<br><strong>{% if option.immediate.net_gain != None %}{% if option.immediate.net_gain > 0 %}+{% endif %}{{ option.immediate.net_gain|floatformat:1 }}{% else %}—{% endif %}</strong></p>
+    <p class="rv-plan-gain {% if option.net_gain > 0 %}rv-plan-positive{% endif %}">GW{{ report.gameweek }}–{{ report.end_gameweek }} gain vs hold<br><strong>{% if option.net_gain != None %}{% if option.net_gain > 0 %}+{% endif %}{{ option.net_gain|floatformat:1 }}{% else %}—{% endif %}</strong></p>
+    <p>GW{{ report.gameweek }} squad points after hits<br><strong>{{ option.immediate.points|floatformat:1|default:"—" }}</strong></p>
+    <p>GW{{ report.gameweek }}–{{ report.end_gameweek }} squad points after hits<br><strong>{{ option.net_points|floatformat:1|default:"—" }}</strong></p>
+    <p>Hit in GW{{ report.gameweek }} only<br><strong>{{ option.hits|default_if_none:"—" }}</strong></p>
+    <p>GW{{ report.gameweek }}–{{ report.end_gameweek }} gain sensitivity<br><strong>{{ option.gain_low }} to {{ option.gain_high }}</strong></p>
+  </div>
+  {% if option.moves and option.net_gain > 0 and option.immediate.net_gain <= 0 %}<p class="text-sm mt-3"><strong>Longer-term gain:</strong> this route does not improve this gameweek's estimated points after hits.</p>{% endif %}
+  <details class="my-3 text-sm">
+    <summary class="cursor-pointer">Compare points gameweek by gameweek</summary>
+    <div class="decision-weekly-table"><table>
+      <caption>Predicted squad points including captaincy. Transfer hits apply in GW{{ report.gameweek }} only.</caption>
+      <thead><tr><th scope="col">GW</th><th scope="col">Hold</th><th scope="col">Plan after hits</th><th scope="col">Gain this GW</th><th scope="col">Cumulative gain</th></tr></thead>
+      <tbody>{% for week in option.weekly %}<tr><th scope="row">{{ week.gameweek }}</th><td>{{ week.hold_points|floatformat:1 }}</td><td>{{ week.points|floatformat:1|default:"—" }}</td><td>{% if week.net_gain > 0 %}+{% endif %}{{ week.net_gain|floatformat:1|default:"—" }}</td><td>{% if week.cumulative_gain > 0 %}+{% endif %}{{ week.cumulative_gain|floatformat:1|default:"—" }}</td></tr>{% endfor %}</tbody>
+    </table></div>
+  </details>
+  {% for move in option.moves %}
+  <details class="my-3 text-sm">
+    <summary class="cursor-pointer">{{ move.out_name }} vs {{ move.in_name }} · £{{ move.buy_price }}m · fixtures and outlook</summary>
+    <p class="mt-2">Player points before captaincy and hits: GW{{ report.gameweek }} {{ move.out_name }} {{ move.out_next_points|floatformat:1 }} vs {{ move.in_name }} {{ move.in_next_points|floatformat:1 }}; GW{{ report.gameweek }}–{{ report.end_gameweek }} {{ move.out_points|floatformat:1 }} vs {{ move.in_points|floatformat:1 }}. Bench and captain changes determine the squad gain above.</p>
+    {% if move.outlook %}<p class="mt-2"><strong>{{ move.outlook.label }}:</strong> {{ move.outlook.detail }}</p>{% endif %}
+    <p class="mt-2"><strong>Keep {{ move.out_name }}:</strong> {% for fixture in move.out_schedule %}GW{{ fixture.gameweek }}: {{ fixture.opponents|join:", "|default:"Blank" }} ({{ fixture.points }} est. pts){% if not forloop.last %} · {% endif %}{% endfor %}</p>
+    <p class="mt-2"><strong>Buy {{ move.in_name }}:</strong> {% for fixture in move.schedule %}GW{{ fixture.gameweek }}: {{ fixture.opponents|join:", "|default:"Blank" }} ({{ fixture.points }} est. pts){% if not forloop.last %} · {% endif %}{% endfor %}</p>
+    {% if move.news %}<p class="mt-2">{{ move.news }}</p>{% endif %}{% if move.minutes_risk %}<p>Limited season minutes make this projection less certain.</p>{% endif %}
+  </details>
+  {% endfor %}
+  {% if option.moves %}<p class="text-sm mt-3">{% if option.bank_after == None %}Bank estimate unavailable. Confirm your bank balance.{% if "Confirm selling prices" in option.unknown %} Confirm selling prices.{% endif %}{% elif "Confirm selling prices" in option.unknown %}Bank after moves (upper bound): £{{ option.bank_after }}m. Confirm selling prices before relying on this balance.{% else %}Estimated bank after moves: £{{ option.bank_after }}m.{% endif %}</p>{% endif %}
+  {% if option.free_next != None %}<p class="text-xs text-gray-600 mt-2">{{ option.free_next }} free transfer{{ option.free_next|pluralize }} next gameweek if the normal allowance applies. The forecast assumes you keep the resulting squad for all {{ report.horizon }} gameweeks.</p>{% endif %}
+  {% if option.vs_rival != None %}<p class="text-sm mt-2">Estimated points versus your rival's unchanged squad over GW{{ report.gameweek }}–{{ report.end_gameweek }}: {{ option.vs_rival }}.</p>{% endif %}
+  <form method="POST" action="{% url 'rivals:decisions.save' %}" class="mt-3">{% csrf_token %}<input type="hidden" name="choice" value="{{ option.save_token }}"><button class="app-primary-button" type="submit">Save this plan</button></form>
+</article>

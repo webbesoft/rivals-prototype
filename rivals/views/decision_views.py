@@ -40,7 +40,7 @@ def planner_timing(view):
 
 
 def report_context(report, user):
-    for option in report["options"]:
+    for option in report["options"] + [report["short_term"]]:
         option["save_token"] = signing.dumps(
             {
                 "user": user.pk,
@@ -285,7 +285,12 @@ def save_decision(request):
                 "Your options have changed. Review your latest plan before saving."
             )
         option = next(
-            (item for item in report["options"] if item["key"] == token["option"]), None
+            (
+                item
+                for item in report["options"] + [report["short_term"]]
+                if item["key"] == token["option"]
+            ),
+            None,
         )
         if not option:
             raise ValueError("Review your latest options before saving.")

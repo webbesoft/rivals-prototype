@@ -18,6 +18,7 @@
 {% endblock %}
 
 {% block content %}
+  {% include "partials/decision_points.html" %}
   {% if first_week %}
   <p style="margin:0 0 8px;color:#58685c;font-family:'Courier New',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;">01 &middot; The team sheet</p>
   <h2 style="margin:0 0 10px;font-size:23px;font-weight:700;letter-spacing:-0.7px;line-height:1.25;">Fixtures and playing-time risks</h2>
@@ -63,6 +64,7 @@
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:32px;border-top:1px solid #ccd2c3;"><tr><td style="padding-top:28px;">
     <p style="margin:0 0 8px;color:#58685c;font-family:'Courier New',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;">02 &middot; The next move</p>
     <h2 style="margin:0 0 14px;font-size:25px;font-weight:700;letter-spacing:-0.8px;line-height:1.25;">Before the deadline</h2>
+    {% include "partials/decision_outlooks.html" %}
     {% if ai_cards %}
     <p style="margin:0 0 20px;color:#58685c;font-size:13px;line-height:1.7;">AI selected these priorities from your transfer plan. Figures remain estimates.</p>
     {% for card in ai_cards %}
@@ -73,24 +75,17 @@
     {% endfor %}
     {% else %}
     <p style="margin:0 0 20px;padding:12px 14px;background-color:#f1f2e9;color:#58685c;font-size:12px;line-height:1.7;">{{ ai_notice }}</p>
-    {% if report.best.moves %}
-    <p style="margin:0 0 6px;color:#58685c;font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;">Suggested route</p>
-    <p style="margin:0 0 10px;font-size:17px;font-weight:700;line-height:1.6;">{% for move in report.best.moves %}{{ move.out_name }} &rarr; {{ move.in_name }}{% if not forloop.last %}<br>{% endif %}{% endfor %}</p>
-    <p style="margin:0 0 22px;font-size:13px;line-height:1.7;">Estimated <strong>{{ report.best.net_gain }} more points</strong> than holding over {{ report.horizon }} gameweeks, after {{ report.best.hits }} points in hits. Sensitivity range: {{ report.best.gain_low }} to {{ report.best.gain_high }} points.</p>
-    {% else %}
-    <h3 style="margin:0 0 8px;font-size:17px;">Hold / roll</h3>
-    <p style="margin:0 0 22px;font-size:13px;line-height:1.7;">No available route clearly beats holding after estimated transfer costs. Keep your flexibility for later news.</p>
     {% endif %}
     <p style="margin:0 0 6px;color:#58685c;font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;">The armband</p>
     <p style="margin:0 0 8px;font-size:16px;font-weight:700;">Captain: {{ report.captain|default:"No clear option" }} &middot; Vice: {{ report.vice|default:"No clear option" }}</p>
-    <p style="margin:0;color:#58685c;font-size:12px;line-height:1.7;">These follow the next gameweek's fixture and playing-time estimates; check late team news.</p>
-    {% endif %}
+    <p style="margin:0;color:#58685c;font-size:12px;line-height:1.7;">These follow the next gameweek's fixture and playing-time estimates; check player availability in <a href="https://fantasy.premierleague.com/" style="color:#17372e;text-decoration:underline;">Fantasy Premier League</a> near the deadline.</p>
 
     {% if report.rival %}
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:24px;border:1px solid #ccd2c3;"><tr><td style="padding:16px;">
       <p style="margin:0 0 8px;color:#58685c;font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;">The league within the league</p>
+      <p style="margin:0 0 8px;font-size:14px;line-height:1.5;"><strong>Mini-league:</strong> {{ report.rival.league }}{% if report.rival.rival %} &middot; <strong>Rival:</strong> {{ report.rival.rival }}{% endif %}</p>
       {% if report.rival.unavailable %}<p style="margin:0;font-size:13px;line-height:1.7;">Fresh rival scenarios are unavailable. Check the planner after standings update.</p>
-      {% else %}<p style="margin:0 0 8px;font-size:14px;font-weight:700;line-height:1.5;">{{ report.rival.league }} &middot; {{ report.rival.rival }}</p>
+      {% else %}
       <p style="margin:0;color:#58685c;font-size:12px;line-height:1.7;">{% if report.rival.gap != None %}Current points gap (rival minus you): <strong>{{ report.rival.gap }}</strong>. {% endif %}Unchanged-squad forecast gap over this window: <strong>{{ report.rival.hold_gap }}</strong>. Rival transfers and captain choices are unknown.{% if report.rival.updated_at %} Standings snapshot: {{ report.rival.updated_at|local_datetime }}.{% endif %}</p>{% endif %}
     </td></tr></table>
     {% endif %}

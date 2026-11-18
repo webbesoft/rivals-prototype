@@ -7,7 +7,7 @@
     <span class="decision-alternatives-toggle">Browse options <span aria-hidden="true">⌄</span></span>
   </summary>
   <div class="decision-alternatives-body">
-    <p class="decision-alternatives-note">See the leading replacement for each player. Gains are estimated points versus keeping your squad, after transfer hits.</p>
+    <p class="decision-alternatives-note">See the leading replacement for each player. Compare this gameweek with GW{{ report.gameweek }}–{{ report.end_gameweek }} ({{ report.horizon }} gameweeks total). Gains include transfer hits, charged once in GW{{ report.gameweek }}.</p>
     {% for slot in report.alternatives %}
     {% with leading=slot.options.0 %}
     <details class="decision-replacement">
@@ -22,19 +22,21 @@
         </span>
         <span class="decision-replacement-gain {% if leading.net_gain > 0 %}decision-gain-positive{% endif %}">
           <strong>{% if leading.net_gain != None %}{% if leading.net_gain > 0 %}+{% endif %}{{ leading.net_gain|floatformat:1 }}{% else %}—{% endif %}</strong>
-          <span class="decision-alternatives-label">pts vs hold</span>
+          <span class="decision-alternatives-label">pts vs hold · GW{{ report.gameweek }}–{{ report.end_gameweek }}</span>
+          <span class="decision-alternatives-label">GW{{ report.gameweek }}: {% if leading.immediate.net_gain != None %}{% if leading.immediate.net_gain > 0 %}+{% endif %}{{ leading.immediate.net_gain|floatformat:1 }}{% else %}—{% endif %} pts</span>
         </span>
         <span class="decision-replacement-chevron" aria-hidden="true">⌄</span>
       </summary>
       <div class="decision-replacement-options">
         <table>
           <caption class="sr-only">Replacements for {{ slot.player }} over {{ report.horizon }} gameweeks. Gains include transfer hits.</caption>
-          <thead><tr><th scope="col">Buy</th><th scope="col">Hit (pts)</th><th scope="col">Gain (pts)</th></tr></thead>
+          <thead><tr><th scope="col">Buy</th><th scope="col">Hit (pts)</th><th scope="col">GW{{ report.gameweek }} gain</th><th scope="col">GW{{ report.gameweek }}–{{ report.end_gameweek }} gain</th></tr></thead>
           <tbody>
             {% for option in slot.options %}
             <tr>
               <th scope="row"><span class="decision-option-name">{{ option.moves.0.in_name }}{% if forloop.first %}<span class="decision-option-badge">Top pick</span>{% endif %}</span><span class="decision-alternatives-note">£{{ option.moves.0.buy_price|floatformat:1 }}m</span></th>
               <td>{{ option.hits|default_if_none:"—" }}</td>
+              <td>{% if option.immediate.net_gain != None %}{% if option.immediate.net_gain > 0 %}+{% endif %}{{ option.immediate.net_gain|floatformat:1 }}{% else %}—{% endif %}</td>
               <td class="{% if option.net_gain > 0 %}decision-gain-positive{% endif %}"><strong>{% if option.net_gain != None %}{% if option.net_gain > 0 %}+{% endif %}{{ option.net_gain|floatformat:1 }}{% else %}—{% endif %}</strong></td>
             </tr>
             {% endfor %}

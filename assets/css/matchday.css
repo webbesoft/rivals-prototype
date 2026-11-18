@@ -334,6 +334,11 @@
 .decision-replacement-gain > strong { font-size: 20px; line-height: 1.3; }
 .decision-replacement-gain > span { margin: 2px 0 0; }
 .decision-gain-positive { color: var(--success); }
+.decision-weekly-table { overflow-x: auto; }
+.decision-weekly-table table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.decision-weekly-table th, .decision-weekly-table td { padding: 8px 6px; text-align: right; border-bottom: 1px solid var(--rule); }
+.decision-weekly-table th:first-child { text-align: left; }
+.decision-weekly-table caption { text-align: left; padding-block: 8px; color: var(--soft-ink); }
 .decision-replacement-options { padding: 0 0 16px; overflow-x: auto; }
 .decision-replacement-options table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .decision-replacement-options thead { background: var(--paper); }
@@ -671,6 +676,9 @@
 .planner-week-panel { display: none; order: 1; flex-basis: 100%; min-width: 0; margin-top: 8px; }
 .planner-week-toggle:checked + .planner-week-label + .planner-week-panel { display: block; }
 .planner-panel .lineup-summary { max-width: 760px; margin-inline: auto; }
+.planner-points { text-align: right; }
+.planner-points strong { display: block; font-size: 30px; line-height: 1.3; font-variant-numeric: tabular-nums; }
+.planner-points span { display: block; color: var(--soft-ink); font-size: 11px; }
 .planner-fixture { padding: 5px 2px; border-radius: 0 0 3px 3px; background: #e4ead9; color: var(--ink); font-size: 11px; line-height: 1.4; overflow-wrap: anywhere; }
 .planner-fixture--blank { background: #e7e5dc; color: var(--soft-ink); }
 .planner-estimate { margin-top: 2px; font-weight: 800; font-variant-numeric: tabular-nums; }

@@ -8,6 +8,7 @@
     <div class="planner-week-panel" role="group" aria-label="Gameweek {{ week.gameweek }} forecast">
       <div class="lineup-summary">
         <div><p class="lineup-eyebrow">GW{{ week.gameweek }} · Hold / roll</p><h3 class="lineup-formation">Forecast XI <span>{{ week.formation }}</span></h3></div>
+        <div class="planner-points"><p class="lineup-eyebrow">Predicted squad points</p><strong>{{ week.points|floatformat:1 }}</strong><span>including captaincy · if you hold</span></div>
       </div>
       <div class="lineup-board">
         <div class="lineup-loading" aria-hidden="true"><span class="lineup-spinner"></span><span>Updating forecast…</span></div>

@@ -41,7 +41,7 @@ def digest(value):
 
 
 class DecisionEngine:
-    VERSION = "decision-v5-ledger-chip-advice"
+    VERSION = "decision-v7-precise-immediate-gains"
 
     def __init__(self, user, api=None, *, fresh_squad=False):
         self.fresh_squad = fresh_squad
@@ -287,7 +287,7 @@ class DecisionEngine:
             ]
             for position in POSITIONS
         }
-        total, lineups = 0.0, []
+        total, lineups, weekly_points = 0.0, [], {}
         for week in self.weeks:
             ordered = {
                 pos: sorted(group, key=lambda pid: (-self.projections[pid][week], pid))
@@ -314,6 +314,7 @@ class DecisionEngine:
                 key=lambda pid: (self.projections[pid][week], -pid),
             )
             total += points
+            weekly_points[week] = points
             lineups.append(
                 {
                     "gameweek": week,
@@ -323,7 +324,7 @@ class DecisionEngine:
                     "points": round(points, 2),
                 }
             )
-        result = {"points": total, "lineups": lineups}
+        result = {"points": total, "lineups": lineups, "weekly_points": weekly_points}
         self._evaluations[key] = result
         return result
 
@@ -360,11 +361,17 @@ class DecisionEngine:
             return None
         projection = self.evaluate(ids)
         hits = (
-            4 * max(0, len(moves) - data["free_transfers"])
-            if data["free_transfers"] is not None
-            else None
+            0
+            if not moves
+            else (
+                4 * max(0, len(moves) - data["free_transfers"])
+                if data["free_transfers"] is not None
+                else None
+            )
         )
         gross = projection["points"] - baseline["points"]
+        first_points = projection["weekly_points"][self.weeks[0]]
+        first_hold = baseline["weekly_points"][self.weeks[0]]
         net = gross - (hits if hits is not None else 4 * len(moves))
         unknown = []
         if not data["confirmed"]:
@@ -426,6 +433,17 @@ class DecisionEngine:
             ],
             "ids": ids,
             "points": round(projection["points"], 1),
+            "net_points": (
+                round(projection["points"] - hits, 1) if hits is not None else None
+            ),
+            "immediate": {
+                "gameweek": self.weeks[0],
+                "points": round(first_points - hits, 1) if hits is not None else None,
+                "hold_points": round(first_hold, 1),
+                "net_gain": (
+                    first_points - first_hold - hits if hits is not None else None
+                ),
+            },
             "gross_gain": round(gross, 1),
             "net_gain": round(gross - hits, 1) if hits is not None else None,
             "gain_low": round(
@@ -478,9 +496,13 @@ class DecisionEngine:
             ordered = sorted(
                 pool, key=lambda pid: (-sum(self.projections[pid].values()), pid)
             )
+            immediate_ordered = sorted(
+                pool, key=lambda pid: (-self.projections[pid][self.weeks[0]], pid)
+            )
             # Include funding routes as well as the strongest individual forecasts.
             selected = (
                 ordered[:4]
+                + immediate_ordered[:2]
                 + sorted(
                     pool,
                     key=lambda pid: (
@@ -501,10 +523,21 @@ class DecisionEngine:
                     for pid in ordered
                     if self.players[pid].get("now_cost", 0) <= ceiling
                 ][:2]
+                legal_immediate = next(
+                    (
+                        pid
+                        for pid in immediate_ordered
+                        if self.players[pid].get("now_cost", 0) <= ceiling
+                        and self.candidate([(out, pid)], baseline) is not None
+                    ),
+                    None,
+                )
+                if legal_immediate is not None:
+                    selected.append(legal_immediate)
             for incoming in dict.fromkeys(selected):
                 opportunities.append((out, incoming))
         choices = [self.candidate([move], baseline) for move in opportunities]
-        # At most seven routes per slot, including individually affordable upgrades.
+        # Shortlists cover both immediate points and the full fixture window.
         for left, right in itertools.combinations(opportunities, 2):
             if left[0] != right[0] and left[1] != right[1]:
                 choices.append(self.candidate([left, right], baseline))
@@ -718,6 +751,86 @@ class DecisionEngine:
             for pid in self.ids
         ]
 
+    def player_outlooks(self):
+        """Explain fixture changes and observed form separately; never infer recovery."""
+        outlooks = []
+        for pid in self.ids:
+            player = self.players[pid]
+            form = number(player.get("form"))
+            season_average = number(player.get("points_per_game"))
+            first = self.projections[pid][self.weeks[0]]
+            later = [self.projections[pid][week] for week in self.weeks[1:]]
+            later_average = sum(later) / len(later) if later else None
+            improves = later_average is not None and later_average > max(
+                first * 1.15, first + 0.5
+            )
+            weak_form = season_average > 0 and form < season_average * 0.75
+            availability_risk = (
+                player.get("status", "a") not in ("a", "d")
+                or number(player.get("chance_of_playing_next_round"), 100) < 100
+                or self.risk[pid] > 0.45
+            )
+            if not (improves or weak_form or availability_risk):
+                continue
+            labels, details = [], []
+            if availability_risk:
+                labels.append("Availability or minutes concern")
+                details.append(
+                    "Playing time lowers this estimate. Current availability is held "
+                    "constant across the window; no recovery date is assumed."
+                )
+            if weak_form:
+                labels.append("Recent form below season average")
+                details.append(
+                    f"FPL form {form:.1f} versus {season_average:.1f} points per game "
+                    "this season. The forecast carries this form forward; a sustained "
+                    "rebound is not assumed."
+                )
+            if improves:
+                labels.append("Fixtures improve")
+                details.append(
+                    f"GW{self.weeks[0]}: {first:.1f} projected player points; "
+                    f"GW{self.weeks[1]}–{self.weeks[-1]}: {later_average:.1f} per "
+                    "gameweek on average. The schedule lifts the estimate. "
+                    "Consider that improvement before selling for this week alone."
+                )
+            outlooks.append(
+                {
+                    "id": pid,
+                    "name": self.name(pid),
+                    "label": "; ".join(labels),
+                    "detail": " ".join(details),
+                    "fixtures_improve": improves,
+                    "weak_form": weak_form,
+                    "availability_risk": availability_risk,
+                }
+            )
+        return outlooks
+
+    def weekly_comparison(self, choice, baseline):
+        """Charge this deadline's hit once, in the first gameweek."""
+        comparison, cumulative = [], 0.0
+        projected = self.evaluate(choice["ids"])["weekly_points"]
+        for index, line in enumerate(choice["lineups"]):
+            week = line["gameweek"]
+            points, hold_points = projected[week], baseline["weekly_points"][week]
+            hit = choice["hits"] if index == 0 else 0
+            gain = points - hold_points - (hit or 0)
+            cumulative += gain
+            comparison.append(
+                {
+                    "gameweek": line["gameweek"],
+                    "points": (round(points - hit, 1) if hit is not None else None),
+                    "hold_points": round(hold_points, 1),
+                    "hits": hit,
+                    "net_gain": round(gain, 1) if hit is not None else None,
+                    "cumulative_gain": (
+                        round(cumulative, 1) if choice["hits"] is not None else None
+                    ),
+                }
+            )
+        return comparison
+
     def preview(self):
         """Forecast the unchanged squad without searching transfer combinations."""
         self.prepare(self.inputs())
@@ -798,10 +911,29 @@ class DecisionEngine:
             and choice["objective"] > 0
         ]
         best = qualified[0] if qualified else hold
+        immediate_choices = [
+            choice
+            for choice in choices
+            if choice["immediate"]["net_gain"] is not None
+            and choice["immediate"]["net_gain"] > 0
+        ]
+        short_term = (
+            min(
+                immediate_choices,
+                key=lambda item: (
+                    -item["immediate"]["net_gain"],
+                    -item["objective"],
+                    len(item["moves"]),
+                    item["key"],
+                ),
+            )
+            if immediate_choices
+            else hold
+        )
         top = self.diverse_options(choices, primary=best if best["moves"] else None)
         if manual_option and all(item["key"] != manual_option["key"] for item in top):
             top.insert(0, manual_option)
-        for choice in [hold] + top:
+        for choice in [hold, short_term] + top:
             choice["vs_rival"] = (
                 round(
                     choice["points"] - (choice["hits"] or 0) - rival["rival_points"], 1
@@ -853,6 +985,25 @@ class DecisionEngine:
             for leader in alternative_leaders
         ]
         scenarios = [hold] + top
+        displayed = (
+            scenarios
+            + [best, short_term]
+            + [choice for slot in alternatives for choice in slot["options"]]
+        )
+        outlooks = self.player_outlooks()
+        outlook_by_id = {item["id"]: item for item in outlooks}
+        for choice in {choice["key"]: choice for choice in displayed}.values():
+            choice["weekly"] = self.weekly_comparison(choice, baseline)
+            for move in choice["moves"]:
+                outgoing, incoming = move["out"], move["in"]
+                move.update(
+                    out_schedule=self.player_fixtures[outgoing],
+                    out_next_points=round(self.projections[outgoing][self.weeks[0]], 1),
+                    in_next_points=round(self.projections[incoming][self.weeks[0]], 1),
+                    out_points=round(sum(self.projections[outgoing].values()), 1),
+                    in_points=round(sum(self.projections[incoming].values()), 1),
+                    outlook=outlook_by_id.get(outgoing),
+                )
         result = {
             "fingerprint": fingerprint,
             "season": self.context["season"],
@@ -860,10 +1011,15 @@ class DecisionEngine:
             "scoring_gameweek": self.context["scoring_gameweek"],
             "deadline": self.context["next_deadline"].isoformat(),
             "horizon": len(self.weeks),
+            "end_gameweek": self.weeks[-1],
             "created_at": timezone.now().isoformat(),
             "strategy": data["strategy"],
             "baseline": hold,
             "best": best,
+            "short_term": short_term,
+            "short_term_is_separate": all(
+                short_term["key"] != choice["key"] for choice in scenarios
+            ),
             "options": scenarios,
             "manual": manual_option,
             "alternatives": alternatives[:5],
@@ -883,6 +1039,7 @@ class DecisionEngine:
             "captain_id": first["captain"],
             "vice_id": first["vice"],
             "players": self.player_forecasts(),
+            "player_outlooks": outlooks,
             "inputs": data,
             "bank_display": data["bank"] / 10 if data["bank"] is not None else 0,
             "weeks": self.weeks,

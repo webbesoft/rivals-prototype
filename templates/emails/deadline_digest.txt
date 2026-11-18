@@ -2,6 +2,18 @@
 GW{{ report.gameweek }} · Your AI briefing
 Deadline: {{ deadline|date:"D j M Y H:i T" }}
 
+PREDICTED POINTS: TRANSFER VERSUS HOLD
+{% if report.best.moves %}Suggested route: {% for move in report.best.moves %}{{ move.out_name }} -> {{ move.in_name }}{% if not forloop.last %}; {% endif %}{% endfor %}.
+{% else %}Hold / roll: no available route clearly beats holding over GW{{ report.gameweek }}–{{ report.end_gameweek }} after transfer costs and the selected risk preference.
+{% endif %}GW{{ report.gameweek }} (this gameweek): hold {{ report.best.immediate.hold_points|floatformat:1 }}; {% if report.best.moves %}transfer{% else %}hold / roll{% endif %} {{ report.best.immediate.points|floatformat:1 }}; gain vs hold {% if report.best.immediate.net_gain > 0 %}+{% endif %}{{ report.best.immediate.net_gain|floatformat:1 }} pts.
+{% if report.horizon > 1 %}GW{{ report.gameweek }}–{{ report.end_gameweek }} ({{ report.horizon }} gameweeks total): hold {{ report.baseline.points|floatformat:1 }}; {% if report.best.moves %}transfer{% else %}hold / roll{% endif %} {{ report.best.net_points|floatformat:1 }}; gain vs hold {% if report.best.net_gain > 0 %}+{% endif %}{{ report.best.net_gain|floatformat:1 }} pts.
+{% endif %}Includes captaincy. {{ report.best.hits }} points in hits, charged once in GW{{ report.gameweek }}. The full-window total includes this gameweek; it is not a season forecast.
+{% if report.best.moves %}GW{{ report.gameweek }}–{{ report.end_gameweek }} gain sensitivity: {{ report.best.gain_low }} to {{ report.best.gain_high }} points. These are estimates, not guaranteed returns.
+{% endif %}
+{% if report.best.moves %}{% if report.best.immediate.net_gain > 0 %}More points now and across the window.{% elif report.best.immediate.net_gain < 0 %}A longer-term move: holding projects more points in GW{{ report.gameweek }}. The route earns its estimated advantage in later gameweeks.{% else %}A longer-term move: no estimated points advantage in GW{{ report.gameweek }}; the gain comes later.{% endif %}
+{% endif %}{% if report.short_term and report.short_term.key != report.best.key %}Best for GW{{ report.gameweek }}: {% if report.short_term.moves %}{% for move in report.short_term.moves %}{{ move.out_name }} -> {{ move.in_name }}{% if not forloop.last %}; {% endif %}{% endfor %}. {% if report.short_term.immediate.net_gain > 0 %}+{% endif %}{{ report.short_term.immediate.net_gain|floatformat:1 }} points versus hold this gameweek, after hits; {% if report.short_term.net_gain > 0 %}+{% endif %}{{ report.short_term.net_gain|floatformat:1 }} over GW{{ report.gameweek }}–{{ report.end_gameweek }}.{% else %}Hold / roll. No available transfer improves this gameweek's estimated points after hits.{% endif %} The suggested route is ranked over the full {{ report.horizon }}-gameweek window.
+{% endif %}{% if report.baseline.free_next != None %}Holding leaves {{ report.baseline.free_next }} free transfer{{ report.baseline.free_next|pluralize }} next gameweek;{% else %}Next gameweek’s free-transfer allowance is unknown;{% endif %} {% if report.best.moves %}{% if report.best.free_next != None %}the suggested route leaves {{ report.best.free_next }}.{% else %}the suggested route’s allowance is also unknown.{% endif %}{% else %}no transfer hit applies.{% endif %} Future transfers are not modelled; saved flexibility has no added points value in this forecast.
+
 FIXTURES AND PLAYING-TIME RISKS
 Hold / current-squad baseline: if you make no transfers.
 Forecast XI · {{ first_week.formation }}
@@ -19,18 +31,17 @@ PLANNING WINDOW (UNCHANGED SQUAD)
 {% for week in outlook %}GW{{ week.gameweek }}: {{ week.points|floatformat:1 }} XI est. pts including captaincy; {{ week.blanks }} blanks; {{ week.doubles }} doubles; {{ week.risks }} risk flags across all 15 players.
 {% endfor %}
 BEFORE THE DEADLINE
+{% for player in report.player_outlooks %}{{ player.name }} · {{ player.label }}: {{ player.detail }}
+{% endfor %}
 {% if ai_cards %}AI selected these priorities from your transfer plan. Figures remain estimates.
 {% for card in ai_cards %}{{ forloop.counter }}. {{ card.title }}
 {{ card.detail }}
 {% endfor %}{% else %}{{ ai_notice }}
-{% if report.best.moves %}Suggested route: {% for move in report.best.moves %}{{ move.out_name }} -> {{ move.in_name }}{% if not forloop.last %}; {% endif %}{% endfor %}.
-Estimated gain versus hold: {{ report.best.net_gain }} points over {{ report.horizon }} gameweeks, after {{ report.best.hits }} points in hits. Sensitivity range: {{ report.best.gain_low }} to {{ report.best.gain_high }} points.
-{% else %}Hold / roll: no available route clearly beats holding after estimated transfer costs. Keep your flexibility for later news.
 {% endif %}
 Captain: {{ report.captain|default:"No clear option" }}; vice: {{ report.vice|default:"No clear option" }}.
-Chosen using next gameweek fixture and playing-time estimates. Check late team news.
-{% endif %}
-{% if report.rival %}{% if report.rival.unavailable %}Rival scenarios are unavailable. Check the planner after standings update.{% else %}{{ report.rival.league }} · {{ report.rival.rival }}. Current gap (rival minus you): {{ report.rival.gap }}. Forecast gap if squads stay unchanged: {{ report.rival.hold_gap }}. Rival transfers and captain choices are unknown. Standings snapshot: {{ report.rival.updated_at|local_datetime }}.{% endif %}{% endif %}
+Chosen using next gameweek fixture and playing-time estimates. Check player availability in Fantasy Premier League: https://fantasy.premierleague.com/
+{% if report.rival %}Mini-league: {{ report.rival.league }}{% if report.rival.rival %} · Rival: {{ report.rival.rival }}{% endif %}.
+{% if report.rival.unavailable %}Rival scenarios are unavailable. Check the planner after standings update.{% else %}Current gap (rival minus you): {{ report.rival.gap }}. Forecast gap if squads stay unchanged: {{ report.rival.hold_gap }}. Rival transfers and captain choices are unknown. Standings snapshot: {{ report.rival.updated_at|local_datetime }}.{% endif %}{% endif %}
 {% if notice %}{{ notice }}{% endif %}
 Open your transfer plan: {{ planner_url }}
 

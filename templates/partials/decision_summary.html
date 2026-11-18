@@ -6,16 +6,17 @@
   </div>
   {% if decision_error %}<p role="status" class="text-sm text-gray-600">{{ decision_error }}</p>
   {% elif report %}
-    <p class="text-sm text-gray-500 mb-3">GW{{ report.gameweek }} · Deadline {{ decision_deadline|date:"D j M H:i T" }} · Next {{ report.horizon }} gameweeks · Prepared {{ decision_prepared|date:"H:i T" }}</p>
-    <p class="text-xs text-gray-500 mb-4">Plan uses {{ report.inputs.free_transfers }} free transfer{{ report.inputs.free_transfers|pluralize }} and £{{ report.bank_display|floatformat:1 }}m in bank.</p>
+    <p class="text-sm text-gray-500 mb-3">GW{{ report.gameweek }} · Deadline {{ decision_deadline|date:"D j M H:i T" }} · GW{{ report.gameweek }}–{{ report.end_gameweek }} ({{ report.horizon }} gameweeks) · Prepared {{ decision_prepared|date:"H:i T" }}</p>
+    {% include "partials/decision_points.html" %}
+    <p class="text-xs text-gray-500 mb-4">Available: {{ report.inputs.free_transfers }} free transfer{{ report.inputs.free_transfers|pluralize }} and £{{ report.bank_display|floatformat:1 }}m in bank.{% if report.best.moves %} Suggested route uses {{ report.best.moves|length }} transfer{{ report.best.moves|length|pluralize }}.{% endif %}</p>
     <p class="text-xs text-gray-500 mb-4">Based on the latest available squad and estimates. Recent transfers and final selling prices may differ; adjustments are optional.</p>
     <ol class="list-decimal pl-5 space-y-2 text-sm">
       {% if report.risks %}<li><strong>Review squad availability:</strong> {% for risk in report.risks %}{{ risk.name }}{% if not forloop.last %}, {% endif %}{% endfor %}.</li>{% endif %}
-      <li>{% if report.best.moves %}<strong>Suggested route:</strong> {% for move in report.best.moves %}{{ move.out_name }} → {{ move.in_name }}{% if not forloop.last %}; {% endif %}{% endfor %}. Estimated {{ report.best.net_gain }} more points than holding, after {{ report.best.hits }} points in hits.
-          {% else %}<strong>Keep your squad for now.</strong> No route clearly beats holding after its estimated points cost.{% endif %}
-      </li>
-      <li><strong>Captain shortlist:</strong> {{ report.captain|default:"No clear option yet" }}; vice {{ report.vice|default:"not yet clear" }}. These are estimates, so check team news near the deadline.</li>
+      <li><strong>Captain shortlist:</strong> {{ report.captain|default:"No clear option yet" }}; vice {{ report.vice|default:"not yet clear" }}. Check player availability in <a href="https://fantasy.premierleague.com/" target="_blank" rel="noopener noreferrer" class="underline">Fantasy Premier League</a> near the deadline.</li>
     </ol>
-    {% if report.rival %}<p class="mt-4 text-sm">{{ report.rival.league }}{% if report.rival.rival %} · Target: {{ report.rival.rival }}{% endif %}{% if report.rival.gap != None %} · {% if report.rival.gap > 0 %}{{ report.rival.gap }} points behind{% elif report.rival.gap < 0 %}{{ report.rival.gap|abs }} points ahead{% else %}Level on points{% endif %}{% endif %}</p>{% endif %}
+    {% include "partials/decision_outlooks.html" %}
+    {% if report.rival %}
+    <p class="mt-4 text-sm"><strong>Mini-league:</strong> {{ report.rival.league }}{% if report.rival.rival %} · <strong>Rival:</strong> {{ report.rival.rival }}{% endif %}{% if report.rival.gap != None %} · {% if report.rival.gap > 0 %}You are {{ report.rival.gap }} points behind{% elif report.rival.gap < 0 %}You are {{ report.rival.gap|abs }} points ahead{% else %}Level on points{% endif %}{% endif %}{% if report.rival.unavailable %}<br>Rival comparison unavailable. Check the planner after league updates arrive.{% endif %}</p>
+    {% endif %}
   {% endif %}
 </div>

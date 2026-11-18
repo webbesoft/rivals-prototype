@@ -36,6 +36,7 @@ def planner_pitch_weeks(report):
         weeks.append(
             {
                 "gameweek": lineup["gameweek"],
+                "points": round(lineup["points"], 1),
                 "rows": rows,
                 "formation": "-".join(str(len(row["players"])) for row in rows[1:]),
                 "bench": sorted(

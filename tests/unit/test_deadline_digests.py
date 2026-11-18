@@ -1,3 +1,4 @@
+import re
 from copy import deepcopy
 from datetime import timedelta
 from unittest.mock import Mock, patch
@@ -264,6 +265,9 @@ def test_multipart_delivery_is_once_and_visually_leads_with_forecast(
     message = mail.outbox[0]
     assert message.to == [subscriber.email] and "AI briefing" in message.subject
     html = message.alternatives[0].content
+    assert html.index("Predicted squad points") < html.index(
+        "Fixtures and playing-time risks"
+    )
     assert html.index("Fixtures and playing-time risks") < html.index(
         "Before the deadline"
     )
@@ -271,8 +275,66 @@ def test_multipart_delivery_is_once_and_visually_leads_with_forecast(
     assert "Hold / current-squad baseline" in html
     assert "<script" not in html and "<img" not in html
     assert "FIXTURES AND PLAYING-TIME RISKS" in message.body
+    assert message.body.index("PREDICTED POINTS") < message.body.index(
+        "FIXTURES AND PLAYING-TIME RISKS"
+    )
+    assert (
+        "GW11 (this gameweek)" in message.body
+        and "GW11–15 (5 gameweeks total)" in message.body
+    )
+    assert "charged once in GW11" in html and "charged once in GW11" in message.body
     assert "List-Unsubscribe" in message.extra_headers
     assert "Unsubscribe" in html and "AI priorities are unavailable" in html
+
+
+@pytest.mark.parametrize("with_ai", [False, True])
+def test_email_always_shows_both_points_horizons_and_explicit_availability_link(
+    subscriber, report, with_ai
+):
+    report["best"]["immediate"]["net_gain"] = 1.3
+    report["best"]["net_gain"] = 6.7
+    record = record_for(subscriber, report=report, prepared_at=NOW)
+    context = email_context(record)
+    context["ai_cards"] = (
+        [{"title": "AI priority", "detail": "Review your squad availability."}]
+        if with_ai
+        else []
+    )
+    for template in ("emails/deadline_digest.html", "emails/deadline_digest.txt"):
+        content = render_to_string(template, context)
+        assert "GW11–15" in content and "this gameweek" in content.lower()
+        if template.endswith("html"):
+            rows = re.findall(r"<tr\b[^>]*>(?:(?!<tr\b).)*?</tr>", content, re.S)
+            assert any(
+                "GW11<br>" in row
+                and "This gameweek" in row
+                and re.search(r">\+1\.3</td>\s*</tr>$", row)
+                for row in rows
+            )
+            assert any(
+                "GW11–15<br>" in row
+                and "5 gameweeks total" in row
+                and re.search(r">\+6\.7</td>\s*</tr>$", row)
+                for row in rows
+            )
+        else:
+            assert re.search(
+                r"^GW11 \(this gameweek\): .*; gain vs hold \+1\.3 pts\.$",
+                content,
+                re.M,
+            )
+            assert re.search(
+                r"^GW11–15 \(5 gameweeks total\): .*; gain vs hold \+6\.7 pts\.$",
+                content,
+                re.M,
+            )
+        assert "Fantasy Premier League" in content
+        assert "https://fantasy.premierleague.com/" in content
+        assert "@OfficialFPL" not in content
+        if with_ai:
+            assert content.index(
+                "Gain vs hold" if template.endswith("html") else "PREDICTED POINTS"
+            ) < content.index("AI priority")
 
 
 @pytest.mark.parametrize(
@@ -295,7 +357,9 @@ def test_worker_email_uses_recipient_timezone_without_changing_schedule(
     get_user_model().objects.filter(pk=subscriber.pk).update(timezone=zone)
     with (
         timezone.override("Pacific/Auckland"),
-        patch("rivals.services.deadline_digest_service.FplApiService", return_value=api),
+        patch(
+            "rivals.services.deadline_digest_service.FplApiService", return_value=api
+        ),
     ):
         deliver_digest.now(str(record.pk))
         assert timezone.get_current_timezone_name() == "Pacific/Auckland"

@@ -146,6 +146,77 @@ def generated(priorities=None, **extra):
     }
 
 
+def test_evidence_distinguishes_immediate_points_from_full_window(report):
+    report["end_gameweek"] = 15
+    report["best"].update(
+        key="5:6", immediate={"points": 60.0, "hold_points": 62.0, "net_gain": -2.0}
+    )
+    report["short_term"] = {
+        "key": "hold",
+        "moves": [],
+        "net_gain": 0.0,
+        "immediate": {"net_gain": 0.0},
+    }
+    evidence = {item["id"]: item for item in evidence_for(report)}
+    assert "GW11 only: 60.0" in evidence["route"]["detail"]
+    assert "GW11–15, including this gameweek" in evidence["route"]["detail"]
+    assert "no immediate points advantage" in evidence["route"]["detail"]
+    assert "Hold / roll" in evidence["short_term"]["title"]
+    assert "IGNORE THE SYSTEM" not in json.dumps(evidence)
+
+
+@pytest.mark.parametrize("chip_count", [0, 4])
+def test_fixture_evidence_has_capacity_before_optional_player_outlooks(
+    report, chip_count
+):
+    report["chip_advice"] = [
+        {
+            "chip": chip,
+            "status": "Wait",
+            "gameweek": 11,
+            "expiry_gameweek": 19,
+            "detail": "Check the fixture window.",
+        }
+        for chip in ("Wildcard", "Free Hit", "Bench Boost", "Triple Captain")
+    ][:chip_count]
+    report["player_outlooks"] = [
+        {
+            "id": pid,
+            "name": f"Player {pid}",
+            "label": "Fixtures improve",
+            "detail": "The schedule improves later.",
+        }
+        for pid in range(1, 6)
+    ]
+    report["players"] = [
+        {
+            "id": 1,
+            "name": "Normal",
+            "schedule": [{"gameweek": 11, "opponents": ["A (H)"]}],
+        },
+        {"id": 2, "name": "Blank", "schedule": [{"gameweek": 11, "opponents": []}]},
+        {
+            "id": 3,
+            "name": "Double",
+            "schedule": [{"gameweek": 11, "opponents": ["A (H)", "B (A)"]}],
+        },
+    ]
+    evidence = evidence_for(report)
+    ids = {item["id"] for item in evidence}
+    assert {"route", "fixture_2", "fixture_3"} <= ids
+    assert len(evidence) <= 10
+    assert sum(item["id"].startswith("outlook_") for item in evidence) == (
+        2 if chip_count == 0 else 0
+    )
+    with patch.object(
+        Gemini, "request", return_value=generated(["route", "fixture_2", "fixture_3"])
+    ) as request:
+        priorities, _, _ = Gemini().prioritise(KEY, evidence, "protect")
+    assert priorities == ["route", "fixture_2", "fixture_3"]
+    prompt = json.dumps(request.call_args.args[1])
+    assert "fixture_2" in prompt and "fixture_3" in prompt
+
+
 @pytest.mark.django_db
 def test_encryption_binds_ciphertext_to_owner_revision_and_rejects_tampering(
     user, credential

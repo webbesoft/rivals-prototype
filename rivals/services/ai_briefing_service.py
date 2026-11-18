@@ -29,7 +29,42 @@ def evidence_for(report):
     else:
         title = "Keep your squad for now"
         detail = "No available route clearly beats holding after estimated transfer costs. Keep your options open for later news."
+    immediate = best.get("immediate")
+    end_week = report.get("end_gameweek", report["gameweek"] + horizon - 1)
+    if immediate:
+        detail += (
+            f' GW{report["gameweek"]} only: {immediate["points"]:.1f} squad points '
+            f'after hits versus {immediate["hold_points"]:.1f} for holding '
+            f'({immediate["net_gain"]:+.1f} points). The full-window gain covers '
+            f'GW{report["gameweek"]}–{end_week}, including this gameweek.'
+        )
+        if best["moves"] and immediate["net_gain"] <= 0:
+            detail += (
+                " This is a longer-term move; it has no immediate points advantage."
+            )
     evidence = [{"id": "route", "title": title, "detail": detail}]
+    short_term = report.get("short_term")
+    if short_term and short_term["key"] != best["key"]:
+        route = (
+            "; ".join(
+                f'{move["out_name"]} → {move["in_name"]}'
+                for move in short_term["moves"]
+            )
+            or "Hold / roll"
+        )
+        evidence.append(
+            {
+                "id": "short_term",
+                "title": f"Best immediate points: {route}",
+                "detail": (
+                    f'GW{report["gameweek"]}: '
+                    f'{short_term["immediate"]["net_gain"]:+.1f} points versus holding '
+                    f'after hits. Across GW{report["gameweek"]}–{end_week}: '
+                    f'{short_term["net_gain"]:+.1f} points versus holding. '
+                    "The main recommendation ranks the full window and selected risk preference."
+                ),
+            }
+        )
     for advice in report.get("chip_advice", []):
         evidence.append(
             {
@@ -82,20 +117,30 @@ def evidence_for(report):
                 "detail": f'This route projects a {best["vs_rival"]:+.1f}-point difference over {horizon} gameweeks if your rival keeps their published squad. Their next transfers and captain choice remain unknown.',
             }
         )
+    fixtures = []
     for player in report["players"]:
         first = player["schedule"][0]
         opponents = first["opponents"]
         if len(opponents) != 1:
             label = "a blank" if not opponents else "multiple fixtures"
-            evidence.append(
+            fixtures.append(
                 {
                     "id": f'fixture_{player["id"]}',
                     "title": f'{player["name"]} has {label}',
                     "detail": f'GW{first["gameweek"]}: {", ".join(opponents) or "no scheduled fixture"}. This is already included in the squad forecast.',
                 }
             )
-        if len(evidence) >= 10:
-            break
+    # Reserve fixture capacity before optional outlooks, even if ordinary players
+    # appear first in the squad. The route remains a required provider priority.
+    evidence = (evidence[:1] + fixtures + evidence[1:])[:10]
+    for player in report.get("player_outlooks", [])[: min(5, 10 - len(evidence))]:
+        evidence.append(
+            {
+                "id": f'outlook_{player["id"]}',
+                "title": f'{player["name"]}: {player["label"]}',
+                "detail": player["detail"],
+            }
+        )
     return evidence
 
 

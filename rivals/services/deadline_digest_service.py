@@ -1,5 +1,6 @@
 """Deadline-aware, consented email work with durable generation and send claims."""
 
+from copy import deepcopy
 from datetime import timedelta
 
 from background_task import background
@@ -406,6 +407,27 @@ def generate_digest(record_id, generation):
 
 def email_context(record):
     report = record.report
+    if report.get("best") and "immediate" not in report["best"]:
+        # Still-fresh pre-deployment reports contain gross totals and saved lineups.
+        # Derive display fields without changing the stored forecast or its identity.
+        report = deepcopy(report)
+        baseline = report["baseline"]
+        first_hold = baseline["lineups"][0]["points"]
+        report["end_gameweek"] = baseline["lineups"][-1]["gameweek"]
+        for option in (baseline, report["best"]):
+            hits = option["hits"]
+            first_points = option["lineups"][0]["points"]
+            option["net_points"] = (
+                round(option["points"] - hits, 1) if hits is not None else None
+            )
+            option["immediate"] = {
+                "gameweek": report["gameweek"],
+                "points": round(first_points - hits, 1) if hits is not None else None,
+                "hold_points": round(first_hold, 1),
+                "net_gain": (
+                    first_points - first_hold - hits if hits is not None else None
+                ),
+            }
     weeks = planner_pitch_weeks(report) if report else []
     outlook = []
     for week, lineup in zip(weeks, report.get("baseline", {}).get("lineups", [])):
