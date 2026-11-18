@@ -448,6 +448,28 @@ def google_callback(
         )
 
 
+@pytest.mark.parametrize("method", ["email", "google"])
+def test_sign_in_survives_browser_restart(client, gmail_user, settings, method):
+    connect_team(gmail_user)
+    if method == "google":
+        response = google_callback(client, gmail_user.email)
+    else:
+        issue_link(gmail_user.email, "/dashboard/")
+        client.get(emailed_path())
+        response = confirm_sign_in(client)
+
+    assert response.status_code == 302
+    # Browsers discard session cookies when the browsing session ends.
+    reopened = Client()
+    for name, cookie in client.cookies.items():
+        if cookie["expires"] or cookie["max-age"]:
+            reopened.cookies[name] = cookie.value
+    assert reopened.get(reverse("api:me")).status_code == 200
+    cookie = response.cookies[settings.SESSION_COOKIE_NAME]
+    assert cookie["expires"]
+    assert int(cookie["max-age"]) == settings.SESSION_COOKIE_AGE
+
+
 @pytest.mark.parametrize("local_verified", [False, True])
 @pytest.mark.parametrize(
     "hosted_domain",

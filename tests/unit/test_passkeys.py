@@ -448,6 +448,26 @@ def login_credential(client, user, device, **kwargs):
     )
 
 
+def test_passkey_sign_in_survives_browser_restart(client, user, settings):
+    device = register(client, user)
+    client = Client()
+    credential, challenge_id = login_credential(client, user, device)
+    response = client.post(
+        reverse("mfa_login_webauthn"),
+        {"credential": json.dumps(credential), "challenge_id": challenge_id},
+        secure=True,
+    )
+    assert response.status_code == 302
+    reopened = Client()
+    for name, cookie in client.cookies.items():
+        if cookie["expires"] or cookie["max-age"]:
+            reopened.cookies[name] = cookie.value
+    assert reopened.get(reverse("api:me"), secure=True).status_code == 200
+    cookie = response.cookies[settings.SESSION_COOKIE_NAME]
+    assert cookie["expires"]
+    assert int(cookie["max-age"]) == settings.SESSION_COOKIE_AGE
+
+
 def test_passkey_registration_login_redirect_and_removal(client, user):
     device = register(client, user)
     key = Authenticator.objects.get(user=user)

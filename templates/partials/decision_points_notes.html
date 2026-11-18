@@ -1,0 +1,10 @@
+  <p style="margin:10px 0;color:#58685c;font-size:12px;line-height:1.7;">{{ report.best.hits }} points in hits, charged once in GW{{ report.gameweek }}. The {{ report.horizon }}-gameweek total includes this gameweek; it is not a season forecast.</p>
+  {% if report.best.moves %}<p style="margin:10px 0;color:#58685c;font-size:12px;line-height:1.7;">GW{{ report.gameweek }}–{{ report.end_gameweek }} gain sensitivity: {{ report.best.gain_low }} to {{ report.best.gain_high }} points. These are estimates, not guaranteed returns.</p>{% endif %}
+  <p style="margin:10px 0;font-size:14px;line-height:1.7;">
+    {% if report.best.moves %}
+      {% if report.best.immediate.net_gain > 0 %}<strong>More points now and across the window.</strong> This route beats holding in GW{{ report.gameweek }} and over GW{{ report.gameweek }}–{{ report.end_gameweek }}.
+      {% elif report.best.immediate.net_gain < 0 %}<strong>A longer-term move.</strong> Holding projects more points in GW{{ report.gameweek }}. This route earns its estimated advantage in later gameweeks.
+      {% else %}<strong>A longer-term move.</strong> No estimated points advantage in GW{{ report.gameweek }}; the gain comes in later gameweeks.{% endif %}
+    {% else %}<strong>Keep your squad for the full window.</strong> No available route clearly beats holding over GW{{ report.gameweek }}–{{ report.end_gameweek }} after transfer costs and the selected risk preference.{% endif %}
+  </p>
+  <p style="margin:10px 0;color:#58685c;font-size:12px;line-height:1.7;">{% if report.baseline.free_next != None %}Holding leaves {{ report.baseline.free_next }} free transfer{{ report.baseline.free_next|pluralize }} next gameweek;{% else %}Next gameweek’s free-transfer allowance is unknown;{% endif %} {% if report.best.moves %}{% if report.best.free_next != None %}the suggested route leaves {{ report.best.free_next }}.{% else %}the suggested route’s allowance is also unknown.{% endif %}{% else %}no transfer hit applies.{% endif %} Future transfers are not modelled, so saved flexibility has no added points value in this forecast.</p>

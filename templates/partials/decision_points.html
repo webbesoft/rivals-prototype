@@ -2,41 +2,10 @@
 <div class="decision-points" style="margin:16px 0 20px;">
   <h3 style="margin:0 0 10px;font-size:18px;line-height:1.4;">{% if report.best.moves %}Suggested route{% else %}Hold / roll{% endif %}</h3>
   {% if report.best.moves %}<p style="margin:0 0 14px;font-size:16px;font-weight:700;line-height:1.6;">{% for move in report.best.moves %}{{ move.out_name }} → {{ move.in_name }}{% if not forloop.last %}; {% endif %}{% endfor %}</p>{% endif %}
-  <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;text-align:left;font-size:12px;line-height:1.5;">
-    <caption style="text-align:left;margin-bottom:8px;color:#58685c;">Predicted squad points · includes captaincy and transfer hits</caption>
-    <thead><tr style="background-color:#17372e;color:#fafbf4;">
-      <th scope="col" style="padding:10px 6px;">Period</th>
-      <th scope="col" style="padding:10px 6px;">Hold</th>
-      <th scope="col" style="padding:10px 6px;">{% if report.best.moves %}Transfer{% else %}Hold / roll{% endif %}</th>
-      <th scope="col" style="padding:10px 6px;">Gain vs hold</th>
-    </tr></thead>
-    <tbody>
-      <tr style="background-color:#edf0e4;">
-        <th scope="row" style="padding:14px 6px;border-bottom:1px solid #ccd2c3;">GW{{ report.gameweek }}<br><span style="font-weight:400;">This gameweek</span></th>
-        <td style="padding:14px 6px;border-bottom:1px solid #ccd2c3;">{{ report.best.immediate.hold_points|floatformat:1 }}</td>
-        <td style="padding:14px 6px;border-bottom:1px solid #ccd2c3;">{{ report.best.immediate.points|floatformat:1 }}</td>
-        <td style="padding:14px 6px;border-bottom:1px solid #ccd2c3;font-size:22px;font-weight:700;">{% if report.best.immediate.net_gain > 0 %}+{% endif %}{{ report.best.immediate.net_gain|floatformat:1 }}</td>
-      </tr>
-      {% if report.horizon > 1 %}<tr style="background-color:#f7f8f1;">
-        <th scope="row" style="padding:14px 6px;border-bottom:1px solid #ccd2c3;">GW{{ report.gameweek }}–{{ report.end_gameweek }}<br><span style="font-weight:400;">{{ report.horizon }} gameweeks total</span></th>
-        <td style="padding:14px 6px;border-bottom:1px solid #ccd2c3;">{{ report.baseline.points|floatformat:1 }}</td>
-        <td style="padding:14px 6px;border-bottom:1px solid #ccd2c3;">{{ report.best.net_points|floatformat:1 }}</td>
-        <td style="padding:14px 6px;border-bottom:1px solid #ccd2c3;font-size:22px;font-weight:700;">{% if report.best.net_gain > 0 %}+{% endif %}{{ report.best.net_gain|floatformat:1 }}</td>
-      </tr>{% endif %}
-    </tbody>
-  </table>
-  <p style="margin:10px 0;color:#58685c;font-size:12px;line-height:1.7;">{{ report.best.hits }} points in hits, charged once in GW{{ report.gameweek }}. The {{ report.horizon }}-gameweek total includes this gameweek; it is not a season forecast.</p>
-  {% if report.best.moves %}<p style="margin:10px 0;color:#58685c;font-size:12px;line-height:1.7;">GW{{ report.gameweek }}–{{ report.end_gameweek }} gain sensitivity: {{ report.best.gain_low }} to {{ report.best.gain_high }} points. These are estimates, not guaranteed returns.</p>{% endif %}
-  <p style="margin:10px 0;font-size:14px;line-height:1.7;">
-    {% if report.best.moves %}
-      {% if report.best.immediate.net_gain > 0 %}<strong>More points now and across the window.</strong> This route beats holding in GW{{ report.gameweek }} and over GW{{ report.gameweek }}–{{ report.end_gameweek }}.
-      {% elif report.best.immediate.net_gain < 0 %}<strong>A longer-term move.</strong> Holding projects more points in GW{{ report.gameweek }}. This route earns its estimated advantage in later gameweeks.
-      {% else %}<strong>A longer-term move.</strong> No estimated points advantage in GW{{ report.gameweek }}; the gain comes in later gameweeks.{% endif %}
-    {% else %}<strong>Keep your squad for the full window.</strong> No available route clearly beats holding over GW{{ report.gameweek }}–{{ report.end_gameweek }} after transfer costs and the selected risk preference.{% endif %}
-  </p>
+  {% include "partials/decision_points_table.html" %}
+  {% include "partials/decision_points_notes.html" %}
   {% if report.short_term and report.short_term.key != report.best.key %}
   <p style="margin:10px 0;font-size:13px;line-height:1.7;"><strong>Best for GW{{ report.gameweek }}:</strong> {% if report.short_term.moves %}{% for move in report.short_term.moves %}{{ move.out_name }} → {{ move.in_name }}{% if not forloop.last %}; {% endif %}{% endfor %}. {% if report.short_term.immediate.net_gain > 0 %}+{% endif %}{{ report.short_term.immediate.net_gain|floatformat:1 }} points versus hold this gameweek, after hits; {% if report.short_term.net_gain > 0 %}+{% endif %}{{ report.short_term.net_gain|floatformat:1 }} over GW{{ report.gameweek }}–{{ report.end_gameweek }}.{% else %}Hold / roll. No available transfer improves this gameweek's estimated points after hits.{% endif %} The suggested route is ranked over the full {{ report.horizon }}-gameweek window.</p>
   {% endif %}
-  <p style="margin:10px 0;color:#58685c;font-size:12px;line-height:1.7;">{% if report.baseline.free_next != None %}Holding leaves {{ report.baseline.free_next }} free transfer{{ report.baseline.free_next|pluralize }} next gameweek;{% else %}Next gameweek’s free-transfer allowance is unknown;{% endif %} {% if report.best.moves %}{% if report.best.free_next != None %}the suggested route leaves {{ report.best.free_next }}.{% else %}the suggested route’s allowance is also unknown.{% endif %}{% else %}no transfer hit applies.{% endif %} Future transfers are not modelled, so saved flexibility has no added points value in this forecast.</p>
 </div>
 {% endif %}

@@ -1,8 +1,26 @@
 {% if report.player_outlooks %}
+{% if compact %}
+<div class="decision-outlooks">
+  {% for player in report.player_outlooks %}
+  <details class="decision-player-outlook">
+    <summary>
+      <strong>{{ player.name }}</strong>
+      <span class="decision-player-flags">
+        {% if player.availability_risk %}<span class="decision-player-flag decision-player-flag--warning">Availability</span>{% endif %}
+        {% if player.weak_form %}<span class="decision-player-flag">Form dip</span>{% endif %}
+        {% if player.fixtures_improve %}<span class="decision-player-flag decision-player-flag--positive">Fixtures improve</span>{% endif %}
+      </span>
+    </summary>
+    <p>{{ player.detail }}</p>
+  </details>
+  {% endfor %}
+</div>
+{% else %}
 <div style="margin:20px 0;">
   <h3 style="margin:0 0 8px;font-size:16px;">Who to keep an eye on</h3>
   {% for player in report.player_outlooks %}
   <p style="margin:0 0 12px;font-size:13px;line-height:1.7;"><strong>{{ player.name }} · {{ player.label }}.</strong> {{ player.detail }}</p>
   {% endfor %}
 </div>
+{% endif %}
 {% endif %}
