@@ -884,3 +884,50 @@
 @media (prefers-reduced-motion: reduce) {
   .app-request-pending::after, .app-request-status::before { animation: none; }
 }
+
+/* Reserve the card footprint before HTMX replaces the initial placeholders. */
+.outlook-slot { min-height: 540px; margin-bottom: 24px; }
+.outlook-slot > .decision-brief { margin-bottom: 0; min-height: 540px; }
+.skeleton { position: relative; color: #6b7280; }
+.skeleton-card { border: 1px solid #d1d5db; background: #fafafa; padding: 24px; min-height: 540px; }
+.skeleton-heading { display: flex; justify-content: space-between; align-items: center; gap: 24px; margin-bottom: 32px; }
+.skeleton-line { display: block; height: 14px; width: 100%; max-width: 440px; border-radius: 3px; background: #e5e7eb; }
+.skeleton-line--title { height: 26px; width: 65%; }
+.skeleton-line--short { width: 35%; height: 12px; }
+.skeleton-button { display: block; flex: 0 0 120px; height: 36px; border: 1px solid #d1d5db; border-radius: 4px; }
+.skeleton-columns { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(220px, 1fr); gap: 28px; }
+.skeleton-body, .skeleton-aside { display: grid; align-content: start; gap: 20px; }
+.skeleton-table { display: grid; margin-top: 8px; border: 1px solid #d1d5db; }
+.skeleton-table > span { height: 40px; border-bottom: 1px solid #e5e7eb; }
+.skeleton-table > span:last-child { border-bottom: 0; }
+.skeleton-box { height: 98px; border: 1px solid #d1d5db; border-radius: 4px; background: #f3f4f6; }
+.skeleton-footer { display: grid; gap: 20px; border-top: 1px solid #d1d5db; padding-top: 24px; margin-top: 32px; }
+.skeleton-fallback { position: absolute; bottom: 14px; left: 24px; font-size: 12px; text-decoration: underline; }
+.skeleton-extra { margin-top: 24px; min-height: 420px; }
+.skeleton-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; margin-top: 32px; }
+.skeleton-tiles > span { height: 280px; border: 1px solid #d1d5db; background: #f3f4f6; }
+.ai-briefing-slot { min-height: 270px; }
+.skeleton--ai .skeleton-card { min-height: 180px; padding: 20px; }
+.skeleton--ai .skeleton-heading, .skeleton--ai .skeleton-aside, .skeleton--ai .skeleton-table, .skeleton--ai .skeleton-footer { display: none; }
+.skeleton--ai .skeleton-columns { display: block; }
+/* Loading announcements stay accessible without pushing existing content down.
+   Errors return to normal flow once aria-busy is cleared. */
+[data-remote-panel][aria-busy="true"] > [data-panel-status] { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (max-width: 700px) {
+  .outlook-slot, .outlook-slot > .decision-brief, .skeleton-card { min-height: 680px; }
+  .skeleton-card { padding: 18px 16px; }
+  .skeleton-columns { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  .skeleton-aside { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .skeleton-button { flex-basis: 90px; }
+  .skeleton-extra { min-height: 420px; }
+  .skeleton-tiles { gap: 10px; }
+}
+.lineup-skeleton { position: relative; padding-bottom: 36px; }
+.lineup-skeleton-board { max-width: 760px; margin: 24px auto 0; border: 1px solid #d1d5db; border-radius: 6px; background: #fafafa; padding-top: 24px; }
+.lineup-skeleton-row { display: flex; justify-content: center; gap: 18px; padding: 0 12px 18px; }
+.lineup-skeleton-row > span { flex: 0 1 112px; height: 136px; border: 1px solid #d1d5db; border-radius: 4px; background: #f3f4f6; }
+.lineup-skeleton-bench { border-top: 1px solid #d1d5db; padding-top: 32px; }
+@media (max-width: 480px) {
+  .lineup-skeleton-row { gap: 10px; }
+  .lineup-skeleton-row > span { height: 122px; }
+}

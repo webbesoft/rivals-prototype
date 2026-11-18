@@ -7,6 +7,6 @@
   <div id="squad-history-panel" class="p-5" hx-get="{% url 'rivals:teams.lineup' team.id %}"
        hx-trigger="load" hx-swap="innerHTML" hx-request='{"timeout":18000}'
        hx-sync="closest [data-remote-panel]:replace">
-    {% include "partials/team_lineup.html" %}
+    {% if squad %}{% include "partials/team_lineup.html" %}{% else %}{% include "partials/lineup_skeleton.html" %}{% endif %}
   </div>
 </section>

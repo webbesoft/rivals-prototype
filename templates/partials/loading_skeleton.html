@@ -1,0 +1,19 @@
+<div class="skeleton skeleton--{{ kind }}" role="status" aria-label="{{ label }}">
+  <div class="skeleton-card" aria-hidden="true">
+    <div class="skeleton-heading"><span class="skeleton-line skeleton-line--title"></span><span class="skeleton-button"></span></div>
+    <div class="skeleton-columns">
+      <div class="skeleton-body">
+        <span class="skeleton-line skeleton-line--short"></span>
+        <span class="skeleton-line skeleton-line--title"></span>
+        <span class="skeleton-line"></span>
+        <div class="skeleton-table"><span></span><span></span><span></span></div>
+      </div>
+      <div class="skeleton-aside"><span class="skeleton-box"></span><span class="skeleton-box"></span></div>
+    </div>
+    <div class="skeleton-footer"><span class="skeleton-line"></span><span class="skeleton-line"></span></div>
+  </div>
+  {% if kind == 'planner' or kind == 'results' %}
+  <div class="skeleton-card skeleton-extra" aria-hidden="true"><span class="skeleton-line skeleton-line--title"></span><div class="skeleton-tiles"><span></span><span></span><span></span></div></div>
+  {% endif %}
+  {% if kind != 'ai' %}<a class="skeleton-fallback" href="{% url 'rivals:decisions.workspace' %}">Open transfer planner</a>{% endif %}
+</div>

@@ -128,6 +128,8 @@ MIDDLEWARE = [
     "core.middleware.BlockScannerMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
+    # WhiteNoise serves precompressed assets; compress dynamic HTML/HTMX here.
+    "django.middleware.gzip.GZipMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",

@@ -8,7 +8,7 @@
 {% include "partials/planner_pitch.html" %}
 {% endif %}
 {% include "partials/chip_advice.html" %}
-{% if ai_enabled %}<div data-remote-panel><div id="gemini-briefing" hx-get="{% url 'rivals:decisions.ai' %}?fingerprint={{ report.fingerprint|urlencode }}" hx-trigger="load" hx-swap="outerHTML" hx-request='{"timeout":10000}'></div></div>{% endif %}
+{% if ai_enabled %}<div data-remote-panel><div id="gemini-briefing" class="app-panel ai-briefing-slot p-5 mb-6" hx-get="{% url 'rivals:decisions.ai' %}?fingerprint={{ report.fingerprint|urlencode }}" hx-trigger="load" hx-swap="outerHTML" hx-request='{"timeout":10000}'>{% include "partials/loading_skeleton.html" with kind="ai" label="Loading AI priorities" %}</div></div>{% endif %}
 {% endif %}
 {% if results_only %}
 <details class="app-panel border border-gray-200 bg-white p-5 mb-6" data-remote-panel data-loading-message="Loading planner controls…" data-error-message="We couldn't load the controls. Use the link below to try again."

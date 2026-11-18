@@ -1,0 +1,11 @@
+<div class="lineup-skeleton" role="status" aria-label="Loading squad lineup">
+  <div aria-hidden="true">
+    <div class="skeleton-heading"><span class="skeleton-button"></span><span class="skeleton-button"></span></div>
+    <span class="skeleton-line skeleton-line--title"></span>
+    <div class="lineup-skeleton-board">
+      {% for row in "1234" %}<div class="lineup-skeleton-row">{% for player in "123" %}<span></span>{% endfor %}</div>{% endfor %}
+      <div class="lineup-skeleton-row lineup-skeleton-bench">{% for player in "1234" %}<span></span>{% endfor %}</div>
+    </div>
+  </div>
+  <a class="skeleton-fallback" href="{% url 'rivals:teams.lineup' team.id %}">Open squad lineup</a>
+</div>

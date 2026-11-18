@@ -4,7 +4,7 @@
   <header class="rv-page-heading"><div><p class="rv-eyebrow">The next call / Transfer planner</p><h1>Your next move.</h1><p class="rv-section-note">Keep your squad or change the route. Compare the gain, the hit and the uncertainty before you decide.</p></div><a class="app-secondary-button" href="{% url 'rivals:decisions.journal' %}">Review saved decisions <c-components.icon name="arrow-up-right" /></a></header>
   <p data-panel-status role="status" hidden class="my-4 text-sm"></p>
   <div id="decision-workspace" class="mt-5" hx-get="{% url 'rivals:decisions.preview' %}" hx-trigger="load" hx-request='{"timeout":120000}' hx-sync="closest [data-remote-panel]:replace">
-    <a class="app-secondary-button" href="{% url 'rivals:decisions.workspace' %}">Open transfer planner</a>
+    {% include "partials/loading_skeleton.html" with kind="planner" label="Loading transfer planner" %}
   </div>
 </div>
 <script src="{% static 'js/team-panels.js' %}"></script>

@@ -7,8 +7,8 @@
     {% if user.team_id == team.id %}
     <section id="squad-briefing" class="mb-8" data-remote-panel data-loading-message="Preparing your transfer outlook…" data-error-message="We couldn't load your outlook. Open the planner to try again.">
       <p data-panel-status role="status" hidden class="mb-3 text-sm"></p>
-      <div hx-get="{% url 'rivals:decisions.summary' %}" hx-trigger="load" hx-request='{"timeout":25000}'>
-        <a class="text-pitch underline" href="{% url 'rivals:decisions' %}">Plan transfers</a>
+      <div class="outlook-slot" hx-get="{% url 'rivals:decisions.summary' %}" hx-trigger="load" hx-request='{"timeout":25000}'>
+        {% include "partials/loading_skeleton.html" with kind="outlook" label="Loading transfer outlook" %}
       </div>
     </section>
     {% elif user.team %}

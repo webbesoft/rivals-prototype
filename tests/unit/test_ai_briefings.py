@@ -522,7 +522,7 @@ def test_post_requests_briefing_and_polling_is_read_only_with_csrf(
                 "csrfmiddlewaretoken": client.cookies["csrftoken"].value,
             },
         )
-    assert "Preparing your priorities" in response.content.decode()
+    assert 'aria-label="Loading AI priorities"' in response.content.decode()
     assert AIBriefing.objects.filter(user=user).count() == 1
     assert "no-store" in response.headers["Cache-Control"]
     client.get(url, {"fingerprint": report["fingerprint"]})
