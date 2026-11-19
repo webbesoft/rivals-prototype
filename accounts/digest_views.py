@@ -179,9 +179,11 @@ def briefing_settings_context(user):
     from accounts.ai_views import GeminiConnectionForm
     from rivals.models import AICredential
     from rivals.services.ai_credentials import configured
+    from rivals.services.ai_briefing_service import MONTHLY_GENERATION_LIMIT
 
     subscription, _ = DigestSubscription.objects.get_or_create(user=user)
     return {
+        "monthly_ai_limit": MONTHLY_GENERATION_LIMIT,
         "connection_form": GeminiConnectionForm(),
         "gemini_configured": configured(),
         "gemini_connected": AICredential.objects.filter(user=user).exists(),

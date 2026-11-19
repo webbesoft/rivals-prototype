@@ -17,6 +17,16 @@ from rivals.services.ai_credentials import (
 
 
 class GeminiConnectionForm(forms.Form):
+    billing_acknowledged = forms.BooleanField(
+        label=(
+            "I understand that previews and enabled deadline emails may incur Google "
+            "API charges, that I am responsible for those charges, and that I must "
+            "configure spending controls in my Google project."
+        ),
+        error_messages={
+            "required": "Acknowledge the billing responsibility and spending controls before connecting."
+        },
+    )
     api_key = forms.RegexField(
         # Google owns the key format. Allow printable ASCII for the HTTP header,
         # including dots in authorization keys, and verify the key with Google.

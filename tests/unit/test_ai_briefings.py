@@ -302,7 +302,13 @@ def test_key_forms_never_echo_secrets_and_are_csrf_protected(user, credential):
             Gemini, "verify", side_effect=AIUnavailable("Cannot use key.")
         ):
             page = client.post(
-                url, {"action": "connect", "api_key": KEY, "csrfmiddlewaretoken": token}
+                url,
+                {
+                    "action": "connect",
+                    "api_key": KEY,
+                    "billing_acknowledged": "on",
+                    "csrfmiddlewaretoken": token,
+                },
             )
     assert KEY not in page.content.decode()
     assert (
@@ -374,6 +380,96 @@ def test_daily_generation_and_token_caps(user, credential, report, field, value)
     with pytest.raises(AIUnavailable):
         request_briefing(user, report)
     assert not AIBriefing.objects.exists()
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("trigger", ["planner", "scheduled"])
+def test_monthly_cap_survives_key_removal_and_applies_to_all_triggers(
+    user, credential, report, trigger
+):
+    AIUsage.objects.create(
+        user=user, date=NOW.date() - timedelta(days=1), generations=60
+    )
+    disconnect(user)
+    with patch("django.utils.timezone.now", return_value=NOW + timedelta(seconds=31)):
+        with patch.object(Gemini, "verify"):
+            connect(user, KEY)
+        with pytest.raises(AIUnavailable) as error:
+            request_briefing(user, report, trigger=trigger)
+    assert error.value.code == "monthly_limit"
+    assert not AIBriefing.objects.exists()
+    assert not Task.objects.filter(task_name__endswith="prepare_briefing").exists()
+
+
+@pytest.mark.django_db
+def test_monthly_cap_allows_last_reservation_reuses_it_and_resets_next_month(
+    user, credential, report
+):
+    AIUsage.objects.create(
+        user=user, date=NOW.date() - timedelta(days=1), generations=59
+    )
+    run = request_briefing(user, report, enqueue=False)
+    assert request_briefing(user, report, enqueue=False).pk == run.pk
+    with patch("django.utils.timezone.now", return_value=NOW + timedelta(minutes=11)):
+        with pytest.raises(AIUnavailable) as error:
+            request_briefing(user, {**report, "fingerprint": "b" * 64}, enqueue=False)
+    assert error.value.code == "monthly_limit"
+    next_month = NOW.replace(month=12, day=1)
+    with patch("django.utils.timezone.now", return_value=next_month):
+        fresh = request_briefing(
+            user,
+            {**report, "deadline": (next_month + timedelta(days=2)).isoformat()},
+            enqueue=False,
+        )
+    assert fresh.pk != run.pk
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("replacement", [False, True])
+def test_connect_requires_explicit_cost_acknowledgement(user, replacement, settings):
+    settings.PASSWORDLESS_AUTH_ENABLED = False
+    if replacement:
+        with patch.object(Gemini, "verify"):
+            connect(user, KEY)
+    before = (
+        AICredential.objects.filter(user=user)
+        .values_list("revision", flat=True)
+        .first()
+    )
+    client = Client()
+    client.force_login(user)
+    with patch.object(Gemini, "verify") as verify:
+        response = client.post(
+            reverse("accounts:gemini"), {"action": "connect", "api_key": KEY}
+        )
+    assert response.status_code == 200
+    assert "billing_acknowledged" in response.context["connection_form"].errors
+    assert 'id="id_billing_acknowledged_error"' in response.content.decode()
+    assert KEY not in response.content.decode()
+    verify.assert_not_called()
+    assert (
+        AICredential.objects.filter(user=user)
+        .values_list("revision", flat=True)
+        .first()
+        == before
+    )
+
+
+@pytest.mark.django_db
+def test_billing_notice_is_visible_with_unchecked_required_acknowledgement(
+    user, settings
+):
+    settings.PASSWORDLESS_AUTH_ENABLED = False
+    client = Client()
+    client.force_login(user)
+    page = client.get(reverse("accounts:gemini"))
+    body = page.content.decode()
+    assert "Your key, your Google bill" in body
+    assert "alerts-only budget does not stop requests" in body
+    assert "60 per UTC calendar month" in body
+    field = page.context["connection_form"]["billing_acknowledged"]
+    assert field.field.required and not field.value()
+    assert 'required id="id_billing_acknowledged"' in str(field)
 
 
 @pytest.mark.django_db
@@ -709,7 +805,11 @@ def test_connection_accepts_provider_verified_key_formats(user, settings, key, p
     with patch.object(Gemini, "verify") as verify:
         response = client.post(
             reverse("accounts:gemini"),
-            {"action": "connect", "api_key": padding + key + padding},
+            {
+                "action": "connect",
+                "api_key": padding + key + padding,
+                "billing_acknowledged": "on",
+            },
         )
     assert response.status_code == 302, response.context["connection_form"].errors
     verify.assert_called_once_with(key)
@@ -748,7 +848,8 @@ def test_connection_provider_error_is_shown_as_an_error_alert(user, settings):
     message = "Gemini could not use this key. Check its permissions or reconnect."
     with patch.object(Gemini, "verify", side_effect=AIUnavailable(message)):
         response = client.post(
-            reverse("accounts:gemini"), {"action": "connect", "api_key": KEY}
+            reverse("accounts:gemini"),
+            {"action": "connect", "api_key": KEY, "billing_acknowledged": "on"},
         )
     body = response.content.decode()
     assert message in body
@@ -762,7 +863,8 @@ def test_connection_form_successfully_verifies_and_encrypts_once(user):
     client.force_login(user)
     with patch.object(Gemini, "verify") as verify:
         response = client.post(
-            reverse("accounts:gemini"), {"action": "connect", "api_key": KEY}
+            reverse("accounts:gemini"),
+            {"action": "connect", "api_key": KEY, "billing_acknowledged": "on"},
         )
     assert response.status_code == 302
     verify.assert_called_once_with(KEY)

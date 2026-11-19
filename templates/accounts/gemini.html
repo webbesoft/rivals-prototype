@@ -12,6 +12,14 @@
       <p class="text-sm text-gray-600 mb-4">Supported provider: Google Gemini.</p>
       <p class="text-sm text-gray-600 mb-4">When you request a briefing or an opted-in deadline email is due, we send Google a small summary of your plan: player names, estimated gains and transfer costs, the estimated remaining bank and free transfers, captain options, squad risks and anonymous rival comparisons. We leave out your email, FPL ID, league names and rival identities. Gemini selects priorities; the facts and recommendations come from your plan.</p>
       <p class="text-sm text-gray-600 mb-4">Requests use your Google API quota and may incur charges. Google's data use depends on your account and region; unpaid services may use prompts to improve their products. Review <a class="underline" href="https://ai.google.dev/gemini-api/terms" rel="noopener noreferrer" target="_blank">Google's terms</a> and your billing limits before connecting.</p>
+      <aside class="app-notice mb-4" aria-labelledby="ai-billing-heading">
+        <h3 id="ai-billing-heading" class="font-bold">Your key, your Google bill</h3>
+        <p>Google bills API usage to your Google project. You are responsible for charges from previews and any deadline emails you enable. Rivals does not pay or reimburse your Google API bill.</p>
+        <p class="mt-3">Before connecting, use a dedicated project and key for Rivals, restrict the key to the Gemini API, and set a low <strong>spend cap</strong> for that project in Google AI Studio or Cloud Billing where available. Also set usage quotas and billing alerts. An alerts-only budget does not stop requests. Spend caps can still allow charges for requests already in progress.</p>
+        <p class="mt-3"><a class="underline" href="https://docs.cloud.google.com/billing/docs/how-to/budgets-spend-caps" target="_blank" rel="noopener noreferrer">Set up a Google spend cap</a> · <a class="underline" href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noopener noreferrer">Check Gemini billing</a> · <a class="underline" href="https://ai.google.dev/gemini-api/docs/api-key" target="_blank" rel="noopener noreferrer">Secure your key</a></p>
+        <p class="mt-3">Rivals allows at most six new AI briefings per UTC day and {{ monthly_ai_limit }} per UTC calendar month, shared by previews and emails, with ten minutes between requests. Failed attempts count too. These request limits are not a monetary spending cap. Rivals cannot check or enforce your Google spending controls or limit use of your key elsewhere.</p>
+        <p class="mt-3">Removing your saved key stops future AI requests from Rivals. Requests already sent to Google may still be charged. Revoke the key in Google AI Studio if you suspect misuse.</p>
+      </aside>
       <p class="text-sm text-gray-600 mb-4">Your key is encrypted and never displayed again. You can remove it at any time. Regular transfer advice works without AI briefings.</p>
       {% if not user.is_verified %}
         <p class="text-sm mb-4">Verify your email to enable AI briefings.</p><a class="app-secondary-button" href="{% url 'accounts:verification_pending' %}">Email verification</a>
@@ -29,6 +37,14 @@
             </div>
           {% endif %}
           <p class="text-xs text-gray-600">By connecting, you agree to send the planning summary above to Google when you request a briefing or enable scheduled delivery below. Up to six briefings per day, with ten minutes between new requests.</p>
+          <div>
+            <label for="{{ connection_form.billing_acknowledged.id_for_label }}" class="block text-sm">{{ connection_form.billing_acknowledged }} {{ connection_form.billing_acknowledged.label }}</label>
+            {% if connection_form.billing_acknowledged.errors %}
+              <div id="{{ connection_form.billing_acknowledged.auto_id }}_error" role="alert" class="app-notice app-notice-error">
+                {% for error in connection_form.billing_acknowledged.errors %}<p>{{ error }}</p>{% endfor %}
+              </div>
+            {% endif %}
+          </div>
           <button type="submit" class="app-primary-button">{% if gemini_connected %}Replace key{% else %}Enable AI briefings{% endif %}</button>
           <a class="underline text-sm ml-3" href="https://aistudio.google.com/api-keys" target="_blank" rel="noopener noreferrer">Get a Gemini key</a>
         </form>

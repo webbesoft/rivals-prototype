@@ -42,6 +42,7 @@ REASONS = {
     "",
     "unavailable",
     "daily_limit",
+    "monthly_limit",
     "cooldown",
     "not_eligible",
     "no_credential",

@@ -3,7 +3,7 @@
 from background_task import background
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.db.models import F, Q
+from django.db.models import F, Q, Sum
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.views.decorators.debug import sensitive_variables
@@ -14,6 +14,8 @@ from rivals.services.ai_credentials import AIUnavailable, configured, decrypt
 from rivals.services.decision_engine import DecisionEngine
 from rivals.services.gemini_service import MODEL, TOKEN_RESERVATION, Gemini
 from rivals.services.ai_usage_audit import event, run_event, prepare_call, enabled
+
+MONTHLY_GENERATION_LIMIT = 60
 
 
 def evidence_for(report):
@@ -246,6 +248,19 @@ def _request_briefing(user, report, *, enqueue, trigger, digest_id):
         if existing:
             event("reused", run=existing, trigger=trigger, digest_id=digest_id)
             return existing
+        # The user row is locked above, serializing all triggers and credentials.
+        # Count durable reservations, including failed/cancelled requests.
+        monthly_generations = (
+            AIUsage.objects.filter(
+                user=user, date__gte=now.date().replace(day=1), date__lte=now.date()
+            ).aggregate(total=Sum("generations"))["total"]
+            or 0
+        )
+        if monthly_generations >= MONTHLY_GENERATION_LIMIT:
+            raise AIUnavailable(
+                "Your monthly AI briefing limit has been reached. Your transfer advice is still available.",
+                code="monthly_limit",
+            )
         recent = AIBriefing.objects.filter(
             user=user, created_at__gt=now - timezone.timedelta(minutes=10)
         ).exists()

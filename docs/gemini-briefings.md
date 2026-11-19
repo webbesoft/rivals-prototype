@@ -34,13 +34,16 @@ Primary references checked for this implementation:
 - [Gemini pricing](https://ai.google.dev/gemini-api/docs/pricing)
 - [Fernet authenticated encryption](https://cryptography.io/en/latest/fernet/)
 
-Google's terms distinguish unpaid/paid services and regional treatment. The app does not infer billing or promise that Google will not use a user's prompts. The connection screen links to those terms; users should review their account and provider billing limits.
+Google's terms distinguish unpaid/paid services and regional treatment. The app does not infer billing or promise that Google will not use a user's prompts. The connection screen links to those terms and requires an unchecked, server-validated billing acknowledgement for each connection or replacement. Successful connections record the existing consent timestamp. Missing acknowledgement makes no provider call and does not change an existing key.
+
+The billing notice explains that users are responsible for their Google charges, including previews and opted-in emails, and that Rivals does not pay or reimburse the provider bill. It recommends a dedicated project/key restricted to Gemini, a low provider spend cap where available, usage quotas and alerts. [Google's spend-cap documentation](https://docs.cloud.google.com/billing/docs/how-to/budgets-spend-caps) distinguishes spend caps from alerts-only budgets and notes that in-flight requests can still accrue charges. Rivals cannot inspect or enforce those provider settings. Removing a key prevents future Rivals calls but cannot recall requests already dispatched; suspected misuse requires revocation at Google. This notice is product disclosure, not a guarantee of liability protection.
 
 ## Limits and lifecycle
 
 Limits are durable database reservations per manager, independent of key replacement/deletion:
 
 - Six new briefings per UTC day, ten minutes between new requests.
+- Sixty new briefings per UTC calendar month, shared by previews, test emails and scheduled delivery. The reservation sums durable daily counters under the same per-user lock, so failed/cancelled work and key replacement/removal cannot reset it. Reusing an existing result needs no new reservation. The counter resets at the start of the next UTC month.
 - A 100,000-token daily reservation ceiling. Each run reserves 16,512 tokens: at most 16,000 serialized input bytes (a conservative text-token allowance) plus 512 maximum generated tokens, including reported thinking usage. Minimal thinking is requested.
 - Ten connection attempts per UTC day, at least thirty seconds apart. Metadata validation does not generate text.
 
