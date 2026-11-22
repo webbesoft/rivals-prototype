@@ -395,6 +395,7 @@ class TeamSyncService:
         picks=None,
         elements=None,
         points=None,
+        minutes=None,
         points_final=False,
         refresh=False,
         season=None,
@@ -449,6 +450,7 @@ class TeamSyncService:
                     selected_by_percent=player.get("selected_by_percent"),
                     total_points_at_time=player.get("total_points"),
                     gameweek_points=(points or {}).get(pick["element"]),
+                    gameweek_minutes=(minutes or {}).get(pick["element"]),
                     points_final=points_final,
                 )
             )
@@ -476,6 +478,8 @@ class TeamSyncService:
                     if previous.points_final:
                         record.points_final = True
                         record.gameweek_points = previous.gameweek_points
+                        if previous.gameweek_minutes is not None:
+                            record.gameweek_minutes = previous.gameweek_minutes
             squad.delete()
             SquadHistory.objects.bulk_create(records)
         return True

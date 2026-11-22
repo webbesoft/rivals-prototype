@@ -656,6 +656,7 @@ class SquadHistory(models.Model):
     )
     total_points_at_time = models.IntegerField(null=True, blank=True)
     gameweek_points = models.IntegerField(null=True, blank=True)
+    gameweek_minutes = models.IntegerField(null=True, blank=True)
     points_final = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

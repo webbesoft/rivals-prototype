@@ -123,7 +123,10 @@ def api():
         "elements": [
             {
                 "id": i,
-                "stats": {"total_points": 0 if i == 1 else -1 if i == 5 else i % 7},
+                "stats": {
+                    "total_points": 0 if i == 1 else -1 if i == 5 else i % 7,
+                    "minutes": 90,
+                },
             }
             for i in range(1, 16)
         ]
@@ -765,3 +768,43 @@ def test_unknown_context_cannot_import_current_scores_into_a_previous_season(
     assert all(row.gameweek_points is None for row in rows)
     api.fetch_team_picks.assert_not_called()
     api.fetch_gameweek_live.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "minutes,points,final,label",
+    [
+        (0, 0, False, "Yet to play"),
+        (0, 0, True, "Did not play"),
+        (90, 0, True, "0 pts"),
+        (90, -1, True, "-1 pts"),
+        (None, None, False, "— pts"),
+    ],
+)
+def test_lineup_distinguishes_appearance_from_zero_points(
+    minutes, points, final, label
+):
+    from django.template.loader import render_to_string
+
+    player = SquadHistory(
+        player_name="Test Player",
+        element_type=2,
+        gameweek_minutes=minutes,
+        gameweek_points=points,
+        points_final=final,
+        multiplier=1,
+    )
+    html = render_to_string("partials/lineup_player.html", {"player": player})
+    assert label in html
+    if minutes != 0:
+        assert "Yet to play" not in html
+        assert "Did not play" not in html
+
+
+def test_squad_load_records_gameweek_minutes(manager, api):
+    live = api.fetch_gameweek_live.return_value
+    for element in live["elements"]:
+        element["stats"]["minutes"] = 0 if element["id"] == 1 else 90
+    rows, error = SquadHistoryService(manager.team, api).load("2026/27", 10)
+    assert error is None
+    assert rows[0].gameweek_minutes == 0
+    assert rows[1].gameweek_minutes == 90

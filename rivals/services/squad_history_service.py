@@ -86,7 +86,10 @@ class SquadHistoryService:
             complete = len(rows) == 15
             current = season == self.context["season"]
             settled = complete and all(
-                row.points_final and row.gameweek_points is not None for row in rows
+                row.points_final
+                and row.gameweek_points is not None
+                and row.gameweek_minutes is not None
+                for row in rows
             )
             scores_complete = complete and all(
                 row.gameweek_points is not None for row in rows
@@ -123,7 +126,9 @@ class SquadHistoryService:
         complete = len(rows) == 15
         scores_complete = complete and all(p.gameweek_points is not None for p in rows)
         if scores_complete and (
-            not candidate_current or all(p.points_final for p in rows) or recent
+            not candidate_current
+            or all(p.points_final and p.gameweek_minutes is not None for p in rows)
+            or recent
         ):
             if current_season and any(not p.club_short_name for p in rows):
                 self.populate_clubs(rows, season)
@@ -181,6 +186,10 @@ class SquadHistoryService:
             elements={p["id"]: p for p in bootstrap.get("elements", [])},
             clubs={club["id"]: club for club in bootstrap.get("teams", [])},
             points=live_points,
+            minutes={
+                p["id"]: p.get("stats", {}).get("minutes")
+                for p in (live or {}).get("elements", [])
+            },
             points_final=bool(final),
             refresh=True,
             season=season,

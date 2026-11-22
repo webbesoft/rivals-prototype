@@ -271,6 +271,7 @@ def get_squad_history(request, team_id, gameweek):
             "expected_assists": p.expected_assists,
             "selected_by_percent": p.selected_by_percent,
             "gameweek_points": p.gameweek_points,
+            "gameweek_minutes": p.gameweek_minutes,
             "total_points_at_time": p.total_points_at_time,
             "multiplier": p.multiplier,
         }
