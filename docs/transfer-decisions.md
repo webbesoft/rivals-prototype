@@ -18,6 +18,14 @@ This version compares normal transfers, without a chip. It supports two moves at
 
 ## Forecast and ranking
 
+Player forecasts share one implementation across the planner, public Best XI,
+chip benchmarks and team analysis. See [the current calculation](gameweek-predictions.md)
+and [prospective evaluation and experimental challengers](decision-engine.md).
+The `decision-v11` component shadow and offline ridge challenger do not replace
+the planner default. The independent forecast journal freezes the full bootstrap,
+fixtures and each model's XI/captain before deadlines; its summaries report paired
+weekly bootstrap intervals and a registered minimum of ten completed live gameweeks before promotion review.
+
 The selected horizon is 3–6 actual gameweeks, shortened at the end of the season. Fixtures are indexed by club and event. A blank has zero fixtures; a double sums both matches. Unscheduled fixtures are not silently assigned to a gameweek.
 
 Recommendations and route comparisons show a visible keep-versus-buy fixture strip for the next five gameweeks, shortened at GW38 and independent of the points forecast horizon. Each match shows the opponent, home/away and the published FPL difficulty for that player's club (1 easiest to 5 hardest). Doubles show both matches, blanks stay in their gameweek, and missing ratings are marked unavailable rather than assigned a default rating.

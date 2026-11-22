@@ -137,19 +137,20 @@ def chip_advice(engine, baseline):
     comparisons = []
     for week in weeks:
         benchmark = best_projected_xi(
-            {
-                **player,
-                "expected_points": engine.projections[pid].get(week["week"], 0),
-            }
-            for pid, player in engine.players.items()
-            if not player.get("removed", False)
+            [
+                {
+                    **player,
+                    "expected_points": engine.projections[pid].get(week["week"], 0),
+                }
+                for pid, player in engine.players.items()
+                if not player.get("removed", False)
+            ],
+            captaincy=True,
         )
         if benchmark is None:
             continue
         # Compare both sides with captaincy using the same forecast model.
-        points = float(benchmark["points"]) + max(
-            engine.projections[pid].get(week["week"], 0) for pid in benchmark["ids"]
-        )
+        points = float(benchmark["points"])
         following = next(
             (w for w in forecast_weeks if w["week"] == week["week"] + 1), None
         )

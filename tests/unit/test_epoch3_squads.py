@@ -413,6 +413,12 @@ def test_json_squad_endpoints_are_season_scoped(manager, api):
 
 @pytest.mark.django_db
 def test_cold_and_warm_analysis_only_load_data_on_cache_miss(manager, api):
+    # The shared forecast counts actual scheduled gameweeks. Supply a complete
+    # five-week window for this five-week transfer-gain test.
+    fixture = api.fetch_fixtures_data.return_value[0]
+    api.fetch_fixtures_data.return_value.extend(
+        {**fixture, "id": week, "event": week} for week in range(12, 16)
+    )
     start = perf_counter()
     result = TeamAnalysisService(api=api).analyze_team(
         101, include_team_obj=manager.team
@@ -681,6 +687,12 @@ def test_representative_player_pool_produces_alternatives_without_squad_duplicat
             "points_per_game": "7.0",
         }
         for element in range(16, 801)
+    )
+    # The shared forecast counts actual scheduled gameweeks. Supply a complete
+    # five-week window for this five-week transfer-gain test.
+    fixture = api.fetch_fixtures_data.return_value[0]
+    api.fetch_fixtures_data.return_value.extend(
+        {**fixture, "id": week, "event": week} for week in range(12, 16)
     )
     start = perf_counter()
     result = TeamAnalysisService(api=api).analyze_team(

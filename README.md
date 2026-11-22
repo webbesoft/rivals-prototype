@@ -65,3 +65,12 @@ and expose a `Server-Timing` header in browser Network tools; responses taking o
 10 seconds on the server are logged as `Slow planner response`.
 
 See [refresh operations](docs/background-refresh.md) and the [delivery epochs](docs/epochs.md). The current implementation is being developed beyond the original prototype described above.
+
+## Forecasts and accuracy
+
+The planner and public Best XI share a player-points model. The worker saves
+pre-deadline forecasts and scores their frozen XI/captain against final results
+and a hindsight benchmark. Apply migrations through `0024` before starting it.
+See [the current formula](docs/gameweek-predictions.md) and
+[model evaluation and experimental challengers](docs/decision-engine.md) for
+assumptions, historical backtesting and reporting commands.

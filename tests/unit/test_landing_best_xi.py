@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from collections import Counter
 from itertools import combinations
 from unittest.mock import Mock, patch
@@ -17,7 +18,15 @@ def service():
         mock_cache.get.return_value = None
         service = LandingDataService()
         service.fpl_api = Mock()
-        yield service
+        with patch(
+            "django.utils.timezone.now",
+            return_value=datetime(2026, 11, 10, tzinfo=timezone.utc),
+        ):
+            service.fpl_api.fetch_fixtures_data.return_value = [
+                {"event": 11, "team_h": club, "team_a": 100, "team_h_difficulty": 3}
+                for club in range(1, 7)
+            ]
+            yield service
 
 
 def snapshot():
@@ -38,10 +47,17 @@ def snapshot():
                     "minutes": 900,
                     "total_points": 200 - score,
                     "ep_next": str(score / 10),
+                    "form": score / 10 / 1.04,
+                    "points_per_game": score / 10 / 1.04,
                     "now_cost": 55 + player_id,
                 }
             )
     return {
+        "events": [
+            {"id": 1, "deadline_time": "2026-08-01T12:00:00Z"},
+            {"id": 10, "deadline_time": "2026-11-07T12:00:00Z"},
+            {"id": 11, "deadline_time": "2026-11-14T12:00:00Z"},
+        ],
         "elements": players,
         "teams": [{"id": i, "short_name": f"T{i}"} for i in range(1, 7)],
     }
@@ -62,7 +78,10 @@ def test_best_xi_matches_exhaustive_optimum(service):
             and 1 <= positions[4] <= 3
             and max(clubs.values()) <= 3
         ):
-            valid_totals.append(sum(float(p["ep_next"]) for p in xi))
+            valid_totals.append(
+                sum(float(p["ep_next"]) for p in xi)
+                + max(float(p["ep_next"]) for p in xi)
+            )
     assert float(result["expected_points"]) == pytest.approx(max(valid_totals))
     selected = [p for row in result["rows"] for p in row["players"]]
     assert len({p["id"] for p in selected}) == 11
@@ -87,7 +106,7 @@ def test_missing_data_does_not_produce_a_partial_xi(service, data):
 def test_zero_projections_do_not_show_a_zero_point_xi(service):
     data = snapshot()
     for player in data["elements"]:
-        player["ep_next"] = "0.0"
+        player["form"] = player["points_per_game"] = "0.0"
     service.fpl_api.fetch_bootstrap_static.return_value = data
     assert service.get_best_xi() is None
 
@@ -100,20 +119,20 @@ def test_cached_xi_avoids_api_call(service):
 
 
 @pytest.mark.parametrize("projection", [None, "", "invalid", "NaN", "Infinity"])
-def test_unavailable_projections_do_not_fall_back_to_season_points(service, projection):
+def test_invalid_shared_inputs_do_not_fall_back_to_season_points(service, projection):
     data = snapshot()
     for player in data["elements"]:
-        player["ep_next"] = projection
+        player["form"] = player["points_per_game"] = projection
     service.fpl_api.fetch_bootstrap_static.return_value = data
     assert service.get_best_xi() is None
 
 
-def test_players_without_past_minutes_can_be_selected_on_projections(service):
+def test_shared_minutes_discount_applies_to_public_xi(service):
     data = snapshot()
     for player in data["elements"]:
         player["minutes"] = 0
     service.fpl_api.fetch_bootstrap_static.return_value = data
-    assert service.get_best_xi() is not None
+    assert service.get_best_xi() is None
 
 
 def test_landing_renders_xi_and_methodology(service):
@@ -127,12 +146,12 @@ def test_landing_renders_xi_and_methodology(service):
     )
     assert "Team of the week" in html
     assert "No budget cap" in html
-    assert "Next gameweek · FPL expected points" in html
+    assert "Next gameweek · RivalSpy expected points" in html
     assert "xPts" in html
     assert "season-to-date" not in html
     for row in best_xi["rows"]:
         for player in row["players"]:
-            assert f'<strong>{player["name"]}</strong>' in html
+            assert player["name"] in html
     empty_html = render_to_string("pages/index.html", {"user": request.user})
     assert "The best XI will appear" in empty_html
 

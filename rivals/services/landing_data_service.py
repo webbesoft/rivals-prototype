@@ -1,11 +1,12 @@
 import logging
-from decimal import Decimal, InvalidOperation
 from typing import Dict, List, Optional
 
 from django.core.cache import cache
 
 from .fpl_api_service import FplApiService
 from .xi_benchmark import best_projected_xi
+from .player_forecast import PlayerForecast
+from .gameweek_context_service import GameweekContextService
 
 logger = logging.getLogger(__name__)
 
@@ -31,10 +32,10 @@ class LandingDataService:
     def get_best_xi(self) -> Optional[Dict]:
         """Maximise next-gameweek expected points with legal formations and club caps.
 
-        Use FPL ep_next projections from one bootstrap snapshot. This is an
+        Uses the same player model as the squad planner. This is an
         unrestricted-budget starting XI, not a complete 15-player FPL squad.
         """
-        cache_key = "landing_best_xi_expected_v2"
+        cache_key = "landing_best_xi_shared_v3"
         cached = cache.get(cache_key)
         if cached is not None:
             return None if cached is False else cached
@@ -42,22 +43,28 @@ class LandingDataService:
         bootstrap = self.fpl_api.fetch_bootstrap_static()
         if not bootstrap:
             return None
+        context = GameweekContextService.derive(bootstrap.get("events", []))
+        fixtures = self.fpl_api.fetch_fixtures_data()
+        if not context["decision_gameweek"] or fixtures is None:
+            return None
+        forecast = PlayerForecast(
+            bootstrap.get("elements", []), fixtures, context["scoring_gameweek"]
+        )
         clubs = {team["id"]: team for team in bootstrap.get("teams", [])}
         players = {}
         for player in bootstrap.get("elements", []):
             position = player.get("element_type")
             if position not in (1, 2, 3, 4) or player.get("team") not in clubs:
                 continue
-            try:
-                expected_points = Decimal(str(player.get("ep_next")))
-            except InvalidOperation:
+            if player.get("removed", False):
                 continue
-            if not expected_points.is_finite():
-                continue
+            expected_points = forecast.points(
+                player["id"], context["decision_gameweek"]
+            )
             player = {**player, "expected_points": expected_points}
             players[player["id"]] = player
 
-        benchmark = best_projected_xi(players.values())
+        benchmark = best_projected_xi(players.values(), captaincy=True)
         if benchmark is None:
             return None
         shape, points, ids = benchmark["shape"], benchmark["points"], benchmark["ids"]
@@ -82,6 +89,7 @@ class LandingDataService:
                             "team": clubs[p["team"]].get("short_name", "UNK"),
                             "expected_points": p["expected_points"],
                             "cost": p.get("now_cost", 0) / 10,
+                            "captain": p["id"] == benchmark["captain"],
                         }
                         for p in sorted(
                             selected, key=lambda p: (-p["expected_points"], p["id"])
@@ -98,6 +106,32 @@ class LandingDataService:
         }
         cache.set(cache_key, result, self.cache_timeout)
         return result
+
+    def _next_points(self, player):
+        bootstrap = self.fpl_api.fetch_bootstrap_static()
+        fixtures = self.fpl_api.fetch_fixtures_data()
+        if not bootstrap or fixtures is None:
+            return None
+        context = GameweekContextService.derive(bootstrap.get("events", []))
+        if not context["decision_gameweek"]:
+            return None
+        return PlayerForecast([player], fixtures, context["scoring_gameweek"]).points(
+            player["id"], context["decision_gameweek"]
+        )
+
+    def get_forecast_history(self):
+        from rivals.models import GameweekForecast
+        from .gameweek_forecast_service import EXPERIMENT_VERSION
+
+        context = GameweekContextService.cached()
+        return list(
+            GameweekForecast.objects.filter(
+                season=context["season"], version=EXPERIMENT_VERSION
+            )
+            .only("gameweek", "outcomes")
+            .exclude(outcomes={})
+            .order_by("-gameweek")[:5]
+        )
 
     def get_top_captain_picks(self, limit: int = 5) -> List[Dict]:
         """Get the most captained players this gameweek."""
@@ -123,7 +157,7 @@ class LandingDataService:
                 "team": self._get_team_short_name(player.get("team")),
                 "captaincy_percent": player.get("selected_by_percent", "0"),
                 "form": player.get("form", "0"),
-                "expected_points": player.get("ep_next", "0"),
+                "expected_points": self._next_points(player),
             }
             for player in sorted_players
         ]

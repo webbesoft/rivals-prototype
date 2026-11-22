@@ -190,12 +190,17 @@ class FplApiService:
             f"{self.BASE_URL}/entry/{team_id}/event/{gameweek}/picks/"
         )
 
-    def fetch_gameweek_live(self, gameweek, season):
+    def fetch_gameweek_live(self, gameweek, season, *, force_refresh=False):
         if self.snapshot_only:
-            return self._read_snapshot(f"live:{season}:{gameweek}")
+            # Published transport snapshots do not certify final/data-checked scores.
+            return (
+                None
+                if force_refresh
+                else self._read_snapshot(f"live:{season}:{gameweek}")
+            )
         key = f"fpl_live_{season}_{gameweek}"
         cached = cache.get(key)
-        if cached is not None:
+        if cached is not None and not force_refresh:
             return cached
         data = self.make_request(f"{self.BASE_URL}/event/{gameweek}/live/")
         if data is not None:

@@ -16,6 +16,9 @@ KINDS = {
     "league",
     "league_page",
     "decisions",
+    "forecast_histories",
+    "forecasts",
+    "forecast_reviews",
     "squad",
 }
 
@@ -35,6 +38,8 @@ def _skip_refresh(state, kind, context, now, force):
     rolled_over = bool(context.get("season") and state.payload.get("stamp") != stamp)
     interval = 120 if kind == "context" else context.get("refresh_seconds", 1800)
     if kind == "squad":
+        interval = 120
+    if kind == "forecast_histories":
         interval = 120
     if kind == "players":
         interval = max(interval, 900)

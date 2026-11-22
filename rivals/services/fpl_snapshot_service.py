@@ -14,9 +14,13 @@ def publish_snapshots(snapshots):
     now = timezone.now()
     for key, payload in snapshots.items():
         ttl = (
-            900
-            if key in ("bootstrap", "fixtures")
-            else 3600 if key.startswith(("profile:", "history:")) else 120
+            21600
+            if key.startswith("element:")
+            else (
+                900
+                if key in ("bootstrap", "fixtures")
+                else 3600 if key.startswith(("profile:", "history:")) else 120
+            )
         )
         FplSnapshot.objects.update_or_create(
             key=key,

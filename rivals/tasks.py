@@ -125,6 +125,48 @@ def ingest(state):
         from rivals.services.decision_review_service import review_decisions
 
         return {"reviewed": review_decisions(api)}
+    if state.kind == "forecasts":
+        from rivals.services.gameweek_forecast_service import (
+            prepare_forecast,
+            publish_forecast,
+        )
+        from rivals.services.forecast_history_service import read_histories
+
+        # Read the worker's published pair, not another independent upstream pair.
+        source = FplApiService(snapshot_only=True)
+        bootstrap, fixtures = (
+            source.fetch_bootstrap_static(),
+            source.fetch_fixtures_data(),
+        )
+        if not bootstrap or fixtures is None:
+            raise RuntimeError("Published forecast sources unavailable")
+        season = GameweekContextService.derive(bootstrap.get("events", []))["season"]
+        if season != context["season"]:
+            raise RuntimeError("Forecast source season changed")
+        prepared = prepare_forecast(
+            bootstrap, fixtures, histories=read_histories(season)
+        )
+        return {
+            "captured": publish_forecast(
+                prepared, publication_guard=lambda: check_refresh_owner(state)
+            )
+        }
+    if state.kind == "forecast_reviews":
+        from rivals.services.gameweek_forecast_service import review_forecasts
+
+        return {
+            "reviewed": review_forecasts(
+                api, publication_guard=lambda: check_refresh_owner(state)
+            )
+        }
+    if state.kind == "forecast_histories":
+        from rivals.services.forecast_history_service import refresh_histories
+
+        return {
+            "_snapshots": refresh_histories(
+                api, context, publication_guard=lambda: check_refresh_owner(state)
+            )
+        }
     if state.kind == "players":
         from rivals.services.player_sync_service import PlayerSyncService
 
@@ -283,6 +325,9 @@ def refresh_tick():
         return
     enqueue_refresh("players", context=context)
     enqueue_refresh("decisions", context=context)
+    enqueue_refresh("forecasts", context=context)
+    enqueue_refresh("forecast_reviews", context=context)
+    enqueue_refresh("forecast_histories", context=context)
     team_ids = list(
         Team.objects.filter(active=True, pk__gt=cursors.get("team_cursor", 0))
         .filter(

@@ -1,0 +1,3561 @@
+{
+  "evaluated_on": "2026-11-22",
+  "provenance": "reconstructed historical inputs, not exact pre-deadline replay",
+  "sources": [
+    {
+      "season": "2022-23",
+      "url": "https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data/2022-23/gws/merged_gw.csv",
+      "sha256": "b78a6d0456141f9033c32fc4122931baae780ac4a4938683451b1fce7a4fdd15",
+      "evaluated_gameweeks": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        9,
+        10,
+        11,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        26,
+        27,
+        29,
+        30,
+        31,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38
+      ],
+      "skipped_gameweeks": [
+        1,
+        7,
+        8,
+        12,
+        25,
+        28,
+        32
+      ]
+    },
+    {
+      "season": "2023-24",
+      "url": "https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data/2023-24/gws/merged_gw.csv",
+      "sha256": "e9c09c8856f1c86b4f920f46ddd5033af83409439dfda53be925df2a3e7c8a9e",
+      "evaluated_gameweeks": [
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        27,
+        28,
+        30,
+        31,
+        32,
+        33,
+        35,
+        36,
+        37,
+        38
+      ],
+      "skipped_gameweeks": [
+        1,
+        2,
+        17,
+        18,
+        26,
+        29,
+        34
+      ]
+    },
+    {
+      "season": "2024-25",
+      "url": "https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data/2024-25/gws/merged_gw.csv",
+      "sha256": "5bbbcba6353b4c72ad273adcc8e3aa451946a826564679788f45b1cb3325b84e",
+      "evaluated_gameweeks": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        30,
+        31,
+        32,
+        33,
+        35,
+        36,
+        37,
+        38
+      ],
+      "skipped_gameweeks": [
+        1,
+        15,
+        29,
+        34
+      ]
+    }
+  ],
+  "summary": {
+    "holdout": {
+      "components-ridge-v1-experimental": {
+        "gameweeks": 34,
+        "player_gameweeks": 24254,
+        "mae": 1.052003029727603,
+        "rmse": 1.9735102530755513,
+        "bias": 0.05163974840109676,
+        "mean_xi_actual": 53.64705882352941,
+        "mean_captain_actual": 9.294117647058824
+      },
+      "components-v1-experimental": {
+        "gameweeks": 34,
+        "player_gameweeks": 24254,
+        "mae": 1.0224060133354476,
+        "rmse": 1.9803604016845473,
+        "bias": 0.017291331612684143,
+        "mean_xi_actual": 52.5,
+        "mean_captain_actual": 9.029411764705882
+      },
+      "form": {
+        "gameweeks": 34,
+        "player_gameweeks": 24254,
+        "mae": 1.0612950441164344,
+        "rmse": 2.1278035728814246,
+        "bias": -0.018845688683653553,
+        "mean_xi_actual": 48.44117647058823,
+        "mean_captain_actual": 7.147058823529412
+      },
+      "heuristic-v1": {
+        "gameweeks": 34,
+        "player_gameweeks": 24254,
+        "mae": 1.0196413552630785,
+        "rmse": 2.0864084925419584,
+        "bias": -0.18781331466761383,
+        "mean_xi_actual": 54.029411764705884,
+        "mean_captain_actual": 9.352941176470589
+      },
+      "ppg": {
+        "gameweeks": 34,
+        "player_gameweeks": 24254,
+        "mae": 1.3049440305108424,
+        "rmse": 2.1926079591419705,
+        "bias": 0.3897567897685405,
+        "mean_xi_actual": 44.3235294117647,
+        "mean_captain_actual": 8.558823529411764
+      }
+    },
+    "train": {
+      "components-ridge-v1-experimental": {
+        "gameweeks": 62,
+        "player_gameweeks": 45532,
+        "mae": 1.0417772837384183,
+        "rmse": 2.0134235006082117,
+        "bias": -0.0007126160388158569,
+        "mean_xi_actual": 55.0,
+        "mean_captain_actual": 6.532258064516129
+      },
+      "components-v1-experimental": {
+        "gameweeks": 62,
+        "player_gameweeks": 45532,
+        "mae": 1.0113563486240653,
+        "rmse": 2.023513062233272,
+        "bias": -0.03835110790354105,
+        "mean_xi_actual": 51.95161290322581,
+        "mean_captain_actual": 6.241935483870968
+      },
+      "form": {
+        "gameweeks": 62,
+        "player_gameweeks": 45532,
+        "mae": 1.070157618085449,
+        "rmse": 2.1734433734383605,
+        "bias": -0.05227056429178013,
+        "mean_xi_actual": 46.82258064516129,
+        "mean_captain_actual": 6.016129032258065
+      },
+      "heuristic-v1": {
+        "gameweeks": 62,
+        "player_gameweeks": 45532,
+        "mae": 1.0271074837354806,
+        "rmse": 2.139510616638772,
+        "bias": -0.20187892528631923,
+        "mean_xi_actual": 53.53225806451613,
+        "mean_captain_actual": 6.580645161290323
+      },
+      "ppg": {
+        "gameweeks": 62,
+        "player_gameweeks": 45532,
+        "mae": 1.3468381848333724,
+        "rmse": 2.2731618865476806,
+        "bias": 0.41749156453600234,
+        "mean_xi_actual": 41.096774193548384,
+        "mean_captain_actual": 4.290322580645161
+      }
+    }
+  },
+  "ridge_artifact": {
+    "version": "components-ridge-v1-experimental",
+    "features": [
+      "intercept",
+      "appearance",
+      "goals",
+      "assists",
+      "clean_sheet",
+      "saves",
+      "bonus",
+      "cards",
+      "conceded",
+      "defensive_contribution",
+      "penalties",
+      "own_goals"
+    ],
+    "penalty": 100.0,
+    "coefficients": {
+      "1": [
+        0.03920841265679604,
+        1.0923333005523803,
+        0.9945758151829622,
+        1.0182892672987107,
+        0.952424012407194,
+        0.6787333089536367,
+        0.8238252707286008,
+        0.9482664781697075,
+        0.9836777202105326,
+        1.0,
+        0.7673699924688836,
+        0.9438836294216176
+      ],
+      "2": [
+        0.08944450774591582,
+        0.9596997168643417,
+        0.5500329119036953,
+        1.0832688301969782,
+        0.7592231662227078,
+        1.0,
+        1.3936601684261605,
+        1.1295928337184997,
+        1.3529279889231416,
+        1.0,
+        1.0,
+        1.0466062081164975
+      ],
+      "3": [
+        0.08869583500493326,
+        0.9610342177471943,
+        0.8829786612174404,
+        1.4141507985810453,
+        1.0118041148894121,
+        1.0,
+        1.2813768196088993,
+        1.238717219904282,
+        1.0,
+        1.0,
+        0.9949891014133927,
+        0.9369546237769787
+      ],
+      "4": [
+        0.10711957938573743,
+        1.3189588682023001,
+        0.654740103752198,
+        0.8289091117271187,
+        1.0,
+        1.0,
+        1.4325789047970574,
+        0.8794280108907893,
+        1.0,
+        1.0,
+        0.9988699108629712,
+        1.0028861120685384
+      ]
+    },
+    "training_samples": {
+      "1": 5022,
+      "2": 15235,
+      "3": 19649,
+      "4": 5626
+    },
+    "training_seasons": [
+      "2022-23",
+      "2023-24"
+    ]
+  },
+  "heldout_weeks": [
+    {
+      "gameweek": 2,
+      "metrics": {
+        "heuristic-v1": {
+          "players": 616,
+          "mae": 1.2186248196248197,
+          "rmse": 2.650592766009774,
+          "bias": -0.2501486291486291,
+          "spearman_by_position": {
+            "3": 0.7483916107245421,
+            "4": 0.8426867508881865,
+            "2": 0.6715708040549148,
+            "1": 0.8635852896189767
+          },
+          "xi_actual": 43.0,
+          "captain_actual": 10.0,
+          "total_actual": 53.0,
+          "hindsight_total": 171.0,
+          "regret": 118.0,
+          "xi_overlap": 0
+        },
+        "components-v1-experimental": {
+          "players": 616,
+          "mae": 1.1851127006663966,
+          "rmse": 2.2834046620570487,
+          "bias": 0.0012625627107720804,
+          "spearman_by_position": {
+            "3": 0.7489718158570008,
+            "4": 0.8560055883924512,
+            "2": 0.6671790317354529,
+            "1": 0.824451681808317
+          },
+          "xi_actual": 46.0,
+          "captain_actual": 2.0,
+          "total_actual": 48.0,
+          "hindsight_total": 171.0,
+          "regret": 123.0,
+          "xi_overlap": 0
+        },
+        "ppg": {
+          "players": 616,
+          "mae": 1.2256493506493507,
+          "rmse": 2.6832210726429766,
+          "bias": -0.05032467532467533,
+          "spearman_by_position": {
+            "3": 0.7307607490906772,
+            "4": 0.8331958233025097,
+            "2": 0.6680034450647753,
+            "1": 0.8634060290521944
+          },
+          "xi_actual": 48.0,
+          "captain_actual": 10.0,
+          "total_actual": 58.0,
+          "hindsight_total": 171.0,
+          "regret": 113.0,
+          "xi_overlap": 0
+        },
+        "form": {
+          "players": 616,
+          "mae": 1.2256493506493507,
+          "rmse": 2.6832210726429766,
+          "bias": -0.05032467532467533,
+          "spearman_by_position": {
+            "3": 0.7307607490906772,
+            "4": 0.8331958233025097,
+            "2": 0.6680034450647753,
+            "1": 0.8634060290521944
+          },
+          "xi_actual": 48.0,
+          "captain_actual": 10.0,
+          "total_actual": 58.0,
+          "hindsight_total": 171.0,
+          "regret": 113.0,
+          "xi_overlap": 0
+        },
+        "components-ridge-v1-experimental": {
+          "players": 616,
+          "mae": 1.2119439049225682,
+          "rmse": 2.268237044225957,
+          "bias": 0.030388205254014016,
+          "spearman_by_position": {
+            "3": 0.7494184509266284,
+            "4": 0.8606324309492388,
+            "2": 0.6637314080996032,
+            "1": 0.8249336951471248
+          },
+          "xi_actual": 48.0,
+          "captain_actual": 10.0,
+          "total_actual": 58.0,
+          "hindsight_total": 171.0,
+          "regret": 113.0,
+          "xi_overlap": 0
+        }
+      }
+    },
+    {
+      "gameweek": 3,
+      "metrics": {
+        "heuristic-v1": {
+          "players": 627,
+          "mae": 1.03031004784689,
+          "rmse": 1.9816552189442216,
+          "bias": 0.005547231715652762,
+          "spearman_by_position": {
+            "3": 0.7024284605065556,
+            "4": 0.8891898335332752,
+            "2": 0.6737714864265495,
+            "1": 0.6047008590369565
+          },
+          "xi_actual": 57.0,
+          "captain_actual": 17.0,
+          "total_actual": 74.0,
+          "hindsight_total": 142.0,
+          "regret": 68.0,
+          "xi_overlap": 2
+        },
+        "components-v1-experimental": {
+          "players": 627,
+          "mae": 1.0474293005243804,
+          "rmse": 1.842876099824252,
+          "bias": 0.1990750625932262,
+          "spearman_by_position": {
+            "3": 0.7312644056437131,
+            "4": 0.8842250615584394,
+            "2": 0.7018312462709934,
+            "1": 0.6486615649135807
+          },
+          "xi_actual": 75.0,
+          "captain_actual": 17.0,
+          "total_actual": 92.0,
+          "hindsight_total": 142.0,
+          "regret": 50.0,
+          "xi_overlap": 3
+        },
+        "ppg": {
+          "players": 627,
+          "mae": 1.1100478468899522,
+          "rmse": 2.1349973574008123,
+          "bias": 0.26156299840510366,
+          "spearman_by_position": {
+            "3": 0.6955328682926749,
+            "4": 0.8686972318465543,
+            "2": 0.6347903309425936,
+            "1": 0.5944414359695932
+          },
+          "xi_actual": 61.0,
+          "captain_actual": 2.0,
+          "total_actual": 63.0,
+          "hindsight_total": 142.0,
+          "regret": 79.0,
+          "xi_overlap": 2
+        },
+        "form": {
+          "players": 627,
+          "mae": 1.0518341307814991,
+          "rmse": 1.9719928957430968,
+          "bias": 0.1634768740031898,
+          "spearman_by_position": {
+            "3": 0.7059129369995182,
+            "4": 0.8837373743753164,
+            "2": 0.6539948675269732,
+            "1": 0.6006593483597852
+          },
+          "xi_actual": 63.0,
+          "captain_actual": 17.0,
+          "total_actual": 80.0,
+          "hindsight_total": 142.0,
+          "regret": 62.0,
+          "xi_overlap": 2
+        },
+        "components-ridge-v1-experimental": {
+          "players": 627,
+          "mae": 1.0531844249743196,
+          "rmse": 1.8048475441800023,
+          "bias": 0.2268897356138724,
+          "spearman_by_position": {
+            "3": 0.7325933526318481,
+            "4": 0.885877064671429,
+            "2": 0.7015758448576629,
+            "1": 0.6507300952558863
+          },
+          "xi_actual": 70.0,
+          "captain_actual": 17.0,
+          "total_actual": 87.0,
+          "hindsight_total": 142.0,
+          "regret": 55.0,
+          "xi_overlap": 3
+        }
+      }
+    },
+    {
+      "gameweek": 4,
+      "metrics": {
+        "heuristic-v1": {
+          "players": 648,
+          "mae": 1.1448105036253184,
+          "rmse": 2.302252011888456,
+          "bias": -0.1594496570644719,
+          "spearman_by_position": {
+            "3": 0.6426821760432019,
+            "4": 0.650615961455673,
+            "2": 0.6782364200036965,
+            "1": 0.7672198340104893
+          },
+          "xi_actual": 46.0,
+          "captain_actual": 2.0,
+          "total_actual": 48.0,
+          "hindsight_total": 148.0,
+          "regret": 100.0,
+          "xi_overlap": 1
+        },
+        "components-v1-experimental": {
+          "players": 648,
+          "mae": 1.1581777590710385,
+          "rmse": 2.087876510272955,
+          "bias": 0.06950992525081837,
+          "spearman_by_position": {
+            "3": 0.6708674471106753,
+            "4": 0.6432646591194413,
+            "2": 0.6769871418621055,
+            "1": 0.7658190431330423
+          },
+          "xi_actual": 36.0,
+          "captain_actual": 13.0,
+          "total_actual": 49.0,
+          "hindsight_total": 148.0,
+          "regret": 99.0,
+          "xi_overlap": 1
+        },
+        "ppg": {
+          "players": 648,
+          "mae": 1.2067901234567902,
+          "rmse": 2.3078784965866075,
+          "bias": 0.1388888888888889,
+          "spearman_by_position": {
+            "3": 0.6147058025888866,
+            "4": 0.6533932884733258,
+            "2": 0.6475095045642263,
+            "1": 0.7322784629437274
+          },
+          "xi_actual": 46.0,
+          "captain_actual": 2.0,
+          "total_actual": 48.0,
+          "hindsight_total": 148.0,
+          "regret": 100.0,
+          "xi_overlap": 1
+        },
+        "form": {
+          "players": 648,
+          "mae": 1.1481481481481481,
+          "rmse": 2.253179433222982,
+          "bias": -0.00823045267489713,
+          "spearman_by_position": {
+            "3": 0.6397092186783396,
+            "4": 0.6503928798101872,
+            "2": 0.67463189821031,
+            "1": 0.7684434347502217
+          },
+          "xi_actual": 46.0,
+          "captain_actual": 2.0,
+          "total_actual": 48.0,
+          "hindsight_total": 148.0,
+          "regret": 100.0,
+          "xi_overlap": 1
+        },
+        "components-ridge-v1-experimental": {
+          "players": 648,
+          "mae": 1.183902249277292,
+          "rmse": 2.085237665750295,
+          "bias": 0.09920520437288911,
+          "spearman_by_position": {
+            "3": 0.6716693892285566,
+            "4": 0.6461870119817915,
+            "2": 0.6816736583229906,
+            "1": 0.7658190431330423
+          },
+          "xi_actual": 37.0,
+          "captain_actual": 13.0,
+          "total_actual": 50.0,
+          "hindsight_total": 148.0,
+          "regret": 98.0,
+          "xi_overlap": 1
+        }
+      }
+    },
+    {
+      "gameweek": 5,
+      "metrics": {
+        "heuristic-v1": {
+          "players": 659,
+          "mae": 1.0390087506322712,
+          "rmse": 2.015267828786922,
+          "bias": -0.15529773104993136,
+          "spearman_by_position": {
+            "3": 0.6535649613042238,
+            "4": 0.7635457698102696,
+            "2": 0.6663940938646995,
+            "1": 0.7182600664051492
+          },
+          "xi_actual": 72.0,
+          "captain_actual": 9.0,
+          "total_actual": 81.0,
+          "hindsight_total": 139.0,
+          "regret": 58.0,
+          "xi_overlap": 2
+        },
+        "components-v1-experimental": {
+          "players": 659,
+          "mae": 1.0827324708730872,
+          "rmse": 1.9306173539457174,
+          "bias": 0.08139222886190967,
+          "spearman_by_position": {
+            "3": 0.6664813705022747,
+            "4": 0.7773463885207784,
+            "2": 0.7046684840926193,
+            "1": 0.738557952697319
+          },
+          "xi_actual": 48.0,
+          "captain_actual": 9.0,
+          "total_actual": 57.0,
+          "hindsight_total": 139.0,
+          "regret": 82.0,
+          "xi_overlap": 1
+        },
+        "ppg": {
+          "players": 659,
+          "mae": 1.1714719271623673,
+          "rmse": 2.078129565737236,
+          "bias": 0.23621648963075367,
+          "spearman_by_position": {
+            "3": 0.6297225244368881,
+            "4": 0.737298893410021,
+            "2": 0.6282705465253211,
+            "1": 0.6801743918004867
+          },
+          "xi_actual": 59.0,
+          "captain_actual": 9.0,
+          "total_actual": 68.0,
+          "hindsight_total": 139.0,
+          "regret": 71.0,
+          "xi_overlap": 1
+        },
+        "form": {
+          "players": 659,
+          "mae": 1.0648710166919575,
+          "rmse": 1.9815394224060536,
+          "bias": 0.007207890743550834,
+          "spearman_by_position": {
+            "3": 0.6475284134778543,
+            "4": 0.7436967352552565,
+            "2": 0.6524402942131182,
+            "1": 0.7190584834283409
+          },
+          "xi_actual": 82.0,
+          "captain_actual": 9.0,
+          "total_actual": 91.0,
+          "hindsight_total": 139.0,
+          "regret": 48.0,
+          "xi_overlap": 3
+        },
+        "components-ridge-v1-experimental": {
+          "players": 659,
+          "mae": 1.103356786592549,
+          "rmse": 1.919736014155552,
+          "bias": 0.11193701325668862,
+          "spearman_by_position": {
+            "3": 0.6676250938854273,
+            "4": 0.7811680983175346,
+            "2": 0.7048807360118461,
+            "1": 0.7343351330917811
+          },
+          "xi_actual": 48.0,
+          "captain_actual": 9.0,
+          "total_actual": 57.0,
+          "hindsight_total": 139.0,
+          "regret": 82.0,
+          "xi_overlap": 1
+        }
+      }
+    },
+    {
+      "gameweek": 6,
+      "metrics": {
+        "heuristic-v1": {
+          "players": 661,
+          "mae": 1.0939956648656437,
+          "rmse": 2.242587011847297,
+          "bias": -0.09705819465456378,
+          "spearman_by_position": {
+            "3": 0.7477960792904466,
+            "4": 0.7517415370114539,
+            "2": 0.5392123143539278,
+            "1": 0.8420250279351507
+          },
+          "xi_actual": 59.0,
+          "captain_actual": 2.0,
+          "total_actual": 61.0,
+          "hindsight_total": 163.0,
+          "regret": 102.0,
+          "xi_overlap": 1
+        },
+        "components-v1-experimental": {
+          "players": 661,
+          "mae": 1.051151734376082,
+          "rmse": 2.0741023696119165,
+          "bias": 0.13314751397872535,
+          "spearman_by_position": {
+            "3": 0.7790958561537659,
+            "4": 0.8121661529072425,
+            "2": 0.5754180617556601,
+            "1": 0.8529440300373492
+          },
+          "xi_actual": 44.0,
+          "captain_actual": 2.0,
+          "total_actual": 46.0,
+          "hindsight_total": 163.0,
+          "regret": 117.0,
+          "xi_overlap": 1
+        },
+        "ppg": {
+          "players": 661,
+          "mae": 1.255446293494705,
+          "rmse": 2.3254602965554163,
+          "bias": 0.3263993948562784,
+          "spearman_by_position": {
+            "3": 0.6964095018702839,
+            "4": 0.720494673921641,
+            "2": 0.4769675608716239,
+            "1": 0.7320759272986638
+          },
+          "xi_actual": 48.0,
+          "captain_actual": 2.0,
+          "total_actual": 50.0,
+          "hindsight_total": 163.0,
+          "regret": 113.0,
+          "xi_overlap": 1
+        },
+        "form": {
+          "players": 661,
+          "mae": 1.129198184568835,
+          "rmse": 2.234457157725911,
+          "bias": 0.070196671709531,
+          "spearman_by_position": {
+            "3": 0.7392604105101177,
+            "4": 0.7412962132537552,
+            "2": 0.5213453035642641,
+            "1": 0.827813572152666
+          },
+          "xi_actual": 59.0,
+          "captain_actual": 2.0,
+          "total_actual": 61.0,
+          "hindsight_total": 163.0,
+          "regret": 102.0,
+          "xi_overlap": 1
+        },
+        "components-ridge-v1-experimental": {
+          "players": 661,
+          "mae": 1.0746257435240105,
+          "rmse": 2.0588792402239697,
+          "bias": 0.16476679422484108,
+          "spearman_by_position": {
+            "3": 0.778427399013043,
+            "4": 0.8090282662710182,
+            "2": 0.5705497051051169,
+            "1": 0.8529440300373492
+          },
+          "xi_actual": 47.0,
+          "captain_actual": 2.0,
+          "total_actual": 49.0,
+          "hindsight_total": 163.0,
+          "regret": 114.0,
+          "xi_overlap": 1
+        }
+      }
+    },
+    {
+      "gameweek": 7,
+      "metrics": {
+        "heuristic-v1": {
+          "players": 664,
+          "mae": 1.11242,
+          "rmse": 2.2362379491159596,
+          "bias": -0.27725428571428573,
+          "spearman_by_position": {
+            "3": 0.7316139657779782,
+            "4": 0.7607134024960192,
+            "2": 0.6201581390655477,
+            "1": 0.7981056273203551
+          },
+          "xi_actual": 31.0,
+          "captain_actual": 2.0,
+          "total_actual": 33.0,
+          "hindsight_total": 154.0,
+          "regret": 121.0,
+          "xi_overlap": 0
+        },
+        "components-v1-experimental": {
+          "players": 664,
+          "mae": 1.0726783480743618,
+          "rmse": 2.0265112674308408,
+          "bias": -0.04400283514173162,
+          "spearman_by_position": {
+            "3": 0.7520564330955782,
+            "4": 0.8160141964596843,
+            "2": 0.6633554575555928,
+            "1": 0.8008845026548566
+          },
+          "xi_actual": 61.0,
+          "captain_actual": 6.0,
+          "total_actual": 67.0,
+          "hindsight_total": 154.0,
+          "regret": 87.0,
+          "xi_overlap": 0
+        },
+        "ppg": {
+          "players": 664,
+          "mae": 1.2673192771084338,
+          "rmse": 2.2807857787190278,
+          "bias": 0.15055220883534137,
+          "spearman_by_position": {
+            "3": 0.6822785734680255,
+            "4": 0.6668957832954593,
+            "2": 0.5842865913281563,
+            "1": 0.6869067761353487
+          },
+          "xi_actual": 31.0,
+          "captain_actual": 2.0,
+          "total_actual": 33.0,
+          "hindsight_total": 154.0,
+          "regret": 121.0,
+          "xi_overlap": 0
+        },
+        "form": {
+          "players": 664,
+          "mae": 1.1421686746987951,
+          "rmse": 2.2445113778506904,
+          "bias": -0.11867469879518072,
+          "spearman_by_position": {
+            "3": 0.7276724341170078,
+            "4": 0.7654097699326833,
+            "2": 0.6266796719024165,
+            "1": 0.8115829246473039
+          },
+          "xi_actual": 31.0,
+          "captain_actual": 6.0,
+          "total_actual": 37.0,
+          "hindsight_total": 154.0,
+          "regret": 117.0,
+          "xi_overlap": 0
+        },
+        "components-ridge-v1-experimental": {
+          "players": 664,
+          "mae": 1.09912860693804,
+          "rmse": 2.0202110247149556,
+          "bias": -0.013412897653579453,
+          "spearman_by_position": {
+            "3": 0.7499424389238889,
+            "4": 0.8195899840335192,
+            "2": 0.6652518240518582,
+            "1": 0.8009855526670203
+          },
+          "xi_actual": 53.0,
+          "captain_actual": 6.0,
+          "total_actual": 59.0,
+          "hindsight_total": 154.0,
+          "regret": 95.0,
+          "xi_overlap": 0
+        }
+      }
+    },
+    {
+      "gameweek": 8,
+      "metrics": {
+        "heuristic-v1": {
+          "players": 666,
+          "mae": 1.0434951973547892,
+          "rmse": 2.0274277944850296,
+          "bias": -0.12704728635340878,
+          "spearman_by_position": {
+            "3": 0.7355797863447754,
+            "4": 0.8255474417998225,
+            "2": 0.6096225200835397,
+            "1": 0.7463206992835143
+          },
+          "xi_actual": 32.0,
+          "captain_actual": 2.0,
+          "total_actual": 34.0,
+          "hindsight_total": 132.0,
+          "regret": 98.0,
+          "xi_overlap": 1
+        },
+        "components-v1-experimental": {
+          "players": 666,
+          "mae": 1.026037522246087,
+          "rmse": 1.8612029901489984,
+          "bias": 0.09954354849877857,
+          "spearman_by_position": {
+            "3": 0.7539760081028382,
+            "4": 0.8714347410169002,
+            "2": 0.6407397193600616,
+            "1": 0.7692284571537815
+          },
+          "xi_actual": 33.0,
+          "captain_actual": 2.0,
+          "total_actual": 35.0,
+          "hindsight_total": 132.0,
+          "regret": 97.0,
+          "xi_overlap": 1
+        },
+        "ppg": {
+          "players": 666,
+          "mae": 1.2433254683254684,
+          "rmse": 2.132866890007489,
+          "bias": 0.33987916487916486,
+          "spearman_by_position": {
+            "3": 0.6804422435452581,
+            "4": 0.7888326005144443,
+            "2": 0.5492763846186038,
+            "1": 0.6894694758401911
+          },
+          "xi_actual": 27.0,
+          "captain_actual": 2.0,
+          "total_actual": 29.0,
+          "hindsight_total": 132.0,
+          "regret": 103.0,
+          "xi_overlap": 1
+        },
+        "form": {
+          "players": 666,
+          "mae": 1.056156156156156,
+          "rmse": 2.0215505600075074,
+          "bias": 0.03033033033033033,
+          "spearman_by_position": {
+            "3": 0.7533706465207238,
+            "4": 0.8359702729479549,
+            "2": 0.6158598891198358,
+            "1": 0.7725729893487364
+          },
+          "xi_actual": 38.0,
+          "captain_actual": 2.0,
+          "total_actual": 40.0,
+          "hindsight_total": 132.0,
+          "regret": 92.0,
+          "xi_overlap": 1
+        },
+        "components-ridge-v1-experimental": {
+          "players": 666,
+          "mae": 1.0483738879225395,
+          "rmse": 1.8502767178955828,
+          "bias": 0.12941889424447267,
+          "spearman_by_position": {
+            "3": 0.7525226557524273,
+            "4": 0.8705619971600981,
+            "2": 0.6400318176314754,
+            "1": 0.7706916230243107
+          },
+          "xi_actual": 28.0,
+          "captain_actual": 2.0,
+          "total_actual": 30.0,
+          "hindsight_total": 132.0,
+          "regret": 102.0,
+          "xi_overlap": 1
+        }
+      }
+    },
+    {
+      "gameweek": 9,
+      "metrics": {
+        "heuristic-v1": {
+          "players": 667,
+          "mae": 0.9849048776632092,
+          "rmse": 1.8745704598575075,
+          "bias": -0.1096836570490265,
+          "spearman_by_position": {
+            "3": 0.6579100768144992,
+            "4": 0.8129686207093831,
+            "2": 0.6631766354437123,
+            "1": 0.7485333402111197
+          },
+          "xi_actual": 58.0,
+          "captain_actual": 10.0,
+          "total_actual": 68.0,
+          "hindsight_total": 127.0,
+          "regret": 59.0,
+          "xi_overlap": 3
+        },
+        "components-v1-experimental": {
+          "players": 667,
+          "mae": 1.0316362935556687,
+          "rmse": 1.8151956181195381,
+          "bias": 0.1016148524804894,
+          "spearman_by_position": {
+            "3": 0.7014980934747622,
+            "4": 0.832334567665938,
+            "2": 0.6881810643609295,
+            "1": 0.8111374104074803
+          },
+          "xi_actual": 48.0,
+          "captain_actual": 10.0,
+          "total_actual": 58.0,
+          "hindsight_total": 127.0,
+          "regret": 69.0,
+          "xi_overlap": 3
+        },
+        "ppg": {
+          "players": 667,
+          "mae": 1.174503819518812,
+          "rmse": 1.9075803072569872,
+          "bias": 0.35341793389019777,
+          "spearman_by_position": {
+            "3": 0.6136448582823323,
+            "4": 0.8078547544347822,
+            "2": 0.5963632291952974,
+            "1": 0.6729448132355765
+          },
+          "xi_actual": 60.0,
+          "captain_actual": 10.0,
+          "total_actual": 70.0,
+          "hindsight_total": 127.0,
+          "regret": 57.0,
+          "xi_overlap": 3
+        },
+        "form": {
+          "players": 667,
+          "mae": 1.0413793103448277,
+          "rmse": 1.9051103058251821,
+          "bias": 0.051274362818590706,
+          "spearman_by_position": {
+            "3": 0.6775840608795939,
+            "4": 0.8560784318470476,
+            "2": 0.6557112436791068,
+            "1": 0.7775826703383796
+          },
+          "xi_actual": 41.0,
+          "captain_actual": 10.0,
+          "total_actual": 51.0,
+          "hindsight_total": 127.0,
+          "regret": 76.0,
+          "xi_overlap": 2
+        },
+        "components-ridge-v1-experimental": {
+          "players": 667,
+          "mae": 1.0457889703286136,
+          "rmse": 1.7844212991986663,
+          "bias": 0.1307783801348045,
+          "spearman_by_position": {
+            "3": 0.7029386075606823,
+            "4": 0.8338031774015638,
+            "2": 0.6913715033339608,
+            "1": 0.8072236619656017
+          },
+          "xi_actual": 65.0,
+          "captain_actual": 10.0,
+          "total_actual": 75.0,
+          "hindsight_total": 127.0,
+          "regret": 52.0,
+          "xi_overlap": 4
+        }
+      }
+    },
+    {
+      "gameweek": 10,
+      "metrics": {
+        "heuristic-v1": {
+          "players": 670,
+          "mae": 0.9474193812193755,
+          "rmse": 1.8959073974274159,
+          "bias": -0.13084571278151946,
+          "spearman_by_position": {
+            "3": 0.6838243171460825,
+            "4": 0.8245624055076589,
+            "2": 0.6716099996455414,
+            "1": 0.7843502956068467
+          },
+          "xi_actual": 50.0,
+          "captain_actual": 3.0,
+          "total_actual": 53.0,
+          "hindsight_total": 138.0,
+          "regret": 85.0,
+          "xi_overlap": 0
+        },
+        "components-v1-experimental": {
+          "players": 670,
+          "mae": 0.9499734530491749,
+          "rmse": 1.775830675211602,
+          "bias": 0.09758037193409483,
+          "spearman_by_position": {
+            "3": 0.7098544508132165,
+            "4": 0.8574561037233199,
+            "2": 0.7151918631166334,
+            "1": 0.858294771632498
+          },
+          "xi_actual": 43.0,
+          "captain_actual": 2.0,
+          "total_actual": 45.0,
+          "hindsight_total": 138.0,
+          "regret": 93.0,
+          "xi_overlap": 1
+        },
+        "ppg": {
+          "players": 670,
+          "mae": 1.1824644633972992,
+          "rmse": 2.0463826281220223,
+          "bias": 0.3651048329779673,
+          "spearman_by_position": {
+            "3": 0.6320282913155587,
+            "4": 0.7413146166214344,
+            "2": 0.6018146518092051,
+            "1": 0.7288534660568166
+          },
+          "xi_actual": 44.0,
+          "captain_actual": 9.0,
+          "total_actual": 53.0,
+          "hindsight_total": 138.0,
+          "regret": 85.0,
+          "xi_overlap": 0
+        },
+        "form": {
+          "players": 670,
+          "mae": 0.9895522388059701,
+          "rmse": 1.9549401639886883,
+          "bias": 0.03253731343283582,
+          "spearman_by_position": {
+            "3": 0.6875745331038157,
+            "4": 0.8147652631431118,
+            "2": 0.6321144145281435,
+            "1": 0.8184323219994991
+          },
+          "xi_actual": 41.0,
+          "captain_actual": 3.0,
+          "total_actual": 44.0,
+          "hindsight_total": 138.0,
+          "regret": 94.0,
+          "xi_overlap": 0
+        },
+        "components-ridge-v1-experimental": {
+          "players": 670,
+          "mae": 0.9792391904739416,
+          "rmse": 1.777229394939029,
+          "bias": 0.1262540960904572,
+          "spearman_by_position": {
+            "3": 0.7096192938926089,
+            "4": 0.854363246912361,
+            "2": 0.7148339263316367,
+            "1": 0.8560683577840171
+          },
+          "xi_actual": 37.0,
+          "captain_actual": 3.0,
+          "total_actual": 40.0,
+          "hindsight_total": 138.0,
+          "regret": 98.0,
+          "xi_overlap": 1
+        }
+      }
+    },
+    {
+      "gameweek": 11,
+      "metrics": {
+        "heuristic-v1": {
+          "players": 674,
+          "mae": 1.0701137665273825,
+          "rmse": 2.061965387571591,
+          "bias": -0.18925586741759018,
+          "spearman_by_position": {
+            "3": 0.6690324603443744,
+            "4": 0.8532601179350918,
+            "2": 0.6487367214430437,
+            "1": 0.7982992350519469
+          },
+          "xi_actual": 39.0,
+          "captain_actual": 14.0,
+          "total_actual": 53.0,
+          "hindsight_total": 140.0,
+          "regret": 87.0,
+          "xi_overlap": 1
+        },
+        "components-v1-experimental": {
+          "players": 674,
+          "mae": 1.0385564431995409,
+          "rmse": 1.929331674693688,
+          "bias": 0.03632812648351507,
+          "spearman_by_position": {
+            "3": 0.7055185478755482,
+            "4": 0.8438923053307127,
+            "2": 0.7100037165251358,
+            "1": 0.8572875335060585
+          },
+          "xi_actual": 51.0,
+          "captain_actual": 14.0,
+          "total_actual": 65.0,
+          "hindsight_total": 140.0,
+          "regret": 75.0,
+          "xi_overlap": 2
+        },
+        "ppg": {
+          "players": 674,
+          "mae": 1.273369130045688,
+          "rmse": 2.081378023257496,
+          "bias": 0.30920116810324527,
+          "spearman_by_position": {
+            "3": 0.6410927923215656,
+            "4": 0.8572706666125269,
+            "2": 0.5698674138956933,
+            "1": 0.7160487217608417
+          },
+          "xi_actual": 40.0,
+          "captain_actual": 14.0,
+          "total_actual": 54.0,
+          "hindsight_total": 140.0,
+          "regret": 86.0,
+          "xi_overlap": 1
+        },
+        "form": {
+          "players": 674,
+          "mae": 1.1071216617210682,
+          "rmse": 2.0942056559413773,
+          "bias": -0.03293768545994065,
+          "spearman_by_position": {
+            "3": 0.6730393555788985,
+            "4": 0.8193030248064189,
+            "2": 0.6257805609310557,
+            "1": 0.8364356990217815
+          },
+          "xi_actual": 40.0,
+          "captain_actual": 2.0,
+          "total_actual": 42.0,
+          "hindsight_total": 140.0,
+          "regret": 98.0,
+          "xi_overlap": 1
+        },
+        "components-ridge-v1-experimental": {
+          "players": 674,
+          "mae": 1.0715121202357087,
+          "rmse": 1.925178025042961,
+          "bias": 0.06581896770983141,
+          "spearman_by_position": {
+            "3": 0.7057820600665545,
+            "4": 0.847739864171988,
+            "2": 0.709561308404329,
+            "1": 0.857238675469783
+          },
+          "xi_actual": 36.0,
+          "captain_actual": 14.0,
+          "total_actual": 50.0,
+          "hindsight_total": 140.0,
+          "regret": 90.0,
+          "xi_overlap": 1
+        }
+      }
+    },
+    {
+      "gameweek": 12,
+      "metrics": {
+        "heuristic-v1": {
+          "players": 678,
+          "mae": 1.148837594332011,
+          "rmse": 2.232374342358193,
+          "bias": -0.2256922004962138,
+          "spearman_by_position": {
+            "3": 0.6309278099512124,
+            "4": 0.7914094493269085,
+            "2": 0.5413479328222977,
+            "1": 0.777975058920726
+          },
+          "xi_actual": 66.0,
+          "captain_actual": 13.0,
+          "total_actual": 79.0,
+          "hindsight_total": 158.0,
+          "regret": 79.0,
+          "xi_overlap": 4
+        },
+        "components-v1-experimental": {
+          "players": 678,
+          "mae": 1.1525184369795738,
+          "rmse": 2.169802014475111,
+          "bias": -0.005416929384506457,
+          "spearman_by_position": {
+            "3": 0.6679897976492657,
+            "4": 0.7922798602655734,
+            "2": 0.5656408857546741,
+            "1": 0.7800890239890313
+          },
+          "xi_actual": 41.0,
+          "captain_actual": 13.0,
+          "total_actual": 54.0,
+          "hindsight_total": 158.0,
+          "regret": 104.0,
+          "xi_overlap": 1
+        },
+        "ppg": {
+          "players": 678,
+          "mae": 1.3459479434036956,
+          "rmse": 2.2523796800168947,
+          "bias": 0.293743003145658,
+          "spearman_by_position": {
+            "3": 0.5937786366612663,
+            "4": 0.7765292943175723,
+            "2": 0.484605602041908,
+            "1": 0.7250986220995169
+          },
+          "xi_actual": 37.0,
+          "captain_actual": 13.0,
+          "total_actual": 50.0,
+          "hindsight_total": 158.0,
+          "regret": 108.0,
+          "xi_overlap": 2
+        },
+        "form": {
+          "players": 678,
+          "mae": 1.1870206489675517,
+          "rmse": 2.236041593061208,
+          "bias": -0.054277286135693215,
+          "spearman_by_position": {
+            "3": 0.6407518455566396,
+            "4": 0.7955130472355955,
+            "2": 0.528789924780143,
+            "1": 0.7786958412851067
+          },
+          "xi_actual": 57.0,
+          "captain_actual": 13.0,
+          "total_actual": 70.0,
+          "hindsight_total": 158.0,
+          "regret": 88.0,
+          "xi_overlap": 3
+        },
+        "components-ridge-v1-experimental": {
+          "players": 678,
+          "mae": 1.1685451940509122,
+          "rmse": 2.15094856865468,
+          "bias": 0.02478286071599308,
+          "spearman_by_position": {
+            "3": 0.6688733115537514,
+            "4": 0.7904169193580509,
+            "2": 0.5617235263954921,
+            "1": 0.779893678191557
+          },
+          "xi_actual": 53.0,
+          "captain_actual": 13.0,
+          "total_actual": 66.0,
+          "hindsight_total": 158.0,
+          "regret": 92.0,
+          "xi_overlap": 2
+        }
+      }
+    },
+    {
+      "gameweek": 13,
+      "metrics": {
+        "heuristic-v1": {
+          "players": 684,
+          "mae": 1.0158317860769448,
+          "rmse": 2.1876259543530137,
+          "bias": -0.2099819344637849,
+          "spearman_by_position": {
+            "3": 0.7159231807366774,
+            "4": 0.7971535669769888,
+            "2": 0.5365842889327235,
+            "1": 0.4931514306736141
+          },
+          "xi_actual": 72.0,
+          "captain_actual": 13.0,
+          "total_actual": 85.0,
+          "hindsight_total": 175.0,
+          "regret": 90.0,
+          "xi_overlap": 1
+        },
+        "components-v1-experimental": {
+          "players": 684,
+          "mae": 1.084130162995234,
+          "rmse": 2.191081477361764,
+          "bias": 0.012728349073574566,
+          "spearman_by_position": {
+            "3": 0.739636232288537,
+            "4": 0.7917861779522972,
+            "2": 0.572513894431553,
+            "1": 0.5052650953659185
+          },
+          "xi_actual": 61.0,
+          "captain_actual": 13.0,
+          "total_actual": 74.0,
+          "hindsight_total": 175.0,
+          "regret": 101.0,
+          "xi_overlap": 1
+        },
+        "ppg": {
+          "players": 684,
+          "mae": 1.2556055542897648,
+          "rmse": 2.2547045513341133,
+          "bias": 0.32880022024758865,
+          "spearman_by_position": {
+            "3": 0.6548220459647646,
+            "4": 0.7903772139347287,
+            "2": 0.48567152112155876,
+            "1": 0.42294854687083283
+          },
+          "xi_actual": 67.0,
+          "captain_actual": 13.0,
+          "total_actual": 80.0,
+          "hindsight_total": 175.0,
+          "regret": 95.0,
+          "xi_overlap": 3
+        },
+        "form": {
+          "players": 684,
+          "mae": 1.058187134502924,
+          "rmse": 2.2156144448935726,
+          "bias": -0.04590643274853801,
+          "spearman_by_position": {
+            "3": 0.720594664164904,
+            "4": 0.7975440425792499,
+            "2": 0.5407882849926059,
+            "1": 0.5107975689348887
+          },
+          "xi_actual": 48.0,
+          "captain_actual": 13.0,
+          "total_actual": 61.0,
+          "hindsight_total": 175.0,
+          "regret": 114.0,
+          "xi_overlap": 1
+        },
+        "components-ridge-v1-experimental": {
+          "players": 684,
+          "mae": 1.1042328626926465,
+          "rmse": 2.174420117513139,
+          "bias": 0.04483114702791958,
+          "spearman_by_position": {
+            "3": 0.7398315261533519,
+            "4": 0.7931023305676587,
+            "2": 0.5740875505684627,
+            "1": 0.5094742019722209
+          },
+          "xi_actual": 52.0,
+          "captain_actual": 13.0,
+          "total_actual": 65.0,
+          "hindsight_total": 175.0,
+          "regret": 110.0,
+          "xi_overlap": 1
+        }
+      }
+    },
+    {
+      "gameweek": 14,
+      "metrics": {
+        "heuristic-v1": {
+          "players": 690,
+          "mae": 1.170547208622278,
+          "rmse": 2.3591247404745865,
+          "bias": -0.2643691030119391,
+          "spearman_by_position": {
+            "3": 0.6935049882352915,
+            "4": 0.7388921204950556,
+            "2": 0.5146642195879002,
+            "1": 0.6293246740858809
+          },
+          "xi_actual": 45.0,
+          "captain_actual": 18.0,
+          "total_actual": 63.0,
+          "hindsight_total": 170.0,
+          "regret": 107.0,
+          "xi_overlap": 1
+        },
+        "components-v1-experimental": {
+          "players": 690,
+          "mae": 1.184607992597965,
+          "rmse": 2.2806466905244234,
+          "bias": -0.041606201932125976,
+          "spearman_by_position": {
+            "3": 0.7259831373330642,
+            "4": 0.7257347322645084,
+            "2": 0.5558495006429978,
+            "1": 0.7387515750196632
+          },
+          "xi_actual": 50.0,
+          "captain_actual": 18.0,
+          "total_actual": 68.0,
+          "hindsight_total": 170.0,
+          "regret": 102.0,
+          "xi_overlap": 1
+        },
+        "ppg": {
+          "players": 690,
+          "mae": 1.3924930464060898,
+          "rmse": 2.3660074825953674,
+          "bias": 0.2909082946039468,
+          "spearman_by_position": {
+            "3": 0.6621566889956166,
+            "4": 0.7214873037648343,
+            "2": 0.4620958511488845,
+            "1": 0.5668752435746112
+          },
+          "xi_actual": 44.0,
+          "captain_actual": 18.0,
+          "total_actual": 62.0,
+          "hindsight_total": 170.0,
+          "regret": 108.0,
+          "xi_overlap": 1
+        },
+        "form": {
+          "players": 690,
+          "mae": 1.2431884057971014,
+          "rmse": 2.428084471944613,
+          "bias": -0.08492753623188404,
+          "spearman_by_position": {
+            "3": 0.698294775238268,
+            "4": 0.6974033442432879,
+            "2": 0.50484669564372,
+            "1": 0.7012042356368537
+          },
+          "xi_actual": 37.0,
+          "captain_actual": 18.0,
+          "total_actual": 55.0,
+          "hindsight_total": 170.0,
+          "regret": 115.0,
+          "xi_overlap": 1
+        },
+        "components-ridge-v1-experimental": {
+          "players": 690,
+          "mae": 1.2155600247248735,
+          "rmse": 2.2806949123831513,
+          "bias": -0.008338719576090961,
+          "spearman_by_position": {
+            "3": 0.7252404140735247,
+            "4": 0.7226209161255471,
+            "2": 0.5607084453849807,
+            "1": 0.7361460499841597
+          },
+          "xi_actual": 71.0,
+          "captain_actual": 18.0,
+          "total_actual": 89.0,
+          "hindsight_total": 170.0,
+          "regret": 81.0,
+          "xi_overlap": 2
+        }
+      }
+    },
+    {
+      "gameweek": 16,
+      "metrics": {
+        "heuristic-v1": {
+          "players": 693,
+          "mae": 0.9775983134164292,
+          "rmse": 2.0093138442036995,
+          "bias": -0.201204905418684,
+          "spearman_by_position": {
+            "3": 0.7216837575798781,
+            "4": 0.7905857387848213,
+            "2": 0.5829331597653011,
+            "1": 0.6823864212904763
+          },
+          "xi_actual": 69.0,
+          "captain_actual": 5.0,
+          "total_actual": 74.0,
+          "hindsight_total": 152.0,
+          "regret": 78.0,
+          "xi_overlap": 2
+        },
+        "components-v1-experimental": {
+          "players": 693,
+          "mae": 1.0225016109158696,
+          "rmse": 1.9718793960688112,
+          "bias": 0.03393242210727515,
+          "spearman_by_position": {
+            "3": 0.7326867132937219,
+            "4": 0.805196617024201,
+            "2": 0.5900477225803151,
+            "1": 0.6708816341034329
+          },
+          "xi_actual": 44.0,
+          "captain_actual": 5.0,
+          "total_actual": 49.0,
+          "hindsight_total": 152.0,
+          "regret": 103.0,
+          "xi_overlap": 1
+        },
+        "ppg": {
+          "players": 693,
+          "mae": 1.278670523800394,
+          "rmse": 2.1176667886789717,
+          "bias": 0.3917302955181743,
+          "spearman_by_position": {
+            "3": 0.6809634809520422,
+            "4": 0.7503975066586343,
+            "2": 0.4922920991523092,
+            "1": 0.5622528298789553
+          },
+          "xi_actual": 33.0,
+          "captain_actual": 5.0,
+          "total_actual": 38.0,
+          "hindsight_total": 152.0,
+          "regret": 114.0,
+          "xi_overlap": 0
+        },
+        "form": {
+          "players": 693,
+          "mae": 1.0037518037518038,
+          "rmse": 1.9836852610752582,
+          "bias": -0.009235209235209232,
+          "spearman_by_position": {
+            "3": 0.7213390174730658,
+            "4": 0.8281767492479788,
+            "2": 0.6116147158904305,
+            "1": 0.7110884105810212
+          },
+          "xi_actual": 69.0,
+          "captain_actual": 5.0,
+          "total_actual": 74.0,
+          "hindsight_total": 152.0,
+          "regret": 78.0,
+          "xi_overlap": 2
+        },
+        "components-ridge-v1-experimental": {
+          "players": 693,
+          "mae": 1.056124945192614,
+          "rmse": 1.967931731860456,
+          "bias": 0.06943517712625363,
+          "spearman_by_position": {
+            "3": 0.7319741229321437,
+            "4": 0.8063611641780379,
+            "2": 0.5892195365563486,
+            "1": 0.6703567858038231
+          },
+          "xi_actual": 45.0,
+          "captain_actual": 5.0,
+          "total_actual": 50.0,
+          "hindsight_total": 152.0,
+          "regret": 102.0,
+          "xi_overlap": 1
+        }
+      }
+    },
+    {
+      "gameweek": 17,
+      "metrics": {
+        "heuristic-v1": {
+          "players": 701,
+          "mae": 1.1577814452548674,
+          "rmse": 2.4259161894891617,
+          "bias": -0.34696159898459217,
+          "spearman_by_position": {
+            "3": 0.7185312744510786,
+            "4": 0.7632058620102915,
+            "2": 0.49894038818265607,
+            "1": 0.6887165286635549
+          },
+          "xi_actual": 68.0,
+          "captain_actual": 21.0,
+          "total_actual": 89.0,
+          "hindsight_total": 182.0,
+          "regret": 93.0,
+          "xi_overlap": 2
+        },
+        "components-v1-experimental": {
+          "players": 701,
+          "mae": 1.187389788934339,
+          "rmse": 2.3306485924593145,
+          "bias": -0.11076693333612012,
+          "spearman_by_position": {
+            "3": 0.745931928613897,
+            "4": 0.7809850873151756,
+            "2": 0.5093103899564122,
+            "1": 0.7273065097844653
+          },
+          "xi_actual": 57.0,
+          "captain_actual": 21.0,
+          "total_actual": 78.0,
+          "hindsight_total": 182.0,
+          "regret": 104.0,
+          "xi_overlap": 2
+        },
+        "ppg": {
+          "players": 701,
+          "mae": 1.4276355024750174,
+          "rmse": 2.4372714948295515,
+          "bias": 0.26027561953025574,
+          "spearman_by_position": {
+            "3": 0.6656698812859789,
+            "4": 0.7012015842237681,
+            "2": 0.43703465732563745,
+            "1": 0.6271979630555665
+          },
+          "xi_actual": 53.0,
+          "captain_actual": 21.0,
+          "total_actual": 74.0,
+          "hindsight_total": 182.0,
+          "regret": 108.0,
+          "xi_overlap": 1
+        },
+        "form": {
+          "players": 701,
+          "mae": 1.209129814550642,
+          "rmse": 2.41828507633275,
+          "bias": -0.15235378031383737,
+          "spearman_by_position": {
+            "3": 0.7350126433536666,
+            "4": 0.8083652508233955,
+            "2": 0.49689393238228763,
+            "1": 0.6779133401717538
+          },
+          "xi_actual": 69.0,
+          "captain_actual": 21.0,
+          "total_actual": 90.0,
+          "hindsight_total": 182.0,
+          "regret": 92.0,
+          "xi_overlap": 2
+        },
+        "components-ridge-v1-experimental": {
+          "players": 701,
+          "mae": 1.2257822589760834,
+          "rmse": 2.333174062907281,
+          "bias": -0.07494303153379508,
+          "spearman_by_position": {
+            "3": 0.7453052377807512,
+            "4": 0.7775515598792245,
+            "2": 0.5126450355652477,
+            "1": 0.7322188641897892
+          },
+          "xi_actual": 64.0,
+          "captain_actual": 21.0,
+          "total_actual": 85.0,
+          "hindsight_total": 182.0,
+          "regret": 97.0,
+          "xi_overlap": 2
+        }
+      }
+    },
+    {
+      "gameweek": 18,
+      "metrics": {
+        "heuristic-v1": {
+          "players": 701,
+          "mae": 0.9583574615745614,
+          "rmse": 1.8534751689955362,
+          "bias": -0.2585424624704037,
+          "spearman_by_position": {
+            "3": 0.6940694925231173,
+            "4": 0.6715838972223898,
+            "2": 0.6745140433674726,
+            "1": 0.7302868917256972
+          },
+          "xi_actual": 72.0,
+          "captain_actual": 9.0,
+          "total_actual": 81.0,
+          "hindsight_total": 126.0,
+          "regret": 45.0,
+          "xi_overlap": 3
+        },
+        "components-v1-experimental": {
+          "players": 701,
+          "mae": 0.9801144800604178,
+          "rmse": 1.758759274739703,
+          "bias": -0.04678045756123347,
+          "spearman_by_position": {
+            "3": 0.7369897802564663,
+            "4": 0.7110130124246432,
+            "2": 0.7033436591366647,
+            "1": 0.7755855446919421
+          },
+          "xi_actual": 57.0,
+          "captain_actual": 9.0,
+          "total_actual": 66.0,
+          "hindsight_total": 126.0,
+          "regret": 60.0,
+          "xi_overlap": 2
+        },
+        "ppg": {
+          "players": 701,
+          "mae": 1.267745342403394,
+          "rmse": 2.0091953143047054,
+          "bias": 0.35074083422661084,
+          "spearman_by_position": {
+            "3": 0.646574527154008,
+            "4": 0.621160160037306,
+            "2": 0.5596520008991638,
+            "1": 0.6231127995429758
+          },
+          "xi_actual": 54.0,
+          "captain_actual": 9.0,
+          "total_actual": 63.0,
+          "hindsight_total": 126.0,
+          "regret": 63.0,
+          "xi_overlap": 3
+        },
+        "form": {
+          "players": 701,
+          "mae": 0.9854493580599144,
+          "rmse": 1.8689138026436212,
+          "bias": -0.05991440798858773,
+          "spearman_by_position": {
+            "3": 0.6947644271186216,
+            "4": 0.7023128454327463,
+            "2": 0.6638325425567132,
+            "1": 0.766894900136927
+          },
+          "xi_actual": 73.0,
+          "captain_actual": 9.0,
+          "total_actual": 82.0,
+          "hindsight_total": 126.0,
+          "regret": 44.0,
+          "xi_overlap": 2
+        },
+        "components-ridge-v1-experimental": {
+          "players": 701,
+          "mae": 1.0293469860794662,
+          "rmse": 1.7837550356630907,
+          "bias": -0.010371997163475026,
+          "spearman_by_position": {
+            "3": 0.7372766143075855,
+            "4": 0.7217700475862477,
+            "2": 0.7013934112539303,
+            "1": 0.7753430570987405
+          },
+          "xi_actual": 75.0,
+          "captain_actual": 9.0,
+          "total_actual": 84.0,
+          "hindsight_total": 126.0,
+          "regret": 42.0,
+          "xi_overlap": 3
+        }
+      }
+    },
+    {
+      "gameweek": 19,
+      "metrics": {
+        "heuristic-v1": {
+          "players": 705,
+          "mae": 1.0741629884235633,
+          "rmse": 2.0877420625970697,
+          "bias": -0.2037867804386734,
+          "spearman_by_position": {
+            "3": 0.6722007904085967,
+            "4": 0.7491343855815561,
+            "2": 0.5838892250164748,
+            "1": 0.6620338154181766
+          },
+          "xi_actual": 45.0,
+          "captain_actual": 16.0,
+          "total_actual": 61.0,
+          "hindsight_total": 149.0,
+          "regret": 88.0,
+          "xi_overlap": 1
+        },
+        "components-v1-experimental": {
+          "players": 705,
+          "mae": 1.0880866421293487,
+          "rmse": 2.020997997914313,
+          "bias": 0.0034886623268496095,
+          "spearman_by_position": {
+            "3": 0.7176362239904885,
+            "4": 0.798308805839184,
+            "2": 0.6538822137470177,
+            "1": 0.6760840628923668
+          },
+          "xi_actual": 46.0,
+          "captain_actual": 16.0,
+          "total_actual": 62.0,
+          "hindsight_total": 149.0,
+          "regret": 87.0,
+          "xi_overlap": 1
+        },
+        "ppg": {
+          "players": 705,
+          "mae": 1.3091774373126064,
+          "rmse": 2.0876112708426415,
+          "bias": 0.4226066648782544,
+          "spearman_by_position": {
+            "3": 0.6322600148461353,
+            "4": 0.7008511410280885,
+            "2": 0.54631940742357,
+            "1": 0.6190866000389782
+          },
+          "xi_actual": 51.0,
+          "captain_actual": 16.0,
+          "total_actual": 67.0,
+          "hindsight_total": 149.0,
+          "regret": 82.0,
+          "xi_overlap": 1
+        },
+        "form": {
+          "players": 705,
+          "mae": 1.108936170212766,
+          "rmse": 2.1325840882874987,
+          "bias": 0.005957446808510628,
+          "spearman_by_position": {
+            "3": 0.699107527679544,
+            "4": 0.7341656148376233,
+            "2": 0.6157573037860365,
+            "1": 0.7171266451854796
+          },
+          "xi_actual": 42.0,
+          "captain_actual": 7.0,
+          "total_actual": 49.0,
+          "hindsight_total": 149.0,
+          "regret": 100.0,
+          "xi_overlap": 1
+        },
+        "components-ridge-v1-experimental": {
+          "players": 705,
+          "mae": 1.1120524678189947,
+          "rmse": 2.005707755886207,
+          "bias": 0.03985812053361891,
+          "spearman_by_position": {
+            "3": 0.7177148293435908,
+            "4": 0.799584645471346,
+            "2": 0.6516998583768284,
+            "1": 0.6745885414503903
+          },
+          "xi_actual": 54.0,
+          "captain_actual": 16.0,
+          "total_actual": 70.0,
+          "hindsight_total": 149.0,
+          "regret": 79.0,
+          "xi_overlap": 2
+        }
+      }
+    },
+    {
+      "gameweek": 20,
+      "metrics": {
+        "heuristic-v1": {
+          "players": 709,
+          "mae": 0.9366121937371618,
+          "rmse": 1.8655476104763342,
+          "bias": -0.10877983551235994,
+          "spearman_by_position": {
+            "3": 0.708041479323069,
+            "4": 0.7658387598633762,
+            "2": 0.517522005035323,
+            "1": 0.6654270713152604
+          },
+          "xi_actual": 63.0,
+          "captain_actual": 7.0,
+          "total_actual": 70.0,
+          "hindsight_total": 148.0,
+          "regret": 78.0,
+          "xi_overlap": 2
+        },
+        "components-v1-experimental": {
+          "players": 709,
+          "mae": 0.9692739055583941,
+          "rmse": 1.8323423502079588,
+          "bias": 0.09716007080968442,
+          "spearman_by_position": {
+            "3": 0.7632738080886611,
+            "4": 0.840102148846352,
+            "2": 0.5336397369629471,
+            "1": 0.6647103502755924
+          },
+          "xi_actual": 64.0,
+          "captain_actual": 7.0,
+          "total_actual": 71.0,
+          "hindsight_total": 148.0,
+          "regret": 77.0,
+          "xi_overlap": 2
+        },
+        "ppg": {
+          "players": 709,
+          "mae": 1.2764915998776754,
+          "rmse": 2.0089027293649147,
+          "bias": 0.5244632967450392,
+          "spearman_by_position": {
+            "3": 0.6483310999508868,
+            "4": 0.7224437324300458,
+            "2": 0.46322604685215135,
+            "1": 0.6345631908387374
+          },
+          "xi_actual": 67.0,
+          "captain_actual": 7.0,
+          "total_actual": 74.0,
+          "hindsight_total": 148.0,
+          "regret": 74.0,
+          "xi_overlap": 3
+        },
+        "form": {
+          "players": 709,
+          "mae": 0.9483779971791255,
+          "rmse": 1.8757452679658269,
+          "bias": 0.08857545839210156,
+          "spearman_by_position": {
+            "3": 0.7486400285790178,
+            "4": 0.777722312985807,
+            "2": 0.5226567318476247,
+            "1": 0.6928723504622716
+          },
+          "xi_actual": 76.0,
+          "captain_actual": 7.0,
+          "total_actual": 83.0,
+          "hindsight_total": 148.0,
+          "regret": 65.0,
+          "xi_overlap": 2
+        },
+        "components-ridge-v1-experimental": {
+          "players": 709,
+          "mae": 0.9879131606474182,
+          "rmse": 1.799537738867762,
+          "bias": 0.13287526738409258,
+          "spearman_by_position": {
+            "3": 0.7639921996209619,
+            "4": 0.8382652226727357,
+            "2": 0.5317638205911246,
+            "1": 0.6646236837805599
+          },
+          "xi_actual": 64.0,
+          "captain_actual": 7.0,
+          "total_actual": 71.0,
+          "hindsight_total": 148.0,
+          "regret": 77.0,
+          "xi_overlap": 2
+        }
+      }
+    },
+    {
+      "gameweek": 21,
+      "metrics": {
+        "heuristic-v1": {
+          "players": 711,
+          "mae": 0.9547072665275516,
+          "rmse": 1.9759439138986186,
+          "bias": -0.1576909541420593,
+          "spearman_by_position": {
+            "3": 0.7478111629660851,
+            "4": 0.7249942329986382,
+            "2": 0.6456461466780443,
+            "1": 0.7203745558269089
+          },
+          "xi_actual": 55.0,
+          "captain_actual": 2.0,
+          "total_actual": 57.0,
+          "hindsight_total": 160.0,
+          "regret": 103.0,
+          "xi_overlap": 1
+        },
+        "components-v1-experimental": {
+          "players": 711,
+          "mae": 0.9756831833268654,
+          "rmse": 1.901249003346259,
+          "bias": 0.030097326540814463,
+          "spearman_by_position": {
+            "3": 0.7907558091536104,
+            "4": 0.6616909613398192,
+            "2": 0.6698677487728779,
+            "1": 0.8019065942166296
+          },
+          "xi_actual": 53.0,
+          "captain_actual": 2.0,
+          "total_actual": 55.0,
+          "hindsight_total": 160.0,
+          "regret": 105.0,
+          "xi_overlap": 1
+        },
+        "ppg": {
+          "players": 711,
+          "mae": 1.2877072276366537,
+          "rmse": 2.1034065694859456,
+          "bias": 0.46858655915706116,
+          "spearman_by_position": {
+            "3": 0.6865893480038816,
+            "4": 0.7319746686192975,
+            "2": 0.574700876800959,
+            "1": 0.6769053562986251
+          },
+          "xi_actual": 48.0,
+          "captain_actual": 2.0,
+          "total_actual": 50.0,
+          "hindsight_total": 160.0,
+          "regret": 110.0,
+          "xi_overlap": 2
+        },
+        "form": {
+          "players": 711,
+          "mae": 1.0191279887482418,
+          "rmse": 2.047495125005144,
+          "bias": 0.04585091420534459,
+          "spearman_by_position": {
+            "3": 0.7707125289763858,
+            "4": 0.6447102611969712,
+            "2": 0.6372542174799425,
+            "1": 0.7937611794510209
+          },
+          "xi_actual": 43.0,
+          "captain_actual": 2.0,
+          "total_actual": 45.0,
+          "hindsight_total": 160.0,
+          "regret": 115.0,
+          "xi_overlap": 1
+        },
+        "components-ridge-v1-experimental": {
+          "players": 711,
+          "mae": 0.9989623301436585,
+          "rmse": 1.8921565437201133,
+          "bias": 0.06634574783101464,
+          "spearman_by_position": {
+            "3": 0.7922755049237817,
+            "4": 0.6672457580759498,
+            "2": 0.6720299454084397,
+            "1": 0.8031020747327686
+          },
+          "xi_actual": 43.0,
+          "captain_actual": 2.0,
+          "total_actual": 45.0,
+          "hindsight_total": 160.0,
+          "regret": 115.0,
+          "xi_overlap": 1
+        }
+      }
+    },
+    {
+      "gameweek": 22,
+      "metrics": {
+        "heuristic-v1": {
+          "players": 724,
+          "mae": 1.0916776532836432,
+          "rmse": 2.2414426497297324,
+          "bias": -0.21186893665209808,
+          "spearman_by_position": {
+            "3": 0.666386738316548,
+            "4": 0.7380465728206931,
+            "2": 0.5829931184129221,
+            "1": 0.7323634002855803
+          },
+          "xi_actual": 41.0,
+          "captain_actual": 3.0,
+          "total_actual": 44.0,
+          "hindsight_total": 162.0,
+          "regret": 118.0,
+          "xi_overlap": 1
+        },
+        "components-v1-experimental": {
+          "players": 724,
+          "mae": 1.1275466252720932,
+          "rmse": 2.1820075847255063,
+          "bias": -0.018408963957724178,
+          "spearman_by_position": {
+            "3": 0.7100801795376884,
+            "4": 0.7458502654654334,
+            "2": 0.5671393763105992,
+            "1": 0.7831180456417662
+          },
+          "xi_actual": 44.0,
+          "captain_actual": 3.0,
+          "total_actual": 47.0,
+          "hindsight_total": 162.0,
+          "regret": 115.0,
+          "xi_overlap": 1
+        },
+        "ppg": {
+          "players": 724,
+          "mae": 1.4159394953167297,
+          "rmse": 2.2989353305545768,
+          "bias": 0.41573528850716984,
+          "spearman_by_position": {
+            "3": 0.6023987409034436,
+            "4": 0.7153465695674773,
+            "2": 0.5619571036666224,
+            "1": 0.612618809463312
+          },
+          "xi_actual": 52.0,
+          "captain_actual": 3.0,
+          "total_actual": 55.0,
+          "hindsight_total": 162.0,
+          "regret": 107.0,
+          "xi_overlap": 3
+        },
+        "form": {
+          "players": 724,
+          "mae": 1.1621546961325966,
+          "rmse": 2.2855660468899455,
+          "bias": -0.01353591160220994,
+          "spearman_by_position": {
+            "3": 0.6765748048858418,
+            "4": 0.7198669558733694,
+            "2": 0.5806836911835269,
+            "1": 0.7581274995872737
+          },
+          "xi_actual": 39.0,
+          "captain_actual": 2.0,
+          "total_actual": 41.0,
+          "hindsight_total": 162.0,
+          "regret": 121.0,
+          "xi_overlap": 1
+        },
+        "components-ridge-v1-experimental": {
+          "players": 724,
+          "mae": 1.156500901674458,
+          "rmse": 2.1679902373186284,
+          "bias": 0.01798093260818354,
+          "spearman_by_position": {
+            "3": 0.7104057781057401,
+            "4": 0.7443514353642917,
+            "2": 0.5645556838482708,
+            "1": 0.783759504697278
+          },
+          "xi_actual": 57.0,
+          "captain_actual": 3.0,
+          "total_actual": 60.0,
+          "hindsight_total": 162.0,
+          "regret": 102.0,
+          "xi_overlap": 2
+        }
+      }
+    },
+    {
+      "gameweek": 23,
+      "metrics": {
+        "heuristic-v1": {
+          "players": 729,
+          "mae": 0.9436430822704328,
+          "rmse": 2.002493309521076,
+          "bias": -0.15010044990893612,
+          "spearman_by_position": {
+            "3": 0.6732995071128929,
+            "4": 0.7677701084307373,
+            "2": 0.6520538348002608,
+            "1": 0.7104538927834355
+          },
+          "xi_actual": 60.0,
+          "captain_actual": 8.0,
+          "total_actual": 68.0,
+          "hindsight_total": 163.0,
+          "regret": 95.0,
+          "xi_overlap": 2
+        },
+        "components-v1-experimental": {
+          "players": 729,
+          "mae": 0.9259972087776565,
+          "rmse": 1.8953178824279917,
+          "bias": 0.04974749869262475,
+          "spearman_by_position": {
+            "3": 0.723767217811463,
+            "4": 0.8005041651648072,
+            "2": 0.7300877480904598,
+            "1": 0.738625930150163
+          },
+          "xi_actual": 70.0,
+          "captain_actual": 8.0,
+          "total_actual": 78.0,
+          "hindsight_total": 163.0,
+          "regret": 85.0,
+          "xi_overlap": 2
+        },
+        "ppg": {
+          "players": 729,
+          "mae": 1.2823988074290664,
+          "rmse": 2.1243699466785397,
+          "bias": 0.49345801733684114,
+          "spearman_by_position": {
+            "3": 0.5844908029925274,
+            "4": 0.7418944106224103,
+            "2": 0.5619845096837095,
+            "1": 0.5991324978784188
+          },
+          "xi_actual": 54.0,
+          "captain_actual": 8.0,
+          "total_actual": 62.0,
+          "hindsight_total": 163.0,
+          "regret": 101.0,
+          "xi_overlap": 2
+        },
+        "form": {
+          "players": 729,
+          "mae": 1.0142661179698216,
+          "rmse": 2.0843791613668063,
+          "bias": 0.03703703703703705,
+          "spearman_by_position": {
+            "3": 0.6847066471382226,
+            "4": 0.7567156415236032,
+            "2": 0.6610304642051438,
+            "1": 0.7566351801285656
+          },
+          "xi_actual": 57.0,
+          "captain_actual": 7.0,
+          "total_actual": 64.0,
+          "hindsight_total": 163.0,
+          "regret": 99.0,
+          "xi_overlap": 2
+        },
+        "components-ridge-v1-experimental": {
+          "players": 729,
+          "mae": 0.966123814503093,
+          "rmse": 1.9092684741439299,
+          "bias": 0.08611758166662799,
+          "spearman_by_position": {
+            "3": 0.722453453270104,
+            "4": 0.8019144966749636,
+            "2": 0.7283241351978103,
+            "1": 0.7381523199914384
+          },
+          "xi_actual": 64.0,
+          "captain_actual": 8.0,
+          "total_actual": 72.0,
+          "hindsight_total": 163.0,
+          "regret": 91.0,
+          "xi_overlap": 2
+        }
+      }
+    },
+    {
+      "gameweek": 24,
+      "metrics": {
+        "heuristic-v1": {
+          "players": 736,
+          "mae": 1.0878287681299228,
+          "rmse": 2.2439925236328895,
+          "bias": -0.22872011327187952,
+          "spearman_by_position": {
+            "3": 0.6818687085763303,
+            "4": 0.6546585516823749,
+            "2": 0.58014665691625,
+            "1": 0.59534006763778
+          },
+          "xi_actual": 93.0,
+          "captain_actual": 29.0,
+          "total_actual": 122.0,
+          "hindsight_total": 197.0,
+          "regret": 75.0,
+          "xi_overlap": 3
+        },
+        "components-v1-experimental": {
+          "players": 736,
+          "mae": 1.072661929683432,
+          "rmse": 2.183926326904569,
+          "bias": -0.03756805084076584,
+          "spearman_by_position": {
+            "3": 0.7278784721088122,
+            "4": 0.7591940275449375,
+            "2": 0.6317376402941021,
+            "1": 0.6483599724511573
+          },
+          "xi_actual": 98.0,
+          "captain_actual": 29.0,
+          "total_actual": 127.0,
+          "hindsight_total": 197.0,
+          "regret": 70.0,
+          "xi_overlap": 3
+        },
+        "ppg": {
+          "players": 736,
+          "mae": 1.4364326987217912,
+          "rmse": 2.474998689451723,
+          "bias": 0.3323699941875075,
+          "spearman_by_position": {
+            "3": 0.6112657140730853,
+            "4": 0.6271638061485276,
+            "2": 0.499647535724215,
+            "1": 0.5178581319117898
+          },
+          "xi_actual": 60.0,
+          "captain_actual": 29.0,
+          "total_actual": 89.0,
+          "hindsight_total": 197.0,
+          "regret": 108.0,
+          "xi_overlap": 1
+        },
+        "form": {
+          "players": 736,
+          "mae": 1.1543478260869566,
+          "rmse": 2.441934372226426,
+          "bias": -0.1565217391304348,
+          "spearman_by_position": {
+            "3": 0.6968555180361182,
+            "4": 0.7146325891027125,
+            "2": 0.5805398060564926,
+            "1": 0.5768528410299293
+          },
+          "xi_actual": 48.0,
+          "captain_actual": 2.0,
+          "total_actual": 50.0,
+          "hindsight_total": 197.0,
+          "regret": 147.0,
+          "xi_overlap": 1
+        },
+        "components-ridge-v1-experimental": {
+          "players": 736,
+          "mae": 1.1061657811752608,
+          "rmse": 2.1759344122998967,
+          "bias": -0.004469961493722568,
+          "spearman_by_position": {
+            "3": 0.7286635487740754,
+            "4": 0.7697210141134618,
+            "2": 0.6307595294310195,
+            "1": 0.6500167781565327
+          },
+          "xi_actual": 93.0,
+          "captain_actual": 29.0,
+          "total_actual": 122.0,
+          "hindsight_total": 197.0,
+          "regret": 75.0,
+          "xi_overlap": 3
+        }
+      }
+    },
+    {
+      "gameweek": 25,
+      "metrics": {
+        "heuristic-v1": {
+          "players": 742,
+          "mae": 1.0227290392645467,
+          "rmse": 2.1429973810748786,
+          "bias": -0.15186007152759626,
+          "spearman_by_position": {
+            "3": 0.707658342464823,
+            "4": 0.6038085499480631,
+            "2": 0.6170678658054142,
+            "1": 0.7466703538626008
+          },
+          "xi_actual": 87.0,
+          "captain_actual": 20.0,
+          "total_actual": 107.0,
+          "hindsight_total": 167.0,
+          "regret": 60.0,
+          "xi_overlap": 3
+        },
+        "components-v1-experimental": {
+          "players": 742,
+          "mae": 1.0404989692036708,
+          "rmse": 2.0750938667493686,
+          "bias": 0.014588350749187963,
+          "spearman_by_position": {
+            "3": 0.719174675874776,
+            "4": 0.6655965134094485,
+            "2": 0.6835914775865292,
+            "1": 0.7295407945499227
+          },
+          "xi_actual": 74.0,
+          "captain_actual": 20.0,
+          "total_actual": 94.0,
+          "hindsight_total": 167.0,
+          "regret": 73.0,
+          "xi_overlap": 2
+        },
+        "ppg": {
+          "players": 742,
+          "mae": 1.3251630950677817,
+          "rmse": 2.2265485853191294,
+          "bias": 0.40361744539287225,
+          "spearman_by_position": {
+            "3": 0.6736128866070954,
+            "4": 0.573183413484958,
+            "2": 0.5658785786396934,
+            "1": 0.6260856525854048
+          },
+          "xi_actual": 57.0,
+          "captain_actual": 20.0,
+          "total_actual": 77.0,
+          "hindsight_total": 167.0,
+          "regret": 90.0,
+          "xi_overlap": 2
+        },
+        "form": {
+          "players": 742,
+          "mae": 1.0606469002695418,
+          "rmse": 2.2044429530277347,
+          "bias": -0.07250673854447438,
+          "spearman_by_position": {
+            "3": 0.7168894711264958,
+            "4": 0.6261459081760627,
+            "2": 0.65551301086438,
+            "1": 0.7563885980972651
+          },
+          "xi_actual": 57.0,
+          "captain_actual": 3.0,
+          "total_actual": 60.0,
+          "hindsight_total": 167.0,
+          "regret": 107.0,
+          "xi_overlap": 1
+        },
+        "components-ridge-v1-experimental": {
+          "players": 742,
+          "mae": 1.06362793075019,
+          "rmse": 2.0551539726193906,
+          "bias": 0.04801303852230053,
+          "spearman_by_position": {
+            "3": 0.7198271576709016,
+            "4": 0.6669061883363924,
+            "2": 0.6854908520361439,
+            "1": 0.730434269357628
+          },
+          "xi_actual": 81.0,
+          "captain_actual": 20.0,
+          "total_actual": 101.0,
+          "hindsight_total": 167.0,
+          "regret": 66.0,
+          "xi_overlap": 2
+        }
+      }
+    },
+    {
+      "gameweek": 26,
+      "metrics": {
+        "heuristic-v1": {
+          "players": 759,
+          "mae": 1.0268113186236096,
+          "rmse": 2.0810172453078413,
+          "bias": -0.20823548705577447,
+          "spearman_by_position": {
+            "3": 0.7015023529629872,
+            "4": 0.5836499016559734,
+            "2": 0.562026688914373,
+            "1": 0.7170315222987514
+          },
+          "xi_actual": 53.0,
+          "captain_actual": 14.0,
+          "total_actual": 67.0,
+          "hindsight_total": 153.0,
+          "regret": 86.0,
+          "xi_overlap": 2
+        },
+        "components-v1-experimental": {
+          "players": 759,
+          "mae": 1.0693431620980371,
+          "rmse": 2.0412744875996056,
+          "bias": -0.02308389388475724,
+          "spearman_by_position": {
+            "3": 0.7489787592181718,
+            "4": 0.6945792571904233,
+            "2": 0.5698454220651384,
+            "1": 0.6883027504473425
+          },
+          "xi_actual": 70.0,
+          "captain_actual": 14.0,
+          "total_actual": 84.0,
+          "hindsight_total": 153.0,
+          "regret": 69.0,
+          "xi_overlap": 4
+        },
+        "ppg": {
+          "players": 759,
+          "mae": 1.4073549102031968,
+          "rmse": 2.2058003297778113,
+          "bias": 0.47773130871245195,
+          "spearman_by_position": {
+            "3": 0.6443234113025333,
+            "4": 0.5472881081394084,
+            "2": 0.5302331930991331,
+            "1": 0.547303074021013
+          },
+          "xi_actual": 44.0,
+          "captain_actual": 14.0,
+          "total_actual": 58.0,
+          "hindsight_total": 153.0,
+          "regret": 95.0,
+          "xi_overlap": 2
+        },
+        "form": {
+          "players": 759,
+          "mae": 1.0758893280632411,
+          "rmse": 2.1380423981864083,
+          "bias": 0.005006587615283275,
+          "spearman_by_position": {
+            "3": 0.7129062126932993,
+            "4": 0.6543651559174887,
+            "2": 0.6162451247806496,
+            "1": 0.7406272241847048
+          },
+          "xi_actual": 52.0,
+          "captain_actual": 14.0,
+          "total_actual": 66.0,
+          "hindsight_total": 153.0,
+          "regret": 87.0,
+          "xi_overlap": 1
+        },
+        "components-ridge-v1-experimental": {
+          "players": 759,
+          "mae": 1.1051112135938557,
+          "rmse": 2.035840849453061,
+          "bias": 0.014497052970029891,
+          "spearman_by_position": {
+            "3": 0.7491978263434178,
+            "4": 0.6943004552568183,
+            "2": 0.5699528353988862,
+            "1": 0.6900752195668443
+          },
+          "xi_actual": 58.0,
+          "captain_actual": 14.0,
+          "total_actual": 72.0,
+          "hindsight_total": 153.0,
+          "regret": 81.0,
+          "xi_overlap": 3
+        }
+      }
+    },
+    {
+      "gameweek": 27,
+      "metrics": {
+        "heuristic-v1": {
+          "players": 763,
+          "mae": 0.9438726796930897,
+          "rmse": 1.9806245311589816,
+          "bias": -0.18029876810922338,
+          "spearman_by_position": {
+            "3": 0.6900653033122202,
+            "4": 0.6189834085266922,
+            "2": 0.620251957907291,
+            "1": 0.7551567631193675
+          },
+          "xi_actual": 51.0,
+          "captain_actual": 6.0,
+          "total_actual": 57.0,
+          "hindsight_total": 146.0,
+          "regret": 89.0,
+          "xi_overlap": 1
+        },
+        "components-v1-experimental": {
+          "players": 763,
+          "mae": 0.9320400622119536,
+          "rmse": 1.848305171024924,
+          "bias": -0.01147960341647597,
+          "spearman_by_position": {
+            "3": 0.769981583653534,
+            "4": 0.700041563901845,
+            "2": 0.6616758271066042,
+            "1": 0.84039430672107
+          },
+          "xi_actual": 51.0,
+          "captain_actual": 6.0,
+          "total_actual": 57.0,
+          "hindsight_total": 146.0,
+          "regret": 89.0,
+          "xi_overlap": 0
+        },
+        "ppg": {
+          "players": 763,
+          "mae": 1.3194774944486871,
+          "rmse": 2.1526614088877842,
+          "bias": 0.49728362059319764,
+          "spearman_by_position": {
+            "3": 0.6368073739937495,
+            "4": 0.5728176553400772,
+            "2": 0.5841389360467477,
+            "1": 0.6147578690149831
+          },
+          "xi_actual": 35.0,
+          "captain_actual": 6.0,
+          "total_actual": 41.0,
+          "hindsight_total": 146.0,
+          "regret": 105.0,
+          "xi_overlap": 0
+        },
+        "form": {
+          "players": 763,
+          "mae": 0.9937090432503276,
+          "rmse": 2.0151848192739648,
+          "bias": 0.034862385321100926,
+          "spearman_by_position": {
+            "3": 0.7123725031983424,
+            "4": 0.6765096189333855,
+            "2": 0.6577813544145695,
+            "1": 0.8601305605726847
+          },
+          "xi_actual": 50.0,
+          "captain_actual": 6.0,
+          "total_actual": 56.0,
+          "hindsight_total": 146.0,
+          "regret": 90.0,
+          "xi_overlap": 1
+        },
+        "components-ridge-v1-experimental": {
+          "players": 763,
+          "mae": 0.9796237309691653,
+          "rmse": 1.8687450493810804,
+          "bias": 0.025916739633525518,
+          "spearman_by_position": {
+            "3": 0.7708322275295221,
+            "4": 0.7015013471299426,
+            "2": 0.660181036434684,
+            "1": 0.8406162087803659
+          },
+          "xi_actual": 47.0,
+          "captain_actual": 6.0,
+          "total_actual": 53.0,
+          "hindsight_total": 146.0,
+          "regret": 93.0,
+          "xi_overlap": 0
+        }
+      }
+    },
+    {
+      "gameweek": 28,
+      "metrics": {
+        "heuristic-v1": {
+          "players": 764,
+          "mae": 0.8647349961866967,
+          "rmse": 1.7814059983490143,
+          "bias": -0.14724036929501202,
+          "spearman_by_position": {
+            "3": 0.7345047019530623,
+            "4": 0.6453899411062253,
+            "2": 0.687627801810502,
+            "1": 0.7284849511854747
+          },
+          "xi_actual": 40.0,
+          "captain_actual": 15.0,
+          "total_actual": 55.0,
+          "hindsight_total": 133.0,
+          "regret": 78.0,
+          "xi_overlap": 1
+        },
+        "components-v1-experimental": {
+          "players": 764,
+          "mae": 0.8363975962710943,
+          "rmse": 1.6971276431552356,
+          "bias": 0.016781647328491918,
+          "spearman_by_position": {
+            "3": 0.7888207397647562,
+            "4": 0.6890300061798222,
+            "2": 0.7160846668954822,
+            "1": 0.8120812622432333
+          },
+          "xi_actual": 66.0,
+          "captain_actual": 15.0,
+          "total_actual": 81.0,
+          "hindsight_total": 133.0,
+          "regret": 52.0,
+          "xi_overlap": 3
+        },
+        "ppg": {
+          "players": 764,
+          "mae": 1.2336731891134427,
+          "rmse": 1.9590465881948493,
+          "bias": 0.5355375184134828,
+          "spearman_by_position": {
+            "3": 0.6580927197114756,
+            "4": 0.6091974621312883,
+            "2": 0.6188037186210492,
+            "1": 0.604689941239169
+          },
+          "xi_actual": 33.0,
+          "captain_actual": 15.0,
+          "total_actual": 48.0,
+          "hindsight_total": 133.0,
+          "regret": 85.0,
+          "xi_overlap": 1
+        },
+        "form": {
+          "players": 764,
+          "mae": 0.937696335078534,
+          "rmse": 1.8825458978711842,
+          "bias": 0.06806282722513089,
+          "spearman_by_position": {
+            "3": 0.7736859304611435,
+            "4": 0.6522204753684703,
+            "2": 0.6964664067084421,
+            "1": 0.7845418207041682
+          },
+          "xi_actual": 39.0,
+          "captain_actual": 15.0,
+          "total_actual": 54.0,
+          "hindsight_total": 133.0,
+          "regret": 79.0,
+          "xi_overlap": 1
+        },
+        "components-ridge-v1-experimental": {
+          "players": 764,
+          "mae": 0.8771525602272883,
+          "rmse": 1.7082609891663167,
+          "bias": 0.053671731810891354,
+          "spearman_by_position": {
+            "3": 0.788601528475752,
+            "4": 0.6927504436112697,
+            "2": 0.7158796056611392,
+            "1": 0.811927552778046
+          },
+          "xi_actual": 63.0,
+          "captain_actual": 15.0,
+          "total_actual": 78.0,
+          "hindsight_total": 133.0,
+          "regret": 55.0,
+          "xi_overlap": 3
+        }
+      }
+    },
+    {
+      "gameweek": 30,
+      "metrics": {
+        "heuristic-v1": {
+          "players": 769,
+          "mae": 0.9214392482949794,
+          "rmse": 1.8283873743799124,
+          "bias": -0.1685800744650943,
+          "spearman_by_position": {
+            "3": 0.649312661801334,
+            "4": 0.5714888019502291,
+            "2": 0.6653751951877027,
+            "1": 0.7515095596684908
+          },
+          "xi_actual": 40.0,
+          "captain_actual": 3.0,
+          "total_actual": 43.0,
+          "hindsight_total": 117.0,
+          "regret": 74.0,
+          "xi_overlap": 0
+        },
+        "components-v1-experimental": {
+          "players": 769,
+          "mae": 0.9268445005330613,
+          "rmse": 1.7472394515974257,
+          "bias": 0.025913649987424233,
+          "spearman_by_position": {
+            "3": 0.7056537606970684,
+            "4": 0.7178348190349617,
+            "2": 0.6479773814517026,
+            "1": 0.7933342725193618
+          },
+          "xi_actual": 35.0,
+          "captain_actual": 3.0,
+          "total_actual": 38.0,
+          "hindsight_total": 117.0,
+          "regret": 79.0,
+          "xi_overlap": 0
+        },
+        "ppg": {
+          "players": 769,
+          "mae": 1.266044953303573,
+          "rmse": 1.9323723650190052,
+          "bias": 0.5496941859669048,
+          "spearman_by_position": {
+            "3": 0.5951553491637399,
+            "4": 0.49377027408477436,
+            "2": 0.5798698396128719,
+            "1": 0.6384849995958155
+          },
+          "xi_actual": 46.0,
+          "captain_actual": 3.0,
+          "total_actual": 49.0,
+          "hindsight_total": 117.0,
+          "regret": 68.0,
+          "xi_overlap": 0
+        },
+        "form": {
+          "players": 769,
+          "mae": 0.9674902470741222,
+          "rmse": 1.8555087911034425,
+          "bias": 0.014044213263979194,
+          "spearman_by_position": {
+            "3": 0.6868908690213685,
+            "4": 0.6588112344038151,
+            "2": 0.6308186118222407,
+            "1": 0.8220988659673254
+          },
+          "xi_actual": 45.0,
+          "captain_actual": 3.0,
+          "total_actual": 48.0,
+          "hindsight_total": 117.0,
+          "regret": 69.0,
+          "xi_overlap": 1
+        },
+        "components-ridge-v1-experimental": {
+          "players": 769,
+          "mae": 0.9571670050064497,
+          "rmse": 1.7395322193666707,
+          "bias": 0.06288273793655887,
+          "spearman_by_position": {
+            "3": 0.7060505934294177,
+            "4": 0.7201561784382375,
+            "2": 0.6498889230429035,
+            "1": 0.7925903161858178
+          },
+          "xi_actual": 36.0,
+          "captain_actual": 3.0,
+          "total_actual": 39.0,
+          "hindsight_total": 117.0,
+          "regret": 78.0,
+          "xi_overlap": 0
+        }
+      }
+    },
+    {
+      "gameweek": 31,
+      "metrics": {
+        "heuristic-v1": {
+          "players": 771,
+          "mae": 0.9442576154111068,
+          "rmse": 1.9901776029323748,
+          "bias": -0.1947580544994616,
+          "spearman_by_position": {
+            "3": 0.7304433006814318,
+            "4": 0.6700365243316808,
+            "2": 0.5740616713546011,
+            "1": 0.7737106535472109
+          },
+          "xi_actual": 21.0,
+          "captain_actual": 2.0,
+          "total_actual": 23.0,
+          "hindsight_total": 150.0,
+          "regret": 127.0,
+          "xi_overlap": 0
+        },
+        "components-v1-experimental": {
+          "players": 771,
+          "mae": 0.9296528597993742,
+          "rmse": 1.8760778567350789,
+          "bias": 0.010691531455695846,
+          "spearman_by_position": {
+            "3": 0.7716328816298921,
+            "4": 0.7449593914386287,
+            "2": 0.6348238679862098,
+            "1": 0.8986511253120916
+          },
+          "xi_actual": 32.0,
+          "captain_actual": 2.0,
+          "total_actual": 34.0,
+          "hindsight_total": 150.0,
+          "regret": 116.0,
+          "xi_overlap": 0
+        },
+        "ppg": {
+          "players": 771,
+          "mae": 1.329155836991403,
+          "rmse": 2.131493507319424,
+          "bias": 0.5542734651610774,
+          "spearman_by_position": {
+            "3": 0.6534171945713744,
+            "4": 0.5944952117479195,
+            "2": 0.5132786971108937,
+            "1": 0.6538540760803401
+          },
+          "xi_actual": 13.0,
+          "captain_actual": 2.0,
+          "total_actual": 15.0,
+          "hindsight_total": 150.0,
+          "regret": 135.0,
+          "xi_overlap": 0
+        },
+        "form": {
+          "players": 771,
+          "mae": 0.9810635538261997,
+          "rmse": 2.023775670296372,
+          "bias": -0.023346303501945522,
+          "spearman_by_position": {
+            "3": 0.755868930663413,
+            "4": 0.7103869420793615,
+            "2": 0.6134642289166747,
+            "1": 0.8980225838289818
+          },
+          "xi_actual": 20.0,
+          "captain_actual": 3.0,
+          "total_actual": 23.0,
+          "hindsight_total": 150.0,
+          "regret": 127.0,
+          "xi_overlap": 0
+        },
+        "components-ridge-v1-experimental": {
+          "players": 771,
+          "mae": 0.9607222778582306,
+          "rmse": 1.8677157478973176,
+          "bias": 0.04920501844907983,
+          "spearman_by_position": {
+            "3": 0.7713871918064696,
+            "4": 0.7495466959923808,
+            "2": 0.6350293173898168,
+            "1": 0.8988462066662603
+          },
+          "xi_actual": 31.0,
+          "captain_actual": 2.0,
+          "total_actual": 33.0,
+          "hindsight_total": 150.0,
+          "regret": 117.0,
+          "xi_overlap": 0
+        }
+      }
+    },
+    {
+      "gameweek": 32,
+      "metrics": {
+        "heuristic-v1": {
+          "players": 772,
+          "mae": 1.061395145075962,
+          "rmse": 2.3407734136456546,
+          "bias": -0.23318513249064815,
+          "spearman_by_position": {
+            "3": 0.7233371747576269,
+            "4": 0.7599451878610377,
+            "2": 0.4558617271256191,
+            "1": 0.738201777966868
+          },
+          "xi_actual": 62.0,
+          "captain_actual": 7.0,
+          "total_actual": 69.0,
+          "hindsight_total": 188.0,
+          "regret": 119.0,
+          "xi_overlap": 1
+        },
+        "components-v1-experimental": {
+          "players": 772,
+          "mae": 1.0447952308952133,
+          "rmse": 2.1748285310954687,
+          "bias": -0.028501873923574103,
+          "spearman_by_position": {
+            "3": 0.795662804414951,
+            "4": 0.8179888784533038,
+            "2": 0.5142962371698218,
+            "1": 0.8587710293395802
+          },
+          "xi_actual": 72.0,
+          "captain_actual": 7.0,
+          "total_actual": 79.0,
+          "hindsight_total": 188.0,
+          "regret": 109.0,
+          "xi_overlap": 2
+        },
+        "ppg": {
+          "players": 772,
+          "mae": 1.4611707315010882,
+          "rmse": 2.510197738244978,
+          "bias": 0.4283273659329426,
+          "spearman_by_position": {
+            "3": 0.6743078676020481,
+            "4": 0.6957991406067233,
+            "2": 0.3887613435418721,
+            "1": 0.5859267309466003
+          },
+          "xi_actual": 26.0,
+          "captain_actual": 6.0,
+          "total_actual": 32.0,
+          "hindsight_total": 188.0,
+          "regret": 156.0,
+          "xi_overlap": 0
+        },
+        "form": {
+          "players": 772,
+          "mae": 1.0930051813471502,
+          "rmse": 2.4238987136621994,
+          "bias": -0.1639896373056995,
+          "spearman_by_position": {
+            "3": 0.7686076843098747,
+            "4": 0.7902194095675146,
+            "2": 0.5309121269810082,
+            "1": 0.8479335124393761
+          },
+          "xi_actual": 36.0,
+          "captain_actual": 2.0,
+          "total_actual": 38.0,
+          "hindsight_total": 188.0,
+          "regret": 150.0,
+          "xi_overlap": 0
+        },
+        "components-ridge-v1-experimental": {
+          "players": 772,
+          "mae": 1.07760795498229,
+          "rmse": 2.1638730927431244,
+          "bias": 0.00601704300191341,
+          "spearman_by_position": {
+            "3": 0.7960126496573957,
+            "4": 0.8185284373478563,
+            "2": 0.5157511589438547,
+            "1": 0.8613197940768219
+          },
+          "xi_actual": 79.0,
+          "captain_actual": 7.0,
+          "total_actual": 86.0,
+          "hindsight_total": 188.0,
+          "regret": 102.0,
+          "xi_overlap": 2
+        }
+      }
+    },
+    {
+      "gameweek": 33,
+      "metrics": {
+        "heuristic-v1": {
+          "players": 778,
+          "mae": 1.0690874527947145,
+          "rmse": 2.2240899459294394,
+          "bias": -0.2396808139515393,
+          "spearman_by_position": {
+            "3": 0.7660941587113544,
+            "4": 0.6268355288672177,
+            "2": 0.5010760129949383,
+            "1": 0.6904510063688494
+          },
+          "xi_actual": 71.0,
+          "captain_actual": 7.0,
+          "total_actual": 78.0,
+          "hindsight_total": 175.0,
+          "regret": 97.0,
+          "xi_overlap": 2
+        },
+        "components-v1-experimental": {
+          "players": 778,
+          "mae": 1.028870825402898,
+          "rmse": 2.0822555535178884,
+          "bias": -0.03350116427874364,
+          "spearman_by_position": {
+            "3": 0.8233464755209732,
+            "4": 0.7202048970952231,
+            "2": 0.5748091291432005,
+            "1": 0.8136664845952656
+          },
+          "xi_actual": 71.0,
+          "captain_actual": 3.0,
+          "total_actual": 74.0,
+          "hindsight_total": 175.0,
+          "regret": 101.0,
+          "xi_overlap": 0
+        },
+        "ppg": {
+          "players": 778,
+          "mae": 1.4357762173057456,
+          "rmse": 2.3728671028272244,
+          "bias": 0.32983216430133033,
+          "spearman_by_position": {
+            "3": 0.6962487858914758,
+            "4": 0.5861483216752249,
+            "2": 0.4593785973478064,
+            "1": 0.5446254192333477
+          },
+          "xi_actual": 43.0,
+          "captain_actual": 3.0,
+          "total_actual": 46.0,
+          "hindsight_total": 175.0,
+          "regret": 129.0,
+          "xi_overlap": 1
+        },
+        "form": {
+          "players": 778,
+          "mae": 1.1334190231362469,
+          "rmse": 2.3726483418833153,
+          "bias": -0.24344473007712084,
+          "spearman_by_position": {
+            "3": 0.7791627991563127,
+            "4": 0.7121121275313159,
+            "2": 0.5499488402473686,
+            "1": 0.8255189016626995
+          },
+          "xi_actual": 34.0,
+          "captain_actual": 5.0,
+          "total_actual": 39.0,
+          "hindsight_total": 175.0,
+          "regret": 136.0,
+          "xi_overlap": 0
+        },
+        "components-ridge-v1-experimental": {
+          "players": 778,
+          "mae": 1.0635442707914213,
+          "rmse": 2.0768213552698715,
+          "bias": -0.0027703613949912466,
+          "spearman_by_position": {
+            "3": 0.8237651384091006,
+            "4": 0.7205238248684909,
+            "2": 0.5727871463684502,
+            "1": 0.8139324408234787
+          },
+          "xi_actual": 74.0,
+          "captain_actual": 3.0,
+          "total_actual": 77.0,
+          "hindsight_total": 175.0,
+          "regret": 98.0,
+          "xi_overlap": 1
+        }
+      }
+    },
+    {
+      "gameweek": 35,
+      "metrics": {
+        "heuristic-v1": {
+          "players": 780,
+          "mae": 0.8700502922579032,
+          "rmse": 1.7549279493244576,
+          "bias": -0.11207718170398769,
+          "spearman_by_position": {
+            "3": 0.6839173617375168,
+            "4": 0.6321490701939707,
+            "2": 0.651466894940767,
+            "1": 0.6949595123536524
+          },
+          "xi_actual": 50.0,
+          "captain_actual": 5.0,
+          "total_actual": 55.0,
+          "hindsight_total": 125.0,
+          "regret": 70.0,
+          "xi_overlap": 1
+        },
+        "components-v1-experimental": {
+          "players": 780,
+          "mae": 0.8472594210769989,
+          "rmse": 1.6490853787601958,
+          "bias": 0.07001788109679545,
+          "spearman_by_position": {
+            "3": 0.7453264463944423,
+            "4": 0.7326198032623288,
+            "2": 0.7034628574976705,
+            "1": 0.8075311105963365
+          },
+          "xi_actual": 39.0,
+          "captain_actual": 2.0,
+          "total_actual": 41.0,
+          "hindsight_total": 125.0,
+          "regret": 84.0,
+          "xi_overlap": 1
+        },
+        "ppg": {
+          "players": 780,
+          "mae": 1.3129200346801333,
+          "rmse": 2.0014324779475836,
+          "bias": 0.6330563408787014,
+          "spearman_by_position": {
+            "3": 0.6243405514908386,
+            "4": 0.5719802780812507,
+            "2": 0.5555155647548706,
+            "1": 0.5438727246431134
+          },
+          "xi_actual": 30.0,
+          "captain_actual": 2.0,
+          "total_actual": 32.0,
+          "hindsight_total": 125.0,
+          "regret": 93.0,
+          "xi_overlap": 2
+        },
+        "form": {
+          "players": 780,
+          "mae": 0.953076923076923,
+          "rmse": 1.8671107530359745,
+          "bias": 0.09512820512820513,
+          "spearman_by_position": {
+            "3": 0.7084857376228653,
+            "4": 0.7162416866863417,
+            "2": 0.6483456541232782,
+            "1": 0.792937751943392
+          },
+          "xi_actual": 28.0,
+          "captain_actual": 1.0,
+          "total_actual": 29.0,
+          "hindsight_total": 125.0,
+          "regret": 96.0,
+          "xi_overlap": 0
+        },
+        "components-ridge-v1-experimental": {
+          "players": 780,
+          "mae": 0.8780987891566135,
+          "rmse": 1.6472352093654063,
+          "bias": 0.11027347257595806,
+          "spearman_by_position": {
+            "3": 0.7455579665640921,
+            "4": 0.7342120131371707,
+            "2": 0.7030277576770102,
+            "1": 0.8080634316975865
+          },
+          "xi_actual": 39.0,
+          "captain_actual": 2.0,
+          "total_actual": 41.0,
+          "hindsight_total": 125.0,
+          "regret": 84.0,
+          "xi_overlap": 1
+        }
+      }
+    },
+    {
+      "gameweek": 36,
+      "metrics": {
+        "heuristic-v1": {
+          "players": 781,
+          "mae": 0.9308291358484658,
+          "rmse": 1.8858706912930772,
+          "bias": -0.24835132910477004,
+          "spearman_by_position": {
+            "3": 0.7309940143224213,
+            "4": 0.601039185029815,
+            "2": 0.6534029282280652,
+            "1": 0.7245640034483675
+          },
+          "xi_actual": 40.0,
+          "captain_actual": 5.0,
+          "total_actual": 45.0,
+          "hindsight_total": 139.0,
+          "regret": 94.0,
+          "xi_overlap": 0
+        },
+        "components-v1-experimental": {
+          "players": 781,
+          "mae": 0.9440496933090922,
+          "rmse": 1.831598072662504,
+          "bias": -0.0646831825453678,
+          "spearman_by_position": {
+            "3": 0.7680515886885679,
+            "4": 0.6336423493058538,
+            "2": 0.7059365344449647,
+            "1": 0.8334747061310445
+          },
+          "xi_actual": 41.0,
+          "captain_actual": 2.0,
+          "total_actual": 43.0,
+          "hindsight_total": 139.0,
+          "regret": 96.0,
+          "xi_overlap": 1
+        },
+        "ppg": {
+          "players": 781,
+          "mae": 1.3567776776383103,
+          "rmse": 2.084105892039029,
+          "bias": 0.49700262954333696,
+          "spearman_by_position": {
+            "3": 0.6787149742815473,
+            "4": 0.5262324434459387,
+            "2": 0.5570173844621775,
+            "1": 0.5689045571702572
+          },
+          "xi_actual": 18.0,
+          "captain_actual": 2.0,
+          "total_actual": 20.0,
+          "hindsight_total": 139.0,
+          "regret": 119.0,
+          "xi_overlap": 0
+        },
+        "form": {
+          "players": 781,
+          "mae": 0.9851472471190781,
+          "rmse": 1.9644601582084122,
+          "bias": -0.047887323943661964,
+          "spearman_by_position": {
+            "3": 0.7439569837192435,
+            "4": 0.6078257419928318,
+            "2": 0.6754503228922568,
+            "1": 0.8317472375674824
+          },
+          "xi_actual": 56.0,
+          "captain_actual": 3.0,
+          "total_actual": 59.0,
+          "hindsight_total": 139.0,
+          "regret": 80.0,
+          "xi_overlap": 1
+        },
+        "components-ridge-v1-experimental": {
+          "players": 781,
+          "mae": 0.9855489876696916,
+          "rmse": 1.8457294442594756,
+          "bias": -0.02388395021451246,
+          "spearman_by_position": {
+            "3": 0.768629588896798,
+            "4": 0.6435695601929327,
+            "2": 0.7071242851980646,
+            "1": 0.8327231711290878
+          },
+          "xi_actual": 35.0,
+          "captain_actual": 2.0,
+          "total_actual": 37.0,
+          "hindsight_total": 139.0,
+          "regret": 102.0,
+          "xi_overlap": 1
+        }
+      }
+    },
+    {
+      "gameweek": 37,
+      "metrics": {
+        "heuristic-v1": {
+          "players": 781,
+          "mae": 0.9925947787368835,
+          "rmse": 2.0394412963588673,
+          "bias": -0.18805295157457136,
+          "spearman_by_position": {
+            "3": 0.682930077742938,
+            "4": 0.6835340545983526,
+            "2": 0.49494968640071396,
+            "1": 0.7252374309156199
+          },
+          "xi_actual": 38.0,
+          "captain_actual": 6.0,
+          "total_actual": 44.0,
+          "hindsight_total": 147.0,
+          "regret": 103.0,
+          "xi_overlap": 0
+        },
+        "components-v1-experimental": {
+          "players": 781,
+          "mae": 0.9457580388446908,
+          "rmse": 1.9033715477020872,
+          "bias": -0.023911158196542635,
+          "spearman_by_position": {
+            "3": 0.7662870921334003,
+            "4": 0.8098140276316411,
+            "2": 0.6124134666697778,
+            "1": 0.8645816789135102
+          },
+          "xi_actual": 31.0,
+          "captain_actual": 2.0,
+          "total_actual": 33.0,
+          "hindsight_total": 147.0,
+          "regret": 114.0,
+          "xi_overlap": 0
+        },
+        "ppg": {
+          "players": 781,
+          "mae": 1.3901609510988722,
+          "rmse": 2.1938761472820154,
+          "bias": 0.5454355498952398,
+          "spearman_by_position": {
+            "3": 0.635815631809922,
+            "4": 0.5898806855499411,
+            "2": 0.43377332982583344,
+            "1": 0.6329614677037511
+          },
+          "xi_actual": 25.0,
+          "captain_actual": 2.0,
+          "total_actual": 27.0,
+          "hindsight_total": 147.0,
+          "regret": 120.0,
+          "xi_overlap": 0
+        },
+        "form": {
+          "players": 781,
+          "mae": 1.01101152368758,
+          "rmse": 2.064913275996831,
+          "bias": 0.010755441741357235,
+          "spearman_by_position": {
+            "3": 0.7481769347100442,
+            "4": 0.7931958045658564,
+            "2": 0.5701977739414581,
+            "1": 0.871134402446978
+          },
+          "xi_actual": 36.0,
+          "captain_actual": 6.0,
+          "total_actual": 42.0,
+          "hindsight_total": 147.0,
+          "regret": 105.0,
+          "xi_overlap": 0
+        },
+        "components-ridge-v1-experimental": {
+          "players": 781,
+          "mae": 0.9754359088698347,
+          "rmse": 1.8916981676193971,
+          "bias": 0.01613290616697312,
+          "spearman_by_position": {
+            "3": 0.76570306332843,
+            "4": 0.8095569651021677,
+            "2": 0.6129557243555498,
+            "1": 0.8648443047247272
+          },
+          "xi_actual": 31.0,
+          "captain_actual": 2.0,
+          "total_actual": 33.0,
+          "hindsight_total": 147.0,
+          "regret": 114.0,
+          "xi_overlap": 0
+        }
+      }
+    },
+    {
+      "gameweek": 38,
+      "metrics": {
+        "heuristic-v1": {
+          "players": 781,
+          "mae": 0.9326998427681681,
+          "rmse": 1.9691586847053413,
+          "bias": -0.2245127524728356,
+          "spearman_by_position": {
+            "3": 0.7176037705926679,
+            "4": 0.6819517546746697,
+            "2": 0.5956367651939469,
+            "1": 0.6028758742300642
+          },
+          "xi_actual": 48.0,
+          "captain_actual": 13.0,
+          "total_actual": 61.0,
+          "hindsight_total": 152.0,
+          "regret": 91.0,
+          "xi_overlap": 1
+        },
+        "components-v1-experimental": {
+          "players": 781,
+          "mae": 0.9311537775903737,
+          "rmse": 1.9061116876947248,
+          "bias": -0.035784160602370475,
+          "spearman_by_position": {
+            "3": 0.7805740472229925,
+            "4": 0.7930743343127357,
+            "2": 0.6406114543828361,
+            "1": 0.6489459710882964
+          },
+          "xi_actual": 33.0,
+          "captain_actual": 10.0,
+          "total_actual": 43.0,
+          "hindsight_total": 152.0,
+          "regret": 109.0,
+          "xi_overlap": 0
+        },
+        "ppg": {
+          "players": 781,
+          "mae": 1.3183546055719035,
+          "rmse": 2.111011406917884,
+          "bias": 0.531203889061877,
+          "spearman_by_position": {
+            "3": 0.6539169114967858,
+            "4": 0.606875158578678,
+            "2": 0.54356651078943,
+            "1": 0.5219301383380073
+          },
+          "xi_actual": 53.0,
+          "captain_actual": 10.0,
+          "total_actual": 63.0,
+          "hindsight_total": 152.0,
+          "regret": 89.0,
+          "xi_overlap": 1
+        },
+        "form": {
+          "players": 781,
+          "mae": 0.9375160051216389,
+          "rmse": 1.953505663928641,
+          "bias": -0.025352112676056325,
+          "spearman_by_position": {
+            "3": 0.7699241327398374,
+            "4": 0.784744232108883,
+            "2": 0.6518076011804697,
+            "1": 0.6290429941291396
+          },
+          "xi_actual": 47.0,
+          "captain_actual": 13.0,
+          "total_actual": 60.0,
+          "hindsight_total": 152.0,
+          "regret": 92.0,
+          "xi_overlap": 1
+        },
+        "components-ridge-v1-experimental": {
+          "players": 781,
+          "mae": 0.9631903928623045,
+          "rmse": 1.9033665265232604,
+          "bias": 0.003705700307486166,
+          "spearman_by_position": {
+            "3": 0.7802553989366281,
+            "4": 0.7954734355833446,
+            "2": 0.6440217554575874,
+            "1": 0.6489459710882964
+          },
+          "xi_actual": 46.0,
+          "captain_actual": 10.0,
+          "total_actual": 56.0,
+          "hindsight_total": 152.0,
+          "regret": 96.0,
+          "xi_overlap": 1
+        }
+      }
+    }
+  ]
+}

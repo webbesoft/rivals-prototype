@@ -14,6 +14,7 @@ from rivals.services.chip_advice_service import chip_advice
 from rivals.services.fpl_api_service import FplApiService
 from rivals.services.gameweek_context_service import GameweekContextService
 from rivals.services.planning_defaults_service import PlanningDefaults
+from rivals.services.player_forecast import PlayerForecast
 from rivals.services.planned_lineup import replace_lineup, validate_lineup
 from rivals.services.price_change_service import (
     PRICE_FIELDS,
@@ -246,54 +247,25 @@ class DecisionEngine:
         self.projections = {}
         self.risk = {}
         self.player_fixtures = {}
-        scoring = self.context["scoring_gameweek"]
+        self.forecast = PlayerForecast(
+            self.players.values(), self.fixtures, self.context["scoring_gameweek"]
+        )
+        self.projections = self.forecast.project(self.weeks)
+        self.risk = {pid: self.forecast.risk(pid) for pid in self.players}
         for pid, player in self.players.items():
-            availability = min(
-                1.0,
-                max(0.0, number(player.get("chance_of_playing_next_round"), 100) / 100),
-            )
-            if player.get("status", "a") not in ("a", "d"):
-                availability = 0.0
-            minutes = min(
-                1.0, max(0.0, number(player.get("minutes")) / max(90, scoring * 70))
-            )
-            base = max(
-                0.0,
-                0.6 * number(player.get("form"))
-                + 0.4 * number(player.get("points_per_game")),
-            )
-            self.risk[pid] = 0.25 + (1 - minutes * availability) * 0.5
-            weekly, schedule = {}, []
-            for week in self.weeks:
-                points, opponents = 0.0, []
-                for fixture, home in self.fixture_index.get((player["team"], week), []):
-                    difficulty = number(
-                        fixture.get(
-                            "team_h_difficulty" if home else "team_a_difficulty"
-                        ),
-                        3,
-                    )
-                    factor = max(
-                        0.6,
-                        min(
-                            1.4, 1 + (3 - difficulty) * 0.12 + (0.04 if home else -0.04)
-                        ),
-                    )
-                    points += base * factor * minutes * availability
-                    opponent = fixture["team_a"] if home else fixture["team_h"]
-                    opponents.append(
-                        f"{self.club_names.get(opponent, '?')} ({'H' if home else 'A'})"
-                    )
-                weekly[week] = points
-                schedule.append(
-                    {
-                        "gameweek": week,
-                        "opponents": opponents,
-                        "points": round(points, 1),
-                    }
-                )
-            self.projections[pid] = weekly
-            self.player_fixtures[pid] = schedule
+            self.player_fixtures[pid] = [
+                {
+                    "gameweek": week,
+                    "opponents": [
+                        f"{self.club_names.get(fixture['team_a'] if home else fixture['team_h'], '?')} ({'H' if home else 'A'})"
+                        for fixture, home in self.fixture_index.get(
+                            (player["team"], week), []
+                        )
+                    ],
+                    "points": round(self.projections[pid][week], 1),
+                }
+                for week in self.weeks
+            ]
 
     def fixture_difficulty_schedule(self, pid):
         """Five gameweeks of published FPL ratings, independent of forecast horizon."""
@@ -1120,6 +1092,7 @@ class DecisionEngine:
             "weeks": self.weeks,
             "model": {
                 "version": self.VERSION,
+                "player_model": self.forecast.version,
                 "method": "Form and points per game, adjusted for season minutes, current availability and each scheduled fixture. Availability stays constant; blanks score zero and doubles count each match. "
                 + (
                     "Your planned XI and captain are kept for the next gameweek; incoming players inherit the outgoing player's place and armband. Later gameweeks select the best legal XI and captain. "

@@ -970,3 +970,25 @@ class SquadRefresh(models.Model):
                 fields=["team", "season", "gameweek"], name="squad_refresh_identity"
             )
         ]
+
+
+class GameweekForecast(models.Model):
+    """Latest genuine pre-deadline experiment; immutable once its deadline passes."""
+
+    season = models.CharField(max_length=7)
+    gameweek = models.PositiveSmallIntegerField()
+    version = models.CharField(max_length=80)
+    captured_at = models.DateTimeField()
+    deadline = models.DateTimeField()
+    inputs = models.JSONField()
+    predictions = models.JSONField()
+    selections = models.JSONField()
+    outcomes = models.JSONField(default=dict)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["season", "gameweek", "version"],
+                name="gameweek_forecast_identity",
+            )
+        ]

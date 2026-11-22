@@ -13,6 +13,7 @@ from rivals.models import SyncState
 from ..models import Team
 from .fpl_api_service import FplApiService
 from .gameweek_context_service import GameweekContextService
+from .player_forecast import PlayerForecast
 
 logger = logging.getLogger(__name__)
 
@@ -178,19 +179,15 @@ class TeamAnalysisService:
         self._fixture_difficulty_cache[memo_key] = result
         return result
 
-    def calculate_expected_points(
-        self, player: Dict[str, Any], fixture_difficulty: float
-    ) -> float:
-        """Estimate expected points over 5 gameweeks based on form & PPG and fixtures"""
-        form = self._safe_float(player.get("form", 0))
-        ppg = self._safe_float(player.get("points_per_game", 0))
-        base = form * 0.6 + ppg * 0.4
-        multiplier = 1.0
-        if fixture_difficulty <= 2.5:
-            multiplier = 1.2
-        elif fixture_difficulty >= 4.0:
-            multiplier = 0.8
-        return base * multiplier * 5
+    def calculate_expected_points(self, player, *, weeks=5):
+        """Shared model over actual gameweeks, including blanks and doubles."""
+        if not self.decision_gw:
+            return 0.0
+        forecast = PlayerForecast([player], self.fixtures, self.current_gw)
+        return sum(
+            forecast.points(player["id"], week)
+            for week in range(self.decision_gw, min(39, self.decision_gw + weeks))
+        )
 
     def get_top_alternatives_by_position(
         self, position_id: int, exclude_ids: List[int], limit: int = 5
@@ -210,7 +207,7 @@ class TeamAnalysisService:
             fixture_difficulty = self.calculate_fixture_difficulty(
                 team_id, next_fixtures=5
             )
-            expected = self.calculate_expected_points(p, fixture_difficulty)
+            expected = self.calculate_expected_points(p)
             now_cost = p.get("now_cost") or 0
             value_rating = (
                 (float(p.get("total_points", 0)) / float(now_cost or 1)) * 10
@@ -271,9 +268,7 @@ class TeamAnalysisService:
                 fixture_difficulty = self.calculate_fixture_difficulty(
                     player["team"], 5
                 )
-                expected_current = self.calculate_expected_points(
-                    player, fixture_difficulty
-                )
+                expected_current = self.calculate_expected_points(player)
 
                 # pick alts that beat current by a margin (tunable)
                 significant_alts = [
@@ -325,8 +320,6 @@ class TeamAnalysisService:
             player = next((p for p in self.elements if p["id"] == player_id), None)
             if not player:
                 continue
-            if self._safe_float(player.get("form", 0)) < 3.0:
-                continue
             upcoming = [
                 fixture
                 for fixture in self.fixtures
@@ -337,9 +330,7 @@ class TeamAnalysisService:
             if not self.decision_gw or not upcoming:
                 continue
             fd = self.calculate_fixture_difficulty(player["team"], next_fixtures=1)
-            expected = (self.calculate_expected_points(player, fd) / 5.0) * len(
-                upcoming
-            )
+            expected = self.calculate_expected_points(player, weeks=1)
             candidates.append(
                 {
                     "id": player["id"],
@@ -395,6 +386,7 @@ class TeamAnalysisService:
         """Return aggregated metrics for the given squad picks."""
         players = []
         total_expected = 0.0
+        next_expected = 0.0
         total_fd = 0.0
         total_points = 0
 
@@ -403,9 +395,10 @@ class TeamAnalysisService:
             if not p:
                 continue
             fd = self.calculate_fixture_difficulty(p["team"], 5)
-            expected = self.calculate_expected_points(p, fd)
+            expected = self.calculate_expected_points(p)
             players.append(p)
             total_expected += expected
+            next_expected += self.calculate_expected_points(p, weeks=1)
             total_fd += fd
             total_points += p.get("total_points", 0)
 
@@ -413,6 +406,7 @@ class TeamAnalysisService:
         return {
             "players": players,
             "total_expected_points": total_expected,
+            "next_expected_points": next_expected,
             "avg_fixture_difficulty": (total_fd / count) if players else 3.0,
             "avg_player_points": (total_points / count) if players else 0.0,
         }
@@ -488,16 +482,10 @@ class TeamAnalysisService:
             )
 
             my_expected = sum(
-                self.calculate_expected_points(
-                    p, self.calculate_fixture_difficulty(p["team"], 5)
-                )
-                for p in my_players
+                self.calculate_expected_points(p) for p in my_players
             ) / len(my_players)
             their_expected = sum(
-                self.calculate_expected_points(
-                    p, self.calculate_fixture_difficulty(p["team"], 5)
-                )
-                for p in rival_players
+                self.calculate_expected_points(p) for p in rival_players
             ) / len(rival_players)
 
             diff = my_avg - their_avg
@@ -668,7 +656,7 @@ class TeamAnalysisService:
             free_transfers,
         )
         digest = hashlib.sha256(repr(stamp).encode()).hexdigest()[:24]
-        return f"tactical_v3_{team.fpl_team_id}_{digest}"
+        return f"tactical_v4_shared_{team.fpl_team_id}_{digest}"
 
     def get_cached_analysis(
         self, fpl_team_id, include_team_obj=None, free_transfers=None
@@ -1004,12 +992,12 @@ class TeamAnalysisService:
             my_metrics = self.analyze_squad_metrics(my_squad)
             rival_metrics = self.analyze_squad_metrics(rival_squad)
             my_expected_next = (
-                (my_metrics["total_expected_points"] / 5.0)
+                my_metrics["next_expected_points"]
                 if my_metrics.get("total_expected_points")
                 else 0
             )
             rival_expected_next = (
-                (rival_metrics["total_expected_points"] / 5.0)
+                rival_metrics["next_expected_points"]
                 if rival_metrics.get("total_expected_points")
                 else 0
             )
@@ -1190,12 +1178,12 @@ class TeamAnalysisService:
 
             # Projected GW outcome
             my_expected_next = (
-                (my_analysis["total_expected_points"] / 5.0)
+                my_analysis["next_expected_points"]
                 if my_analysis.get("total_expected_points")
                 else 0
             )
             rival_expected_next = (
-                (rival_analysis["total_expected_points"] / 5.0)
+                rival_analysis["next_expected_points"]
                 if rival_analysis.get("total_expected_points")
                 else 0
             )

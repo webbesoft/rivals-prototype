@@ -162,7 +162,7 @@ def test_negative_landing_cache_avoids_recomputation():
     from rivals.services.landing_data_service import LandingDataService
 
     cache.clear()
-    cache.set("landing_best_xi_expected_v2", False, 60)
+    cache.set("landing_best_xi_shared_v3", False, 60)
     with patch("rivals.services.landing_data_service.FplApiService") as api:
         assert LandingDataService().get_best_xi() is None
         api.return_value.fetch_bootstrap_static.assert_not_called()
