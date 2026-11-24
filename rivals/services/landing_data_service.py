@@ -5,7 +5,11 @@ from django.core.cache import cache
 
 from .fpl_api_service import FplApiService
 from .xi_benchmark import best_projected_xi
-from .player_forecast import PlayerForecast
+from .active_player_forecast import (
+    active_model_identity,
+    active_model_name,
+    build_player_forecast,
+)
 from .gameweek_context_service import GameweekContextService
 
 logger = logging.getLogger(__name__)
@@ -35,11 +39,10 @@ class LandingDataService:
         Uses the same player model as the squad planner. This is an
         unrestricted-budget starting XI, not a complete 15-player FPL squad.
         """
-        cache_key = "landing_best_xi_shared_v3"
-        cached = cache.get(cache_key)
-        if cached is not None:
-            return None if cached is False else cached
-
+        if active_model_name() == "heuristic-v1":
+            cached = cache.get("landing_best_xi_shared_v4_heuristic-v1")
+            if cached is not None:
+                return None if cached is False else cached
         bootstrap = self.fpl_api.fetch_bootstrap_static()
         if not bootstrap:
             return None
@@ -47,9 +50,17 @@ class LandingDataService:
         fixtures = self.fpl_api.fetch_fixtures_data()
         if not context["decision_gameweek"] or fixtures is None:
             return None
-        forecast = PlayerForecast(
-            bootstrap.get("elements", []), fixtures, context["scoring_gameweek"]
+        forecast = build_player_forecast(
+            bootstrap.get("elements", []),
+            fixtures,
+            context["scoring_gameweek"],
+            teams=bootstrap.get("teams", []),
+            season=context["season"],
         )
+        cache_key = f"landing_best_xi_shared_v4_{forecast.cache_identity}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return None if cached is False else cached
         clubs = {team["id"]: team for team in bootstrap.get("teams", [])}
         players = {}
         for player in bootstrap.get("elements", []):
@@ -115,9 +126,15 @@ class LandingDataService:
         context = GameweekContextService.derive(bootstrap.get("events", []))
         if not context["decision_gameweek"]:
             return None
-        return PlayerForecast([player], fixtures, context["scoring_gameweek"]).points(
-            player["id"], context["decision_gameweek"]
-        )
+        if not hasattr(self, "_points_forecast"):
+            self._points_forecast = build_player_forecast(
+                bootstrap.get("elements", []) or [player],
+                fixtures,
+                context["scoring_gameweek"],
+                teams=bootstrap.get("teams", []),
+                season=context["season"],
+            )
+        return self._points_forecast.points(player["id"], context["decision_gameweek"])
 
     def get_forecast_history(self):
         from rivals.models import GameweekForecast
@@ -135,7 +152,7 @@ class LandingDataService:
 
     def get_top_captain_picks(self, limit: int = 5) -> List[Dict]:
         """Get the most captained players this gameweek."""
-        cache_key = f"landing_captain_picks_{limit}"
+        cache_key = f"landing_captain_picks_{limit}_{active_model_identity()}"
         cached = cache.get(cache_key)
         if cached:
             return cached
@@ -167,7 +184,7 @@ class LandingDataService:
 
     def get_transfer_trends(self, limit: int = 5) -> Dict[str, List[Dict]]:
         """Get the most transferred in/out players."""
-        cache_key = f"landing_transfer_trends_{limit}"
+        cache_key = f"landing_transfer_trends_{limit}_{active_model_identity()}"
         cached = cache.get(cache_key)
         if cached:
             return cached

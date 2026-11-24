@@ -6,6 +6,12 @@ For saved experiments, the component challenger, backtest commands and rollout c
 see [Decision engine and forecast evaluation](decision-engine.md). This file is the
 human-readable specification of the current default player-points calculation.
 
+An explicit `FPL_PLAYER_MODEL=decision-v12-calibrated` deployment setting selects
+the revised experimental component calculation for the UI instead. See
+[activation instructions](deployment.md#using-the-revised-calculations-in-the-ui)
+and [the revised formula](component-calibration-results.md). The formula below
+describes `heuristic-v1`, which remains the default when that setting is absent.
+
 The squad planner is a hand-weighted heuristic: it starts from past FPL points,
 adjusts for each upcoming fixture, and discounts for season minutes and current
 availability. It then selects the legal XI and captain with the highest predicted

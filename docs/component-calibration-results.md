@@ -134,7 +134,10 @@ the current parameter file, and replay uses the frozen coefficients. Existing
 v3 records remain separate. [Policy v2](forecast-promotion-v2.json) changes the
 experiment and challenger identities while retaining every numerical threshold
 from v1, including ten completed live GWs and at most 10% candidate fallbacks.
-The planner continues to use `heuristic-v1`.
+The deployment default remains `heuristic-v1`. An explicit
+`FPL_PLAYER_MODEL=decision-v12-calibrated` setting now enables revised forecasts
+and plans in the UI, labelled experimental. This manual opt-in does not change
+the prospective promotion thresholds. See [deployment instructions](deployment.md#using-the-revised-calculations-in-the-ui).
 
 ```sh
 # Read-only input coverage and scored comparisons

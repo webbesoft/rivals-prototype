@@ -4,6 +4,47 @@ The default web container validates its production configuration and applies dat
 
 ## Production environment
 
+### Using the revised calculations in the UI
+
+Set this in the deployment machine's `.env.production`:
+
+```dotenv
+FPL_PLAYER_MODEL=decision-v12-calibrated
+```
+
+Commit all source changes and new files, including the fitted
+`docs/component-calibration-parameters.json`, then run `kamal deploy`. Both web and
+job receive the setting and restart through the normal deployment. The standard
+web startup applies any pending migrations; this model switch adds no migration,
+dependency, API key or new service. The revised model is an explicit experimental
+opt-in; it does not constitute automatic promotion under the live validation policy.
+
+Reload the planner after deployment. Its pitch shows **Revised component model ·
+Experimental**. The selected model drives squad forecasts, transfer plans, chip
+comparisons, Best XI and team analysis. Model and history inputs participate in
+cache identities, so switching models recalculates plans without manually clearing
+caches. Saved historical decisions retain their original estimates.
+
+To check or warm current inputs in the running deployment:
+
+```sh
+kamal app exec --reuse --roles web "python manage.py check_forecast_history"
+# Optional bounded refresh and updated shadow capture:
+kamal app exec --reuse --roles web "python manage.py check_forecast_history --warm-batches 1 --capture"
+```
+
+For local development, set the same variable in `.env` and restart the web process
+and worker (or let the development reloader restart the web process). To return to
+the original calculations, set `FPL_PLAYER_MODEL=heuristic-v1` and redeploy. With no
+setting, the original model remains the deployment default. The release gate tests
+that default explicitly and tests the revised model through isolated opt-in cases;
+the runtime model setting is checked separately before deployment.
+
+Activation verification on 24 November: 1,072 Python tests pass under the release
+test settings, including isolated revised-model cases, and all 62 JavaScript tests
+pass. Django system checks and migration consistency checks pass. Kamal's actual
+configuration loader resolves the revised setting for both web and job roles.
+
 Start with `.env.production.example` and configure your deployment environment. Kamal loads `.env.production` locally and injects the values listed in `config/deploy.yml` into both roles. `SITE_URL` and `DEFAULT_FROM_EMAIL` are included alongside the existing SMTP, Django and AI settings. The example deliberately leaves secrets empty.
 
 `.kamal/secrets` uses plain `$VARIABLE` references. Kamal's Ruby dotenv parser does not support Bash defaults such as `${VARIABLE:-True}`: it leaves a literal `:-True}` suffix, disabling boolean flags and corrupting credentials. Optional defaults are resolved in the Ruby block in `config/deploy.yml` before secrets are parsed. Existing shell environment variables take precedence over `.env.production`. After changing production values, redeploy with `kamal deploy` so both roles receive the updated environment.

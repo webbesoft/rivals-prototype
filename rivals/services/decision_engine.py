@@ -14,7 +14,7 @@ from rivals.services.chip_advice_service import chip_advice
 from rivals.services.fpl_api_service import FplApiService
 from rivals.services.gameweek_context_service import GameweekContextService
 from rivals.services.planning_defaults_service import PlanningDefaults
-from rivals.services.player_forecast import PlayerForecast
+from rivals.services.active_player_forecast import build_player_forecast
 from rivals.services.planned_lineup import replace_lineup, validate_lineup
 from rivals.services.price_change_service import (
     PRICE_FIELDS,
@@ -248,8 +248,12 @@ class DecisionEngine:
         self.projections = {}
         self.risk = {}
         self.player_fixtures = {}
-        self.forecast = PlayerForecast(
-            self.players.values(), self.fixtures, self.context["scoring_gameweek"]
+        self.forecast = build_player_forecast(
+            self.players.values(),
+            self.fixtures,
+            self.context["scoring_gameweek"],
+            teams=self.bootstrap.get("teams", []),
+            season=self.context["season"],
         )
         self.projections = self.forecast.project(self.weeks)
         self.risk = {pid: self.forecast.risk(pid) for pid in self.players}
@@ -835,8 +839,12 @@ class DecisionEngine:
                 labels.append("Recent form below season average")
                 details.append(
                     f"FPL form {form:.1f} versus {season_average:.1f} points per game "
-                    "this season. The forecast carries this form forward; a sustained "
-                    "rebound is not assumed."
+                    "this season. "
+                    + (
+                        "The revised estimate uses underlying performance and expected minutes; this flag describes observed FPL returns."
+                        if self.forecast.experimental
+                        else "The forecast carries this form forward; a sustained rebound is not assumed."
+                    )
                 )
             if improves:
                 labels.append("Fixtures improve")
@@ -896,6 +904,23 @@ class DecisionEngine:
             "players": self.player_forecasts(),
             "lineup_mode": "planned" if self.planned_lineup else "optimised",
             "lineup_warning": self.lineup_warning,
+            "model": self.model_info(),
+        }
+
+    def model_info(self):
+        return {
+            "version": self.VERSION,
+            "player_model": self.forecast.version,
+            "label": self.forecast.display_name,
+            "experimental": self.forecast.experimental,
+            "method": self.forecast.method
+            + " Availability stays constant; blanks score zero and doubles count each match. "
+            + (
+                "Your planned XI and captain are kept for the next gameweek; incoming players inherit the outgoing player's place and armband. Later gameweeks select the best legal XI and captain. "
+                if self.planned_lineup
+                else "Best legal XI and captain are selected separately each week. "
+            )
+            + "Ranges are sensitivity estimates, not confidence intervals. No chips or automatic substitutions are assumed.",
         }
 
     def chip_usage(self):
@@ -924,6 +949,7 @@ class DecisionEngine:
             [
                 self.VERSION,
                 self.source_hash,
+                self.forecast.cache_identity,
                 self.chip_usage(),
                 self.rival_signature(data),
                 self.context["season"],
@@ -1113,17 +1139,7 @@ class DecisionEngine:
             "inputs": data,
             "bank_display": data["bank"] / 10 if data["bank"] is not None else 0,
             "weeks": self.weeks,
-            "model": {
-                "version": self.VERSION,
-                "player_model": self.forecast.version,
-                "method": "Form and points per game, adjusted for season minutes, current availability and each scheduled fixture. Availability stays constant; blanks score zero and doubles count each match. "
-                + (
-                    "Your planned XI and captain are kept for the next gameweek; incoming players inherit the outgoing player's place and armband. Later gameweeks select the best legal XI and captain. "
-                    if self.planned_lineup
-                    else "Best legal XI and captain are selected separately each week. "
-                )
-                + "Ranges are sensitivity estimates, not confidence intervals. No chips or automatic substitutions are assumed.",
-            },
+            "model": self.model_info(),
         }
         cache.set(cache_key, result, 120)
         return result

@@ -85,3 +85,7 @@ adds a versioned shadow revision and candidate-prioritised history refreshes.
 `check_forecast_history` reports input coverage without writing; optional bounded
 warmup and capture flags are documented there. Restart the FPL worker after deploying
 the revision so future captures use experiment v4.
+
+To use the revised calculations in the UI, set
+`FPL_PLAYER_MODEL=decision-v12-calibrated` and deploy both roles with `kamal deploy`.
+See [activation instructions](docs/deployment.md#using-the-revised-calculations-in-the-ui).

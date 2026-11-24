@@ -3,6 +3,7 @@ from django.core.exceptions import ImproperlyConfigured
 from django.core.management.base import BaseCommand, CommandError
 
 from rivalspy.security import validate_production_settings
+from rivals.services.active_player_forecast import active_model_identity
 
 
 class Command(BaseCommand):
@@ -11,6 +12,10 @@ class Command(BaseCommand):
     )
 
     def handle(self, *args, **options):
+        try:
+            active_model_identity()
+        except (ImproperlyConfigured, OSError, ValueError) as error:
+            raise CommandError(str(error)) from None
         if settings.DEBUG:
             self.stdout.write("Development configuration; production checks skipped.")
             return

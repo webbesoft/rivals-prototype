@@ -8,6 +8,7 @@ Dotenv.load(".env.production")
   "AI_GENERATION_ENABLED" => "True",
   "MCP_ENABLED" => "True",
   "PASSWORDLESS_AUTH_ENABLED" => "False",
+  "FPL_PLAYER_MODEL" => "heuristic-v1",
   "MCP_ALLOWED_ORIGINS" => ENV["SITE_URL"].to_s
 }.each { |key, value| ENV[key] = value if ENV[key].to_s.empty? }
 %>
@@ -86,6 +87,7 @@ env:
     - DEFAULT_FROM_EMAIL
     - SITE_URL
     - PASSWORDLESS_AUTH_ENABLED
+    - FPL_PLAYER_MODEL
     - GOOGLE_CLIENT_ID
     - GOOGLE_CLIENT_SECRET
     - MCP_ENABLED

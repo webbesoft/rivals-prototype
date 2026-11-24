@@ -76,6 +76,8 @@ def forecasts(frame):
 
 
 def prepare_forecast(bootstrap, fixtures, *, captured_at=None, histories=None):
+    from .active_player_forecast import active_model_name
+
     now = captured_at or timezone.now()
     context = GameweekContextService.derive(bootstrap.get("events", []), now=now)
     week = context["decision_gameweek"]
@@ -100,7 +102,8 @@ def prepare_forecast(bootstrap, fixtures, *, captured_at=None, histories=None):
         "players": players,
         "bootstrap": bootstrap,
         "model_versions": {
-            "default_player_model": PlayerForecast.version,
+            "default_player_model": active_model_name(),
+            "reference_player_model": PlayerForecast.version,
             "shadow": CalibratedComponentForecast.version,
             "comparison": ComponentForecast.version,
             "fixture_control": FIXTURE_CONTROL,

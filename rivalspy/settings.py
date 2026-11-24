@@ -59,6 +59,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "False").lower() in ("1", "true", "yes")
 TESTING = "test" in sys.argv or "pytest" in sys.modules
+FPL_PLAYER_MODEL = os.getenv("FPL_PLAYER_MODEL", "heuristic-v1")
 
 # Default web/worker startup rejects this development fallback via check_production_config.
 SECRET_KEY = os.getenv("SECRET_KEY", "secret-key-should-be-changed")

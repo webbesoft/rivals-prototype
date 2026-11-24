@@ -18,6 +18,7 @@ export EMAIL_BACKEND=django.core.mail.backends.locmem.EmailBackend
 export BACKGROUND_TASK_RUN_ASYNC=False
 # Legacy-flow tests need a fixed baseline; passwordless tests enable it explicitly.
 export PASSWORDLESS_AUTH_ENABLED=False
+export FPL_PLAYER_MODEL=heuristic-v1
 unset PYTEST_ADDOPTS
 
 uv run --locked python -m pytest -q -o addopts=

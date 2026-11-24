@@ -162,7 +162,7 @@ def test_negative_landing_cache_avoids_recomputation():
     from rivals.services.landing_data_service import LandingDataService
 
     cache.clear()
-    cache.set("landing_best_xi_shared_v3", False, 60)
+    cache.set("landing_best_xi_shared_v4_heuristic-v1", False, 60)
     with patch("rivals.services.landing_data_service.FplApiService") as api:
         assert LandingDataService().get_best_xi() is None
         api.return_value.fetch_bootstrap_static.assert_not_called()
@@ -280,6 +280,9 @@ def test_chip_advice_checks_fit_xi_candidates_and_qualifying_recovery_weeks():
         },
         chip_usage=lambda: {},
     )
+    from rivals.services.decision_engine import DecisionEngine
+
+    engine.best_xi = lambda week: DecisionEngine.best_xi(engine, week)
     engine.projections[1] = {week: 13 for week in weeks}
     engine.projections[2].update({21: 10, 22: 12})
     for week, ids in blanks.items():

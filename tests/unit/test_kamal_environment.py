@@ -85,6 +85,8 @@ def test_kamal_passes_production_settings_to_django(
     else:
         source.update(dict.fromkeys(FLAGS, flag_value))
         expected = {key: source[key] for key in OPTIONAL}
+    source["FPL_PLAYER_MODEL"] = "decision-v12-calibrated"
+    expected["FPL_PLAYER_MODEL"] = "decision-v12-calibrated"
     (tmp_path / ".env.production").write_text(
         "\n".join(f"{key}='{value}'" for key, value in source.items()) + "\n"
     )
@@ -128,6 +130,7 @@ print(__import__('json').dumps({
     'AI_GENERATION_ENABLED': settings.AI_GENERATION_ENABLED,
     'MCP_ENABLED': settings.MCP_ENABLED,
     'PASSWORDLESS_AUTH_ENABLED': settings.PASSWORDLESS_AUTH_ENABLED,
+    'FPL_PLAYER_MODEL': settings.FPL_PLAYER_MODEL,
     'keyring_configured': configured(),
 }))
 """,
@@ -148,3 +151,4 @@ print(__import__('json').dumps({
             for key in FLAGS:
                 assert runtime[key] == (expected[key] == "True")
             assert runtime["keyring_configured"] == bool(expected["AI_CREDENTIAL_KEYS"])
+            assert runtime["FPL_PLAYER_MODEL"] == expected["FPL_PLAYER_MODEL"]

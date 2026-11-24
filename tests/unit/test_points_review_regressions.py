@@ -56,6 +56,8 @@ def test_fresh_legacy_report_delivers_both_points_comparisons(
     record = record_for(
         subscriber, report=legacy, prepared_at=NOW, generation_state="ready"
     )
+    record.refresh_from_db()
+    frozen_evidence = deepcopy(record.report)
     with patch(
         "rivals.services.deadline_digest_service.FplApiService", return_value=api
     ):
@@ -91,7 +93,9 @@ def test_fresh_legacy_report_delivers_both_points_comparisons(
         in message.body
     )
     assert "Best for GW11" not in message.body
-    assert record.report == legacy  # Presentation must not rewrite the saved evidence.
+    assert (
+        record.report == frozen_evidence
+    )  # Presentation must not rewrite persisted JSON evidence.
 
 
 @pytest.mark.django_db

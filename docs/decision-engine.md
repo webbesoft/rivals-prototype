@@ -1,11 +1,17 @@
 # Decision engine and forecast evaluation
 
-Updated 24 November 2026. The app continues to use `heuristic-v1` player forecasts
+Updated 24 November 2026. The deployment default uses `heuristic-v1` player forecasts
 inside planner `decision-v10-planned-lineup`. The default formula is documented in
 [How gameweek predicted scores work](gameweek-predictions.md). The component
 revision runs as `decision-v12-calibrated` in shadow mode, alongside original
 `decision-v11` and a fixture-only control. The offline ridge variant remains
 `decision-v11-ridge-standardized-v1`; it is not included in live shadow capture.
+
+Deployments can explicitly select `decision-v12-calibrated` for all user-facing
+calculations with `FPL_PLAYER_MODEL`. The planner identifies the revised model as
+experimental. See [UI activation and deployment](deployment.md#using-the-revised-calculations-in-the-ui)
+for the setting and restart steps. The independent evaluation still retains the
+fixed heuristic reference and original v11 comparison whichever model the UI uses.
 
 The [24 November component validation](component-validation-results.md) adds a
 fixed-model evaluation on 35 usable GWs of 2025/26 and isolates team strengths,

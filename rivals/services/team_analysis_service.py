@@ -13,7 +13,11 @@ from rivals.models import SyncState
 from ..models import Team
 from .fpl_api_service import FplApiService
 from .gameweek_context_service import GameweekContextService
-from .player_forecast import PlayerForecast
+from .active_player_forecast import (
+    active_cache_stamp,
+    active_model_name,
+    build_player_forecast,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +41,7 @@ class TeamAnalysisService:
         self.current_gw = None
         self.decision_gw = None
         self._fixture_difficulty_cache = {}
+        self._points_forecast = None
 
     # ---------- Data loading / caching ----------
     def refresh_data(self, force_refresh: bool = False) -> bool:
@@ -58,6 +63,7 @@ class TeamAnalysisService:
             self.current_gw = event_context["scoring_gameweek"]
             self.decision_gw = event_context["decision_gameweek"]
             self._fixture_difficulty_cache.clear()
+            self._points_forecast = None
 
             fixtures = self.api.fetch_fixtures_data(force_refresh=force_refresh)
             if fixtures is None:
@@ -183,7 +189,22 @@ class TeamAnalysisService:
         """Shared model over actual gameweeks, including blanks and doubles."""
         if not self.decision_gw:
             return 0.0
-        forecast = PlayerForecast([player], self.fixtures, self.current_gw)
+        if (
+            self._points_forecast is None
+            or self._points_forecast.version != active_model_name()
+            or player["id"] not in self._points_forecast.players
+        ):
+            context = GameweekContextService.derive(self.events)
+            pool = {p["id"]: p for p in self.elements}
+            pool[player["id"]] = player
+            self._points_forecast = build_player_forecast(
+                pool.values(),
+                self.fixtures,
+                self.current_gw,
+                teams=self.teams.values(),
+                season=context["season"],
+            )
+        forecast = self._points_forecast
         return sum(
             forecast.points(player["id"], week)
             for week in range(self.decision_gw, min(39, self.decision_gw + weeks))
@@ -646,6 +667,7 @@ class TeamAnalysisService:
             season=context["season"], gameweek=context["scoring_gameweek"]
         ).aggregate(latest=Max("updated_at"))["latest"]
         stamp = (
+            active_cache_stamp(context["season"]),
             context["season"],
             context["scoring_gameweek"],
             context["decision_gameweek"],
