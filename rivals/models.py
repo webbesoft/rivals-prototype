@@ -395,6 +395,7 @@ class GameweekData(models.Model):
     bench_points = models.IntegerField(default=0)
     rank = models.IntegerField(null=True, blank=True)
     rank_sort = models.IntegerField(null=True, blank=True)
+    overall_rank = models.PositiveIntegerField(null=True, blank=True)
     bank = models.IntegerField(null=True, blank=True)
     event_transfers = models.IntegerField(default=0)
     event_transfers_cost = models.IntegerField(default=0)
@@ -420,6 +421,104 @@ class GameweekData(models.Model):
 
     def __str__(self):
         return f"Gameweek {self.gameweek} Data for {self.team.team_name}"
+
+
+class AchievementEvent(models.Model):
+    """Durable event checks; transport snapshot expiry must not erase evidence."""
+
+    season = models.CharField(max_length=7)
+    gameweek = models.PositiveSmallIntegerField()
+    finished = models.BooleanField(default=False)
+    data_checked = models.BooleanField(default=False)
+    average_score = models.IntegerField(null=True)
+    finalised_at = models.DateTimeField(null=True)
+    is_last = models.BooleanField(default=False)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["season", "gameweek"], name="unique_achievement_event"
+            )
+        ]
+
+
+class AchievementSeason(models.Model):
+    team = models.ForeignKey("Team", on_delete=models.CASCADE)
+    season = models.CharField(max_length=7)
+    # The first evaluation's completed weeks remain quiet, including late picks.
+    baseline_gameweek = models.PositiveSmallIntegerField(default=0)
+    progress = models.JSONField(default=dict)
+    evaluated_at = models.DateTimeField(null=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["team", "season"], name="unique_achievement_season"
+            )
+        ]
+
+
+class LeagueAchievementResult(models.Model):
+    team = models.ForeignKey("Team", on_delete=models.CASCADE)
+    league = models.ForeignKey("MiniLeague", on_delete=models.CASCADE)
+    season = models.CharField(max_length=7)
+    gameweek = models.PositiveSmallIntegerField()
+    rank = models.PositiveIntegerField()
+    entrant_count = models.PositiveIntegerField()
+    entrant_count_is_exact = models.BooleanField(default=True)
+    league_name = models.CharField(max_length=255)
+    eligible = models.BooleanField(default=False)
+    verified_at = models.DateTimeField()
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["team", "league", "season", "gameweek"],
+                name="unique_league_achievement_result",
+            )
+        ]
+
+
+class AchievementAward(models.Model):
+    team = models.ForeignKey(
+        "Team", on_delete=models.CASCADE, related_name="achievements"
+    )
+    season = models.CharField(max_length=7)
+    code = models.CharField(max_length=32)
+    tier = models.PositiveSmallIntegerField()
+    gameweek = models.PositiveSmallIntegerField()
+    league = models.ForeignKey("MiniLeague", null=True, on_delete=models.CASCADE)
+    # Non-null scope makes uniqueness work for league-free awards on SQLite too.
+    scope = models.CharField(max_length=32, blank=True, default="")
+    rule_version = models.PositiveSmallIntegerField(default=1)
+    evidence = models.JSONField(default=dict)
+    active = models.BooleanField(default=True)
+    announce = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["team", "season", "code", "tier", "gameweek", "scope"],
+                name="unique_achievement_occurrence",
+            )
+        ]
+        indexes = [models.Index(fields=["team", "season", "active"])]
+
+
+class AchievementDismissal(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    award = models.ForeignKey(AchievementAward, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "award"], name="unique_achievement_dismissal"
+            )
+        ]
 
 
 class MiniLeagueTeam(models.Model):

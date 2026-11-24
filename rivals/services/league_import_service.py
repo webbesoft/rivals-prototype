@@ -47,10 +47,18 @@ class LeagueImportService:
         with transaction.atomic():
             self._check_owner()
             run = LeagueImport.objects.filter(league_id=self.state.object_id).first()
+            from rivals.models import AchievementEvent
+
+            final_event = AchievementEvent.objects.filter(
+                season=self.context["season"],
+                gameweek=self.context["scoring_gameweek"],
+                finalised_at__isnull=False,
+            ).first()
             if run and (
                 run.stamp != self.stamp
                 or timezone.now() - run.created_at > self.MAX_AGE
                 or run.league_info.get("_rivals_pagination", {}).get("restart", False)
+                or (final_event and run.created_at < final_event.finalised_at)
             ):
                 run.delete()
                 run = None
@@ -80,6 +88,7 @@ class LeagueImportService:
                         "page": 1,
                     },
                 },
+                fetched_at=run.created_at,
             )
             return True
 
@@ -108,7 +117,7 @@ class LeagueImportService:
                         },
                     }
                 )
-                self._publish_summary(league, first)
+                self._publish_summary(league, first, fetched_at=run.created_at)
                 return True
             with transaction.atomic():
                 self._check_owner()
@@ -127,7 +136,7 @@ class LeagueImportService:
         self._publish(run)
         return True
 
-    def _publish_summary(self, league, data):
+    def _publish_summary(self, league, data, *, fetched_at=None):
         from rivals.services.league_summary_service import save_page
 
         # Validate before touching either the previous publication or checkpoint.
@@ -136,7 +145,13 @@ class LeagueImportService:
             self._check_owner()
             league.summary_only = True
             league.save(update_fields=["summary_only"])
-            save_page(league, self.context["season"], 1, data)
+            save_page(
+                league,
+                self.context["season"],
+                1,
+                data,
+                fetched_at=fetched_at or self.state.last_attempt_at,
+            )
             LeagueImport.objects.filter(league=league).delete()
 
     def _reconcile(self, run):
@@ -295,8 +310,23 @@ class LeagueImportService:
             ).delete()
             league = run.league
             league.name = run.league_info["name"]
+            league.league_type = run.league_info.get("league_type", league.league_type)
+            league.scoring_type = run.league_info.get("scoring", league.scoring_type)
             league.last_synced_at = timezone.now()
-            league.save(update_fields=["name", "last_synced_at"])
+            league.save(
+                update_fields=["name", "last_synced_at", "league_type", "scoring_type"]
+            )
+            from .achievement_service import record_league_results
+
+            record_league_results(
+                league,
+                self.context["season"],
+                self.context["scoring_gameweek"],
+                rows,
+                entrant_count=len(rows),
+                fetched_at=run.created_at,
+                leaders_complete=True,
+            )
             run.delete()
 
     def _publish_page(self, run, rows):

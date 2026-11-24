@@ -27,6 +27,9 @@ def mini_league_show(request, mini_league_id):
         raise Http404
 
     enqueue_refresh("league", mini_league.id)
+    from rivals.services.achievement_service import league_champions
+
+    champions = league_champions(mini_league, GameweekContextService.cached()["season"])
     if mini_league.uses_summary:
         from rivals.services.league_summary_service import large_league_context
 
@@ -42,6 +45,7 @@ def mini_league_show(request, mini_league_id):
                     request.GET,
                 ),
                 "mini_league": mini_league,
+                "league_champions": champions,
             },
         )
     standings = mini_league.mini_league_teams.select_related("team").order_by(
@@ -85,6 +89,7 @@ def mini_league_show(request, mini_league_id):
         {
             **refresh_status(request.user),
             "mini_league": mini_league,
+            "league_champions": champions,
             "standings": standings,
             "standings_page": page,
             "user_standing": user_standing,

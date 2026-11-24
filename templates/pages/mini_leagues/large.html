@@ -2,6 +2,7 @@
 {% load humanize math_filters %}
 <div class="rv-wrap rv-league league-page">
   {% include "partials/league_heading.html" %}
+  {% include "partials/league_champions.html" %}
   <div id="large-league-content" {% if waiting %}hx-get="{{ request.path }}?{{ request.GET.urlencode }}" hx-trigger="every 15s" hx-select="#large-league-content" hx-swap="outerHTML"{% endif %}>
   {% include "partials/league_position.html" with position=rank_snapshot large_league=True %}
   {% if not rank_snapshot %}<p class="league-notice" role="status">Your position will appear after your team’s next update. You can explore the standings below.</p>{% endif %}

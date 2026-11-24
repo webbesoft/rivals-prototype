@@ -6,7 +6,7 @@ from django.utils import timezone
 from rivals.models import LeagueRankSnapshot, LeagueStandingsPage, MiniLeague
 
 
-def save_profile_ranks(team, profile, context):
+def save_profile_ranks(team, profile, context, *, fetched_at=None):
     from rivals.services.league_membership_service import account_leagues
 
     if str(profile.get("id")) != str(team.fpl_team_id):
@@ -44,6 +44,16 @@ def save_profile_ranks(team, profile, context):
                     "total_points": points,
                 },
             )
+            from .achievement_service import record_league_results
+
+            record_league_results(
+                league,
+                season,
+                gameweek,
+                [{"entry": int(team.fpl_team_id), "rank": rank}],
+                entrant_count=row.get("rank_count"),
+                fetched_at=fetched_at or timezone.now(),
+            )
 
 
 def latest_rank(team, league, season):
@@ -56,7 +66,7 @@ def latest_rank(team, league, season):
     )
 
 
-def save_page(league, season, number, data):
+def save_page(league, season, number, data, *, fetched_at=None):
     from rivals.services.league_import_service import LeagueImportService
 
     rows = LeagueImportService._validated_rows(data, number)
@@ -73,8 +83,29 @@ def save_page(league, season, number, data):
     )
     if number == 1:
         league.name = data["league"]["name"]
+        league.league_type = data["league"].get("league_type", league.league_type)
+        league.scoring_type = data["league"].get("scoring", league.scoring_type)
         league.last_synced_at = timezone.now()
-        league.save(update_fields=["name", "last_synced_at"])
+        league.save(
+            update_fields=["name", "last_synced_at", "league_type", "scoring_type"]
+        )
+        from .achievement_service import record_league_results
+        from .gameweek_context_service import GameweekContextService
+
+        context = GameweekContextService.cached()
+        # A page proves at least its own number of entrants, even when large
+        # league metadata omits the total. Do not use imported membership counts.
+        record_league_results(
+            league,
+            season,
+            context.get("scoring_gameweek"),
+            rows,
+            entrant_count=max(len(rows), 2 if data["standings"]["has_next"] else 0),
+            fetched_at=fetched_at or timezone.now(),
+            count_is_exact=not data["standings"]["has_next"],
+            leaders_complete=not data["standings"]["has_next"]
+            or any(r["rank"] > 1 for r in rows),
+        )
     return page
 
 

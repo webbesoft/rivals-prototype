@@ -1,0 +1,32 @@
+<section class="achievements" aria-label="Seasonal trophy cabinet">
+  <div class="achievement-heading">
+    <div><p class="rv-eyebrow">The trophy cabinet</p><h3>{{ achievement_earned_count }} of 6 achievements earned</h3><p>Memorable gameweeks. Lasting bragging rights.</p></div>
+    <form method="GET">
+      <label for="achievement-season">Season</label>
+      <select id="achievement-season" name="season">
+        {% for season in achievement_seasons %}<option value="{{ season }}" {% if season == achievement_season %}selected{% endif %}>{{ season }}</option>{% endfor %}
+      </select>
+      <button type="submit">View</button>
+    </form>
+  </div>
+  <p class="achievement-note">Awards unlock after final results are checked. Chips and double gameweeks count. Repeat gameweeks count once, even when several tiers unlock.</p>
+  {% if achievement_evaluated_at %}<p class="achievement-note">Last checked {{ achievement_evaluated_at|timesince }} ago · {{ achievement_season }}</p>{% else %}<p role="status" class="achievement-note">Your trophy cabinet is being prepared. Refresh this page after the next background update to see verified results.</p>{% endif %}
+  <div class="achievement-grid">
+    {% for card in achievement_cards %}
+    <article class="achievement-card {% if card.earned %}achievement-earned{% endif %}" aria-labelledby="achievement-{{ card.code }}">
+      <div class="achievement-card-top"><span class="achievement-emblem" aria-hidden="true">{{ card.symbol }}</span><span class="achievement-status">{% if card.earned %}Earned{% else %}To unlock{% endif %}</span></div>
+      <h3 id="achievement-{{ card.code }}">{{ card.name }}</h3>
+      <p>{{ card.rule }}</p>
+      <div class="achievement-tiers" aria-label="Achievement tiers">{% for tier in card.tiers %}<span {% if tier.earned %}class="achievement-tier-earned"{% endif %}>{{ tier.value }} {{ card.unit }}{% if tier.earned %}<span class="sr-only"> earned</span>{% endif %}</span>{% endfor %}</div>
+      {% if card.streak %}
+        <p class="achievement-metric">Current: {% if card.streak.current != None %}{{ card.streak.current }}{% else %}awaiting results{% endif %} · Longest verified: {{ card.streak.longest }}</p>
+        {% if not card.streak.complete %}<p class="achievement-note">Some results are still being verified. Streaks never bridge missing weeks.</p>{% endif %}
+        {% if card.next_tier %}<p class="achievement-note">Next milestone: {{ card.next_tier }} consecutive gameweeks</p>{% endif %}
+      {% elif card.earned %}
+        <p class="achievement-metric">Achieved {{ card.count }} time{{ card.count|pluralize }}{% if card.best %} · Best: {{ card.best }} points{% endif %}</p>
+      {% endif %}
+      {% if card.occurrences %}<details class="achievement-evidence"><summary>See qualifying results</summary><ul>{% for occasion in card.occurrences %}<li><a href="{{ occasion.url }}">GW{{ occasion.gameweek }} · {{ occasion.evidence.summary }}</a>{% if occasion.evidence.previous_rank %}<span class="achievement-note">Overall rank: {{ occasion.evidence.previous_rank }} → {{ occasion.evidence.overall_rank }}</span>{% endif %}{% for result in occasion.evidence.results %}<span class="achievement-note">GW{{ result.gameweek }}: {{ result.points }} points · Average {{ result.average }}</span>{% endfor %}{% if occasion.evidence.chip %}<span class="achievement-note">Chip: {{ occasion.evidence.chip }}</span>{% endif %}{% if occasion.evidence.hits %}<span class="achievement-note">Transfer hits: −{{ occasion.evidence.hits }} points</span>{% endif %}</li>{% endfor %}</ul></details>{% endif %}
+    </article>
+    {% endfor %}
+  </div>
+</section>

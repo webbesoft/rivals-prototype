@@ -59,6 +59,7 @@
 
   <link rel="stylesheet" href="{% static 'css/output.css' %}" />
   <link rel="stylesheet" href="{% static 'css/matchday.css' %}" />
+  {% if user.is_authenticated %}<link rel="stylesheet" href="{% static 'css/achievements.css' %}" />{% endif %}
   {% if landing %}<link rel="stylesheet" href="{% static 'css/landing.css' %}" />{% else %}<link rel="stylesheet" href="{% static 'css/rivalry.css' %}" />{% endif %}
   <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.7/dist/htmx.min.js" defer></script>
   <script src="{% static 'js/request-feedback.js' %}" defer></script>

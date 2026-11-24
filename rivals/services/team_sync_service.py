@@ -189,6 +189,7 @@ class TeamSyncService:
             gw_data.total_points = gw["total_points"]
             gw_data.rank = gw.get("rank")
             gw_data.rank_sort = gw.get("rank_sort")
+            gw_data.overall_rank = gw.get("overall_rank") or None
             gw_data.event_transfers = gw["event_transfers"]
             gw_data.event_transfers_cost = gw["event_transfers_cost"]
             gw_data.bench_points = gw["points_on_bench"]
@@ -475,7 +476,7 @@ class TeamSyncService:
                 if previous:
                     for field in metadata:
                         setattr(record, field, getattr(previous, field))
-                    if previous.points_final:
+                    if previous.points_final and not points_final:
                         record.points_final = True
                         record.gameweek_points = previous.gameweek_points
                         if previous.gameweek_minutes is not None:

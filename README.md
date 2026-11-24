@@ -66,6 +66,27 @@ and expose a `Server-Timing` header in browser Network tools; responses taking o
 
 See [refresh operations](docs/background-refresh.md) and the [delivery epochs](docs/epochs.md). The current implementation is being developed beyond the original prototype described above.
 
+## Achievements
+
+Each team's **Achievements** tab keeps a seasonal trophy cabinet for 100/125/150-point
+gameweeks, consecutive overall-rank improvements, captain hauls before multiplication,
+above-average streaks, private classic league leadership and season championships.
+Scores qualify before transfer-hit deductions; chips count, and inherited
+vice-captaincy qualifies. Official tied-first league positions count when at least
+two entrants are confirmed. League trophies are visible only to viewers with access
+to that league.
+
+Apply migrations through `0026_achievements` and restart the existing `fpl_worker`.
+The worker quietly backfills the current season, fetching at most two historical
+lineups per team per dispatcher pass. It waits for finished, data-checked events
+and results refreshed afterward. Verified corrections reconcile existing awards;
+missing data never extends a streak. Settled captain results are rechecked daily.
+The dashboard groups newly earned badges and supports per-user dismissal.
+Refresh pages to see completed background work. The `achievements:<team_id>`
+`SyncState` records expose evaluation status, missing lineups and streak progress
+alongside existing refresh diagnostics. Older seasons are retained, without
+inferring unsupported awards from past-season totals.
+
 ## Forecasts and accuracy
 
 The planner and public Best XI share a player-points model. The worker saves

@@ -36,6 +36,17 @@ urlpatterns = [
     path("intel/", dashboard_views.dashboard_intel, name="intel"),
     path("rivals/sync/", dashboard_views.dashboard_sync_rivals, name="rivals.sync"),
     path("teams/", team_views.team_show, name="teams.index"),
+    path(
+        "achievements/dismiss/",
+        team_views.dismiss_achievements,
+        name="achievements.dismiss",
+    ),
+    path(
+        "teams/<int:team_id>/achievements/",
+        team_views.team_show,
+        {"section": "achievements"},
+        name="teams.achievements",
+    ),
     path("teams/<int:team_id>/", team_views.team_show, name="teams.show"),
     path(
         "teams/<int:team_id>/performance/",

@@ -153,6 +153,7 @@ def dashboard(request):
         "pages/dashboard.html",
         {
             **refresh_status(request.user),
+            **achievement_context(request.user, gameweek_context["season"]),
             "mini_leagues": mini_leagues,
             "user_team": user_team,
             "user_projection": user_projection,
@@ -169,6 +170,12 @@ def dashboard(request):
             ),
         },
     )
+
+
+def achievement_context(user, season):
+    from rivals.services.achievement_service import dashboard_achievements
+
+    return dashboard_achievements(user, season)
 
 
 @login_required

@@ -1,6 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
+from django.http import HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -47,10 +47,17 @@ def team_show(request, team_id=None, section="squad"):
         ("performance", "Performance", "teams.performance"),
         ("transfers", "Transfers & Intel", "teams.transfers"),
         ("history", "History", "teams.history"),
+        ("achievements", "Achievements", "teams.achievements"),
     ]
     section_context = {}
     if section == "squad":
-        section_context["squad_selection"] = SquadHistoryService(team).selection()
+        try:
+            section_context["squad_selection"] = SquadHistoryService(team).selection(
+                request.GET.get("season"),
+                request.GET.get("gameweek"),
+            )
+        except ValueError as error:
+            return HttpResponseBadRequest(str(error))
     elif section == "performance":
         gw_qs = team.gameweek_data
         if team.current_season:
@@ -70,6 +77,23 @@ def team_show(request, team_id=None, section="squad"):
         }
     elif section == "history":
         section_context["season_histories"] = team.season_histories.all()
+    elif section == "achievements":
+        from rivals.models import AchievementSeason
+        from rivals.services.achievement_service import cabinet
+
+        selection = SquadHistoryService(team).selection()
+        seasons = set(selection["seasons"])
+        seasons.update(
+            AchievementSeason.objects.filter(team=team).values_list("season", flat=True)
+        )
+        # Archived cabinets can exist even when the underlying lineup is absent.
+        chosen = request.GET.get("season") or selection["season"]
+        if chosen and chosen not in seasons:
+            return HttpResponseBadRequest("Choose an available season.")
+        section_context = {
+            **cabinet(request.user, team, chosen),
+            "achievement_seasons": sorted(seasons, reverse=True),
+        }
 
     return render(
         request,
@@ -97,6 +121,47 @@ def team_show(request, team_id=None, section="squad"):
             "score_summary": ScoreSummaryService(team).cached(),
         },
     )
+
+
+@login_required
+@require_POST
+def dismiss_achievements(request):
+    from rivals.models import AchievementAward, AchievementDismissal
+    from rivals.services.access_service import accessible_leagues
+    from django.db import transaction
+    from django.db.models import Q
+
+    try:
+        ids = [int(value) for value in request.POST.getlist("award_id")]
+    except (TypeError, ValueError):
+        return HttpResponseBadRequest("Invalid achievement.")
+    if not ids or len(ids) > 100:
+        return HttpResponseBadRequest("Choose achievements to dismiss.")
+    with transaction.atomic():
+        own = AchievementAward.objects.filter(
+            team_id=request.user.team_id,
+            active=True,
+        ).filter(
+            Q(league__isnull=True) | Q(league__in=accessible_leagues(request.user))
+        )
+        selected = list(own.filter(pk__in=ids))
+        if len(selected) != len(set(ids)):
+            return HttpResponseBadRequest("Invalid achievement.")
+        for award in selected:
+            group = own.filter(
+                season=award.season,
+                code=award.code,
+                gameweek=award.gameweek,
+                scope=award.scope,
+            )
+            AchievementDismissal.objects.bulk_create(
+                [
+                    AchievementDismissal(user=request.user, award_id=pk)
+                    for pk in group.values_list("pk", flat=True)
+                ],
+                ignore_conflicts=True,
+            )
+    return redirect("rivals:dashboard")
 
 
 @login_required

@@ -1,0 +1,9 @@
+<section class="achievement-dashboard" aria-label="Your achievements">
+  <div class="achievement-heading"><div><p class="rv-eyebrow">Your trophy cabinet</p><h2>{{ achievement_earned_count }} of 6 achievements earned</h2></div><a href="{% url 'rivals:teams.achievements' user_team.id %}">View achievements →</a></div>
+  {% if achievement_announcements %}
+  <div role="status" class="achievement-announcement"><strong>Earned this gameweek</strong><ul>{% for award in achievement_announcements %}<li><a href="{% url 'rivals:teams.achievements' user_team.id %}">{{ award.name }}</a> · {{ award.evidence.summary }}</li>{% endfor %}</ul>
+    <form method="POST" action="{% url 'rivals:achievements.dismiss' %}">{% csrf_token %}{% for award in achievement_announcements %}<input type="hidden" name="award_id" value="{{ award.id }}">{% endfor %}<button type="submit">Dismiss announcements</button></form>
+  </div>
+  {% endif %}
+  {% if achievement_milestone %}<p class="achievement-metric">{{ achievement_milestone.name }} · {{ achievement_milestone.streak.current }}/{{ achievement_milestone.next_tier }} consecutive gameweeks</p>{% endif %}
+</section>

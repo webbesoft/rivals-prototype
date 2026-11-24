@@ -1,0 +1,3 @@
+{% if league_champions %}
+<section class="achievement-champions" aria-label="Verified league champions"><p class="rv-eyebrow">Season honours</p><h2>League champion{{ league_champions|length|pluralize }}</h2><ul>{% for trophy in league_champions %}<li><span aria-hidden="true">★</span> <a href="{% url 'rivals:teams.achievements' trophy.team_id %}?season={{ trophy.season }}">{{ trophy.team.team_name }}</a> · {{ trophy.season }}{% if league_champions|length > 1 %} · Tied first{% endif %}</li>{% endfor %}</ul></section>
+{% endif %}

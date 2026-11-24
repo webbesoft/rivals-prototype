@@ -74,7 +74,7 @@ class SquadHistoryService:
             "available_gameweeks": weeks,
         }
 
-    def load(self, season, gameweek):
+    def load(self, season, gameweek, *, refresh_final=False):
         if gameweek is None:
             return [], None
         rows = list(
@@ -125,10 +125,14 @@ class SquadHistoryService:
         recent = rows and (timezone.now() - rows[0].updated_at).total_seconds() < 120
         complete = len(rows) == 15
         scores_complete = complete and all(p.gameweek_points is not None for p in rows)
-        if scores_complete and (
-            not candidate_current
-            or all(p.points_final and p.gameweek_minutes is not None for p in rows)
-            or recent
+        if (
+            scores_complete
+            and not refresh_final
+            and (
+                not candidate_current
+                or all(p.points_final and p.gameweek_minutes is not None for p in rows)
+                or recent
+            )
         ):
             if current_season and any(not p.club_short_name for p in rows):
                 self.populate_clubs(rows, season)
@@ -137,7 +141,7 @@ class SquadHistoryService:
             if complete:
                 return rows, "Player scores are unavailable for this season."
             return [], "This lineup is currently unavailable."
-        bootstrap = self.api.fetch_bootstrap_static()
+        bootstrap = self.api.fetch_bootstrap_static(force_refresh=refresh_final)
         if not bootstrap:
             return (
                 rows if complete else []
@@ -160,7 +164,9 @@ class SquadHistoryService:
             return (
                 rows if complete else []
             ), "We couldn't load this lineup. Please try again."
-        live = self.api.fetch_gameweek_live(gameweek, season)
+        live = self.api.fetch_gameweek_live(
+            gameweek, season, force_refresh=refresh_final
+        )
         live_points = {
             p["id"]: p.get("stats", {}).get("total_points")
             for p in (live or {}).get("elements", [])
@@ -180,6 +186,13 @@ class SquadHistoryService:
             and event.get("data_checked")
             for event in bootstrap["events"]
         )
+        if (
+            refresh_final
+            and complete
+            and any(row.points_final for row in rows)
+            and not final
+        ):
+            return rows, "Final results are awaiting verification."
         success = service.sync_squad_for_gameweek(
             gameweek,
             picks=picks,

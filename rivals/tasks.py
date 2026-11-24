@@ -86,6 +86,10 @@ def refresh_resource(key, generation):
         if not owner:
             return
         publish_snapshots(payload.pop("_snapshots", {}))
+        if state.kind == "context":
+            from rivals.services.achievement_service import publish_events
+
+            publish_events(context["season"], payload["events"])
         SyncState.objects.filter(pk=state.pk, generation=generation).update(
             status="ok",
             last_success_at=timezone.now(),
@@ -95,6 +99,15 @@ def refresh_resource(key, generation):
             lease_until=None,
             payload=payload,
         )
+        if state.kind in ("profile", "history", "squad", "league", "league_page"):
+            from rivals.services.achievement_service import queue_achievement_followups
+
+            transaction.on_commit(
+                lambda: queue_achievement_followups(
+                    state.kind, state.object_id, context["season"]
+                ),
+                robust=True,
+            )
 
 
 def ingest(state):
@@ -121,6 +134,14 @@ def ingest(state):
     context = GameweekContextService.cached()
     if context["stale"] or not context["season"]:
         raise RuntimeError("Fresh season context required before ingestion")
+    if state.kind == "achievements":
+        from rivals.services.achievement_service import evaluate_team
+
+        return evaluate_team(
+            Team.objects.get(pk=state.object_id),
+            context["season"],
+            publication_guard=lambda: check_refresh_owner(state),
+        )
     if state.kind == "decisions":
         from rivals.services.decision_review_service import review_decisions
 
@@ -194,7 +215,7 @@ def ingest(state):
 
         rows, notice = SquadHistoryService(
             target.team, api, publication_guard=lambda: check_refresh_owner(state)
-        ).load(target.season, target.gameweek)
+        ).load(target.season, target.gameweek, refresh_final=True)
         if len(rows) != 15 or notice:
             raise RuntimeError("Complete squad scores unavailable")
     elif state.kind == "league_page":
@@ -236,6 +257,7 @@ def ingest(state):
         service = TeamSyncService(team)
         service.fpl_api_service = api
         # Fetch before opening a write transaction, retaining saved data on failure.
+        fetched_at = timezone.now()
         if state.kind == "profile":
             data = api.fetch_team_basic_info(team.fpl_team_id)
             if not data:
@@ -279,7 +301,7 @@ def ingest(state):
 
             from rivals.services.league_summary_service import save_profile_ranks
 
-            save_profile_ranks(team, data, context)
+            save_profile_ranks(team, data, context, fetched_at=fetched_at)
 
     return {
         "_snapshots": (
@@ -341,8 +363,34 @@ def refresh_tick():
         .order_by("pk")
         .values_list("pk", flat=True)[:101]
     )
+    from rivals.models import AchievementEvent
+    from rivals.services.achievement_service import queue_missing_squads
+
+    final_event = (
+        AchievementEvent.objects.filter(
+            season=context["season"],
+            finalised_at__isnull=False,
+        )
+        .order_by("-finalised_at")
+        .first()
+    )
+    input_states = SyncState.objects.in_bulk(
+        [f"{kind}:{pk}" for pk in team_ids[:100] for kind in ("history", "profile")],
+        field_name="key",
+    )
     for team_id in team_ids[:100]:
         enqueue_team(team_id, context=context)
+        if final_event:
+            for kind in ("history", "profile"):
+                previous_input = input_states.get(f"{kind}:{team_id}")
+                if (
+                    not previous_input
+                    or not previous_input.last_success_at
+                    or previous_input.last_success_at < final_event.finalised_at
+                ):
+                    enqueue_refresh(kind, team_id, force=True, context=context)
+        enqueue_refresh("achievements", team_id, context=context)
+        queue_missing_squads(Team.objects.get(pk=team_id), context["season"])
     league_ids = list(
         MiniLeague.objects.filter(
             active=True,
@@ -355,7 +403,20 @@ def refresh_tick():
         .values_list("pk", flat=True)[:101]
     )
     for league_id in league_ids[:100]:
-        enqueue_refresh("league", league_id, context=context)
+        state = (
+            SyncState.objects.filter(key=f"league:{league_id}").first()
+            if final_event
+            else None
+        )
+        needs_final = bool(
+            final_event
+            and (
+                not state
+                or not state.last_success_at
+                or state.last_success_at < final_event.finalised_at
+            )
+        )
+        enqueue_refresh("league", league_id, context=context, force=needs_final)
     cursors.update(
         {
             "worker_id": socket.gethostname(),

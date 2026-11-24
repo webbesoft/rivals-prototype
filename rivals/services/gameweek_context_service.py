@@ -39,6 +39,14 @@ class GameweekContextService:
             "next_deadline": upcoming[0] if upcoming else None,
             "latest_deadline": passed[-1][0] if passed else None,
             "finished": bool(scoring and scoring.get("finished")),
+            "latest_checked_gameweek": max(
+                (
+                    e["id"]
+                    for _, e in dated
+                    if e.get("finished") and e.get("data_checked")
+                ),
+                default=0,
+            ),
             "refresh_seconds": (
                 120 if active_match or near_deadline or just_passed else 1800
             ),

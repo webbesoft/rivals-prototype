@@ -20,6 +20,7 @@ KINDS = {
     "forecasts",
     "forecast_reviews",
     "squad",
+    "achievements",
 }
 
 
@@ -36,6 +37,11 @@ def _skip_refresh(state, kind, context, now, force):
         return True
     stamp = f'{context.get("season")}:{context.get("scoring_gameweek")}'
     rolled_over = bool(context.get("season") and state.payload.get("stamp") != stamp)
+    if kind == "achievements" and "latest_checked_gameweek" in context:
+        rolled_over = (
+            rolled_over
+            or state.payload.get("final_gameweek") != context["latest_checked_gameweek"]
+        )
     interval = 120 if kind == "context" else context.get("refresh_seconds", 1800)
     if kind == "squad":
         interval = 120
@@ -137,7 +143,7 @@ def refresh_status(user):
     keys += [
         resource_key(kind, pk)
         for pk in team_ids
-        for kind in ("profile", "history", "transfers")
+        for kind in ("profile", "history", "transfers", "achievements")
     ]
     keys += [
         resource_key("league", pk)
@@ -150,7 +156,7 @@ def refresh_status(user):
     for state in states:
         state.label = (
             f"{names.get(state.object_id, 'Team')} {state.kind}"
-            if state.kind in ("profile", "history", "transfers")
+            if state.kind in ("profile", "history", "transfers", "achievements")
             else state.kind.title()
         )
     heartbeat = SyncState.objects.filter(key="worker").first()

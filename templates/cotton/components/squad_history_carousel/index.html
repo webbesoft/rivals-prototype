@@ -4,7 +4,7 @@
     <h3 class="app-section-title text-xs font-black uppercase tracking-wider text-pitch">Lineup & squad history</h3>
     <p data-panel-status role="status" aria-live="polite" hidden class="lineup-status mt-2 text-xs text-gray-500"></p>
   </div>
-  <div id="squad-history-panel" class="p-5" hx-get="{% url 'rivals:teams.lineup' team.id %}"
+  <div id="squad-history-panel" class="p-5" hx-get="{% url 'rivals:teams.lineup' team.id %}{% if squad_selection.season and squad_selection.gameweek %}?season={{ squad_selection.season|urlencode }}&amp;gameweek={{ squad_selection.gameweek }}{% endif %}"
        hx-trigger="load" hx-swap="innerHTML" hx-request='{"timeout":18000}'
        hx-sync="closest [data-remote-panel]:replace">
     {% if squad %}{% include "partials/team_lineup.html" %}{% else %}{% include "partials/lineup_skeleton.html" %}{% endif %}

@@ -2,6 +2,7 @@
 {% load humanize math_filters %}
 <div class="rv-wrap rv-league league-page">
   {% include "partials/league_heading.html" %}
+  {% include "partials/league_champions.html" %}
   {% include "partials/league_position.html" with position=user_standing %}
 
   <section class="league-board" aria-label="League Standings & Projections">
