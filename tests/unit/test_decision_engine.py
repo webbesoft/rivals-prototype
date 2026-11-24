@@ -974,7 +974,7 @@ def test_preview_renders_squad_without_running_transfer_search(manager, api):
     ):
         response = client.get(reverse("rivals:decisions.preview"))
     html = response.content.decode()
-    assert "Fixtures and playing-time risks" in html
+    assert "Your gameweek outlook" in html
     assert "decision-results" in html and "?results=1" in html
     assert 'name="starters"' in html and 'name="captain"' in html
     assert 'name="owned_0"' not in html and 'name="bank"' not in html

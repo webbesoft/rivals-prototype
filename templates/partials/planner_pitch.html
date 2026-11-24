@@ -1,17 +1,27 @@
 <section class="app-panel planner-panel border border-gray-200 bg-white p-5 mb-6" aria-labelledby="planner-pitch-heading">
-  <h2 id="planner-pitch-heading" class="text-lg font-bold mb-3">Fixtures and playing-time risks</h2>
-  <p class="text-sm text-gray-600 mb-4">{% if report.lineup_mode == 'planned' %}Your saved XI and captain are used for GW{{ report.gameweek }}. Select players below to make changes.{% else %}This is an optimised XI, which can differ from your FPL selection. Use the pitch to make it your own.{% endif %} Later gameweeks remain optimised.</p>
-  {% include "partials/planned_lineup_form.html" %}
+  <div class="planner-section-heading"><h2 id="planner-pitch-heading">Your gameweek outlook</h2><span>Captaincy included · Holding your squad</span></div>
   {% if report.lineup_warning %}<p class="app-notice app-notice-warning" role="status">{{ report.lineup_warning }}</p>{% endif %}
   <div class="planner-week-switcher" role="group" aria-label="Choose a forecast gameweek">
     {% for week in planner_weeks %}
     <input class="planner-week-toggle" type="radio" name="planner-gameweek" id="planner-gw-{{ week.gameweek }}" {% if forloop.first %}checked{% endif %}>
     <label class="planner-week-label" for="planner-gw-{{ week.gameweek }}">GW{{ week.gameweek }}</label>
     <div class="planner-week-panel" role="group" aria-label="Gameweek {{ week.gameweek }} forecast" {% if forloop.first and lineup_form %}data-lineup-pitch-editor{% endif %}>
-      <div class="lineup-summary">
-        <div><p class="lineup-eyebrow">GW{{ week.gameweek }} · Hold / roll</p><h3 class="lineup-formation"><span class="planner-xi-label" data-lineup-title>{% if week.selection == 'planned' %}Your planned XI{% else %}Optimised XI{% endif %}</span> <span data-lineup-formation>{{ week.formation }}</span></h3></div>
-        <div class="planner-points"><p class="lineup-eyebrow">Predicted squad points</p><strong data-lineup-points>{{ week.points|floatformat:1 }}</strong><span data-lineup-points-note>including captaincy · if you hold</span></div>
+      <div class="planner-scorecard" role="group" aria-label="Gameweek {{ week.gameweek }} projected points comparison">
+        <div class="planner-score planner-score--yours">
+          <p>Your XI <span>GW{{ week.gameweek }}</span></p>
+          <strong data-lineup-points>{{ week.points|floatformat:1 }}</strong>
+          {% if week.benchmark %}<meter data-lineup-comparison min="0" max="{{ week.benchmark.points|floatformat:'1u' }}" value="{{ week.points|floatformat:'1u' }}" aria-label="Your projected points compared with Best XI"></meter>{% endif %}
+          <span data-lineup-points-note>Predicted points</span>
+        </div>
+        <div class="planner-score planner-score--benchmark">
+          <p>Best XI <span>No budget cap</span></p>
+          <strong>{% if week.benchmark %}{{ week.benchmark.points|floatformat:1 }}{% else %}—{% endif %}</strong>
+          {% if week.benchmark %}<meter min="0" max="{{ week.benchmark.points|floatformat:'1u' }}" value="{{ week.benchmark.points|floatformat:'1u' }}" aria-label="Best XI projected points"></meter>{% endif %}
+          <span>{% if week.benchmark %}<span data-lineup-comparison>{{ week.benchmark.gap|floatformat:1 }} pts above your XI</span>{% else %}Benchmark unavailable{% endif %}</span>
+        </div>
       </div>
+      <div class="lineup-summary planner-formation-heading"><h3 class="lineup-formation"><span class="planner-xi-label" data-lineup-title>{% if week.selection == 'planned' %}Your planned XI{% else %}Optimised XI{% endif %}</span> <span data-lineup-formation>{{ week.formation }}</span></h3>{% if forloop.first and lineup_form %}<span>Tap a player to edit</span>{% endif %}</div>
+      {% if forloop.first %}{% include "partials/planned_lineup_form.html" %}{% endif %}
       <div class="lineup-board">
         <div class="lineup-loading" aria-hidden="true"><span class="lineup-spinner"></span><span>Updating forecast…</span></div>
         <div class="lineup-pitch" role="group" aria-label="Forecast starting XI, formation {{ week.formation }}">
@@ -27,11 +37,16 @@
           <div class="lineup-row" data-lineup-bench>{% for player in week.bench %}{% if forloop.parentloop.first and lineup_form %}{% include "partials/planner_player.html" with on_bench=True editable=True %}{% else %}{% include "partials/planner_player.html" with on_bench=True %}{% endif %}{% endfor %}</div>
         </div>
       </div>
-      {% if forloop.first and lineup_form %}<div class="planner-editor-footer"><p><strong data-lineup-save-state>{% if report.lineup_mode == 'planned' %}Saved lineup{% else %}Optimised lineup{% endif %}</strong><span>Your changes apply to GW{{ report.gameweek }}. Later gameweeks remain optimised.</span></p><div><button type="button" data-lineup-undo hidden>Undo changes</button><button id="lineup-save" form="planned-lineup-form" class="app-primary-button" type="submit" data-lineup-save>Save lineup and recalculate</button></div></div>{% endif %}
+      {% if forloop.first and lineup_form %}<div class="planner-editor-footer"><p><strong data-lineup-save-state>{% if report.lineup_mode == 'planned' %}Saved lineup{% else %}Optimised lineup{% endif %}</strong></p><div><button type="button" data-lineup-undo hidden>Undo changes</button><button id="lineup-save" form="planned-lineup-form" class="app-primary-button" type="submit" data-lineup-save>Save lineup</button></div></div>{% endif %}
     </div>
     {% endfor %}
   </div>
-  <p class="lineup-note">H = home · A = away · Blank = no scheduled fixture. Double gameweeks show both opponents. C = captain · V = vice-captain. Points are individual estimates before captaincy; bench points are excluded from the XI forecast.</p>
+  <details class="planner-schedule-details planner-forecast-notes">
+    <summary>About these forecasts</summary>
+    <p>Your XI and Best XI use the same model for the selected gameweek, including a doubled captain score and excluding bench points and chips. Best XI follows legal formations and the three-per-club limit, with no budget cap. It is a ceiling to compare against, not a projected FPL average.</p>
+    <p>{% if report.lineup_mode == 'planned' %}Your saved XI and captain are used for GW{{ report.gameweek }}.{% else %}The optimised XI and captain can differ from your FPL selection.{% endif %} Lineup edits apply to GW{{ report.gameweek }}; later gameweeks remain optimised.</p>
+    <p>H = home · A = away · Blank = no scheduled fixture. Double gameweeks show both opponents. C = captain · V = vice-captain. Player points on the pitch are before captaincy.</p>
+  </details>
   <details class="planner-schedule-details">
     <summary>Full fixture schedule and player news</summary>
     <div class="planner-schedule-grid">

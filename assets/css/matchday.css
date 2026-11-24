@@ -755,7 +755,6 @@
 .planner-lineup-mode { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; font-size: 12px; font-weight: 700; }
 .planner-selection-status { margin-top: 14px; font-size: 13px; line-height: 1.6; font-weight: 650; }
 .planner-selection-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-.planner-lineup-editor:has([data-lineup-actions]:not([hidden])) { position: sticky; top: 76px; z-index: 4; box-shadow: 0 8px 24px #183f3026; }
 .planner-selection-actions button, .planner-editor-footer [data-lineup-undo] { min-height: 44px; padding: 8px 12px; border: 1px solid #99a990; border-radius: 5px; background: #fffef8; color: #17372e; font-size: 12px; font-weight: 750; cursor: pointer; }
 .planner-lineup-error { margin-top: 16px; padding: 16px; border: 2px solid #b52b24; border-left-width: 6px; border-radius: 6px; background: #fff0ed; color: #8a1b15; font-size: 14px; line-height: 1.6; }
 .matchday-app .app-content .planner-lineup-error, .matchday-app .app-content .planner-lineup-error * { color: #8a1b15; }

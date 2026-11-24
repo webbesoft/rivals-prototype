@@ -4,6 +4,15 @@
 def planner_pitch_weeks(report):
     weeks = []
     for lineup in report["baseline"]["lineups"]:
+        points = round(lineup["points"], 1)
+        benchmark = report.get("benchmarks", {}).get(lineup["gameweek"])
+        comparison = None
+        if benchmark and benchmark["points"] > 0:
+            benchmark_points = round(benchmark["points"], 1)
+            comparison = {
+                "points": benchmark_points,
+                "gap": round(max(0, benchmark_points - points), 1),
+            }
         players = []
         for player in report["players"]:
             fixture = next(
@@ -38,7 +47,8 @@ def planner_pitch_weeks(report):
             {
                 "gameweek": lineup["gameweek"],
                 "selection": lineup.get("selection", "optimised"),
-                "points": round(lineup["points"], 1),
+                "points": points,
+                "benchmark": comparison,
                 "rows": rows,
                 "formation": "-".join(str(len(row["players"])) for row in rows[1:]),
                 "bench": sorted(

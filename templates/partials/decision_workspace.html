@@ -6,24 +6,30 @@
 <div class="mb-4"><p class="text-sm text-gray-600">GW{{ report.gameweek }} · Deadline {{ decision_deadline|date:"D j M H:i T" }}</p></div>
 {% include "partials/planner_pitch.html" %}
 {% endif %}
-{% include "partials/decision_summary.html" %}
-{% include "partials/chip_advice.html" %}
-{% if ai_enabled %}<div data-remote-panel><div id="gemini-briefing" class="app-panel ai-briefing-slot p-5 mb-6" hx-get="{% url 'rivals:decisions.ai' %}?fingerprint={{ report.fingerprint|urlencode }}" hx-trigger="load" hx-swap="outerHTML" hx-request='{"timeout":10000}'>{% include "partials/loading_skeleton.html" with kind="ai" label="Loading AI priorities" %}</div></div>{% endif %}
+{% include "partials/planner_recommendation.html" %}
+{% if report.risks or report.price_warnings %}
+<details class="app-panel planner-disclosure mb-6"><summary><span>Player alerts</span><span>{% for risk in report.risks %}{{ risk.name }}{% if not forloop.last %} · {% endif %}{% endfor %}{% if not report.risks %}Price changes to watch{% endif %}</span></summary><div class="planner-disclosure-body">
+  {% if report.risks %}<h2 class="font-bold mb-3">Availability watch</h2><ul class="space-y-2">{% for risk in report.risks %}<li><strong>{{ risk.name }}</strong>: {{ risk.news }}</li>{% endfor %}</ul>{% endif %}
+  {% if report.price_warnings %}<h2 class="font-bold mt-3 mb-3">Price watch</h2><ul class="space-y-2">{% for warning in report.price_warnings %}<li><strong>{{ warning.name }}</strong>: {{ warning.label }}. {{ warning.detail }}</li>{% endfor %}</ul>{% endif %}
+</div></details>
+{% endif %}
+{% if report.chip_advice %}<details class="app-panel planner-disclosure mb-6"><summary><span>Chip opportunities</span><span>{% if report.chip_advice.0.deadlines_remaining <= 4 %}Expire GW{{ report.chip_advice.0.expiry_gameweek }}{% else %}Next {{ report.horizon }} gameweeks{% endif %}</span></summary><div class="planner-disclosure-body">{% include "partials/chip_advice.html" %}</div></details>{% endif %}
+{% if ai_enabled %}<details class="app-panel planner-disclosure mb-6" data-remote-panel hx-get="{% url 'rivals:decisions.ai' %}?fingerprint={{ report.fingerprint|urlencode }}" hx-trigger="toggle once" hx-target="#gemini-briefing" hx-swap="outerHTML" hx-request='{"timeout":10000}'><summary><span>AI briefing</span><span>Your deadline priorities</span></summary><div id="gemini-briefing" class="planner-disclosure-body ai-briefing-slot">{% include "partials/loading_skeleton.html" with kind="ai" label="Loading AI priorities" %}</div></details>{% endif %}
 {% endif %}
 {% if results_only %}
-<details class="app-panel border border-gray-200 bg-white p-5 mb-6" data-remote-panel data-loading-message="Loading planner controls…" data-error-message="We couldn't load the controls. Use the link below to try again."
+<details class="app-panel planner-disclosure mb-6" data-remote-panel data-loading-message="Loading planner controls…" data-error-message="We couldn't load the controls. Use the link below to try again."
   hx-get="{% url 'rivals:decisions.workspace' %}?editor=1" hx-trigger="toggle once" hx-target="find [data-planner-editor]" hx-request='{"timeout":120000}'>
-  <summary class="cursor-pointer font-bold">Adjust estimates or compare your own transfer route</summary>
+  <summary><span>Build your own move</span><span>Budget, transfers &amp; strategy</span></summary>
   <p data-panel-status role="status" hidden class="my-4 text-sm"></p>
-  <div data-planner-editor class="mt-4"><a class="app-secondary-button" href="{% url 'rivals:decisions.workspace' %}?editor=1">Open planner controls</a></div>
+  <div data-planner-editor class="planner-disclosure-body"><a class="app-secondary-button" href="{% url 'rivals:decisions.workspace' %}?editor=1">Open planner controls</a></div>
 </details>
 {% else %}
 {% include "partials/decision_form.html" %}
 {% endif %}
 {% if report %}
-  {% if report.risks %}<div class="app-panel border border-gray-200 bg-white p-5 mb-6"><h2 class="text-lg font-bold mb-3">Availability watch</h2><ul class="space-y-2 text-sm">{% for risk in report.risks %}<li><strong>{{ risk.name }}</strong>: {{ risk.news }}</li>{% endfor %}</ul></div>{% endif %}
-  <div class="rv-plan-comparison app-panel border border-gray-200 bg-white p-5 mb-6">
-    <h2 class="text-lg font-bold mb-4">Transfer versus hold</h2>
+  <details class="rv-plan-comparison app-panel planner-disclosure mb-6">
+    <summary><span>Transfer versus hold</span><span>{{ report.options|length }} routes to compare</span></summary>
+    <div class="planner-disclosure-body">
     <p class="text-sm text-gray-600 mb-4">{% if report.strategy == 'protect' %}Protecting a lead favours gains with less uncertainty.{% else %}Chasing a gap gives more weight to upside, while still requiring a positive estimated gain after transfer costs.{% endif %} These are possible outcomes, not guarantees.</p>
     <div class="rv-plan-routes">
     {% for option in report.options %}
@@ -34,11 +40,13 @@
     <h3 class="font-bold mt-6 mb-3">A different route for immediate points</h3>
     {% include "partials/decision_route.html" with option=report.short_term %}
     {% endif %}
-  </div>
+    </div>
+  </details>
   {% if report.alternatives %}{% include "partials/decision_alternatives.html" %}{% endif %}
   {% if report.rival %}
-  <div class="app-panel bg-white border border-gray-200 p-5 mb-6">
-    <h2 class="text-lg font-bold mb-3">{{ report.rival.league }} · Rival scenarios</h2>
+  <details class="app-panel planner-disclosure mb-6">
+    <summary><span>Rival scenarios</span><span>{{ report.rival.rival|default:report.rival.league }}</span></summary><div class="planner-disclosure-body">
+    <h2 class="font-bold mb-3">{{ report.rival.league }}</h2>
     {% if report.rival.unavailable %}<p class="text-sm">The latest rival lineup or standings aren't available yet. Choose a subscribed league and check again after its updates arrive.</p>
     {% else %}
       <p class="text-sm mb-3">Target {{ report.rival.rival }} · {{ report.rival.shared }} shared players · {% if report.rival.updated_at %}Standings updated {{ report.rival.updated_at|timesince }} ago.{% endif %}</p>
@@ -46,7 +54,7 @@
       <p class="text-xs text-gray-600 mb-4">Your rival's next transfers and captain choice are unknown. These scenarios use the last published squad, not inside information.</p>
       <ul class="text-sm space-y-1">{% for player in report.rival.different_players %}<li>{{ player.side }}: {{ player.name }} · {{ player.points }} projected player points across the window</li>{% endfor %}</ul>
     {% endif %}
-  </div>
+  </div></details>
   {% endif %}
   <details class="text-sm text-gray-600 mb-6"><summary class="cursor-pointer">How to read these estimates</summary><p class="mt-3">{{ report.model.method }}</p><p class="mt-2">A roll preserves flexibility for information that arrives later; its future benefit isn't included as invented extra points. Final prices in FPL can change affordability. Ownership alone isn't used to rate a transfer.</p></details>
 {% endif %}

@@ -786,6 +786,79 @@
   margin-bottom: 0;
   max-width: 550px;
 }
+/* Planner: the score and next decision lead; supporting evidence opens on demand. */
+.planner-section-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 20px; margin-bottom: 20px; }
+.planner-section-heading h2 { font-size: 20px; font-weight: 700; letter-spacing: -.03em; }
+.planner-section-heading > span { font-size: 14px; color: var(--soft-ink); }
+.planner-week-label { font-size: 14px; }
+.planner-scorecard { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 760px; margin: 8px auto 24px; border: 1px solid var(--rule); }
+.planner-score { min-width: 0; padding: 22px 26px; }
+.planner-score > p { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; font-size: 16px; font-weight: 700; }
+.planner-score > p > span { font-size: 13px; font-weight: 400; }
+.planner-score > strong { display: block; margin-block: 6px 10px; font-size: clamp(40px, 5vw, 60px); line-height: 1.1; font-weight: 600; letter-spacing: -.05em; font-variant-numeric: tabular-nums; }
+.planner-score > span { display: block; min-height: 22px; margin-top: 10px; font-size: 14px; line-height: 1.5; }
+.planner-score--yours { background: var(--ink); }
+.matchday-app .app-content .planner-score--yours, .matchday-app .app-content .planner-score--yours :is(p, strong, span) { color: #fafbf4; }
+.planner-score--benchmark { background: #edf0e4; }
+.planner-score meter { display: block; width: 100%; height: 8px; margin-top: 12px; border: 0; border-radius: 3px; background: #ccd2c3; appearance: none; }
+.planner-score meter::-webkit-meter-bar { height: 8px; border: 0; border-radius: 3px; background: #ccd2c3; }
+.planner-score meter::-webkit-meter-optimum-value { border-radius: 3px; background: #6b8252; }
+.planner-score meter::-moz-meter-bar { background: #6b8252; }
+.planner-score--yours meter { background: #496456; }
+.planner-score--yours meter::-webkit-meter-bar { background: #496456; }
+.planner-score--yours meter::-webkit-meter-optimum-value { background: #f0d66a; }
+.planner-score--yours meter::-moz-meter-bar { background: #f0d66a; }
+.planner-formation-heading { gap: 12px; }
+.planner-formation-heading > span { color: var(--soft-ink); font-size: 14px; }
+.planner-lineup-editor { padding: 0 0 16px; border: 0; background: transparent; }
+.planner-editor-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.planner-lineup-mode { font-size: 14px; }
+.planner-lineup-count { font-size: 13px; }
+.planner-selection-status:empty { display: none; }
+.planner-forecast-notes { font-size: 14px; line-height: 1.7; }
+.planner-forecast-notes > p { max-width: 75ch; margin-top: 12px; }
+.planner-next { padding: 24px; }
+.planner-next-heading { display: flex; align-items: start; justify-content: space-between; gap: 16px; }
+.planner-next-heading .rv-eyebrow { font-size: 13px; }
+.planner-next-heading h2 { display: grid; gap: 6px; margin-top: 10px; font-size: clamp(22px, 3vw, 30px); font-weight: 600; line-height: 1.4; letter-spacing: -.04em; overflow-wrap: anywhere; }
+.planner-hit { flex-shrink: 0; padding: 6px 12px; border: 1px solid var(--rule); border-radius: 20px; font-size: 14px; }
+.planner-next-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; margin-top: 24px; padding-block: 20px; border-block: 1px solid var(--rule); }
+.planner-next-metrics dt { color: var(--soft-ink); font-size: 14px; }
+.planner-next-metrics dd { margin-top: 8px; font-size: 36px; line-height: 1.2; letter-spacing: -.04em; font-weight: 600; font-variant-numeric: tabular-nums; }
+.planner-next-metrics small { font-size: 14px; font-weight: 400; letter-spacing: 0; }
+.planner-next-metrics .planner-gain-positive { color: #356b43; }
+.planner-next-metrics .planner-next-captain dd { display: flex; align-items: center; gap: 10px; font-size: 22px; overflow-wrap: anywhere; }
+.planner-captain-icon { display: inline-grid; flex: 0 0 28px; place-items: center; height: 28px; border: 1px solid var(--ink); border-radius: 50%; font-size: 14px; }
+.planner-next-note { margin-top: 16px; font-size: 16px; }
+.planner-next-footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 20px; }
+.planner-next-footer > span { font-size: 14px; color: var(--soft-ink); }
+.planner-disclosure > summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 20px 24px; cursor: pointer; list-style: none; font-size: 16px; font-weight: 600; }
+.planner-disclosure > summary::-webkit-details-marker { display: none; }
+.planner-disclosure > summary > span:first-child { margin-right: auto; }
+.planner-disclosure > summary > span + span { color: var(--soft-ink); font-size: 14px; font-weight: 400; text-align: right; }
+.planner-disclosure > summary::after { content: "+"; font-size: 22px; line-height: 1; font-weight: 400; }
+.planner-disclosure[open] > summary::after { content: "−"; }
+.planner-disclosure > summary:focus-visible { outline: 3px solid #a4762d; outline-offset: 3px; }
+.planner-disclosure-body { padding: 0 24px 24px; font-size: 16px; line-height: 1.6; }
+.planner-disclosure-body > .app-panel { margin-bottom: 0; }
+.planner-recommendation-details { margin-top: 20px; border-top: 1px solid var(--rule); }
+.planner-recommendation-details > summary { padding: 18px 0 0; }
+.planner-recommendation-details > .planner-disclosure-body { padding: 20px 0 0; }
+@media (max-width: 640px) {
+  .planner-score { padding: 18px 14px; }
+  .planner-score > p { display: grid; }
+  .planner-score > span { font-size: 13px; }
+  .planner-next { padding: 18px; }
+  .planner-next-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+  .planner-next-captain { grid-column: 1 / -1; }
+  .planner-next-metrics .planner-next-captain dd { font-size: 20px; }
+  .planner-hit { padding-inline: 8px; font-size: 13px; }
+  .planner-disclosure > summary { flex-wrap: wrap; padding: 16px; }
+  .planner-disclosure > summary > span + span { order: 1; flex-basis: 100%; text-align: left; }
+  .planner-disclosure-body { padding: 0 16px 16px; }
+  .planner-recommendation-details > summary { padding-inline: 0; }
+  .planner-section-heading > span { font-size: 13px; }
+}
 @media (max-width: 1050px) {
   .app-desktop-nav {
     display: none;

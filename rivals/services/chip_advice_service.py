@@ -1,7 +1,5 @@
 """Chip opportunities reconciled with the squad ledger."""
 
-from rivals.services.xi_benchmark import best_projected_xi
-
 CHIP_NAMES = {
     "Triple Captain": "3xc",
     "Bench Boost": "bboost",
@@ -136,17 +134,7 @@ def chip_advice(engine, baseline):
     )
     comparisons = []
     for week in weeks:
-        benchmark = best_projected_xi(
-            [
-                {
-                    **player,
-                    "expected_points": engine.projections[pid].get(week["week"], 0),
-                }
-                for pid, player in engine.players.items()
-                if not player.get("removed", False)
-            ],
-            captaincy=True,
-        )
+        benchmark = engine.best_xi(week["week"])
         if benchmark is None:
             continue
         # Compare both sides with captaincy using the same forecast model.
@@ -201,7 +189,7 @@ def chip_advice(engine, baseline):
                     else "Save your second-half Free Hit for blank gameweeks: require at least three blank-fixture XI slots, recovery to at most one the following week, and a projected gap of at least 15 points. "
                 )
                 + "The benchmark follows formation and club limits but has no budget cap; confirm an affordable 15-player squad and compare free transfers before committing. "
-                "Both teams use the planner's projections; the landing page uses FPL expected points."
+                "Both teams use the planner's shared player-points model."
             ),
         }
     )

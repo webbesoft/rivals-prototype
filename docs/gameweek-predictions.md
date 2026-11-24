@@ -1,6 +1,6 @@
 # How gameweek predicted scores work
 
-Updated: 22 November 2026. Planner model: `decision-v10-planned-lineup`; shared player model: `heuristic-v1`.
+Updated: 24 November 2026. Planner model: `decision-v10-planned-lineup`; shared player model: `heuristic-v1`.
 
 For saved experiments, the component challenger, backtest commands and rollout criteria,
 see [Decision engine and forecast evaluation](decision-engine.md). This file is the
@@ -25,7 +25,7 @@ There are several distinct calculation paths in the app:
 | --- | --- | --- |
 | Squad / transfer planner and deadline digest | Our formula below | Your squad, with legal weekly XI and captain; transfer routes compare against holding |
 | Public landing-page Best XI | Shared planner formula below | Whole player pool, legal XI, maximum three per club, unrestricted budget; captain doubled |
-| Chip advice Best XI benchmark | Planner projections | Whole eligible pool through the benchmark selector; unrestricted budget |
+| Planner score comparison / chip advice Best XI benchmark | Planner projections | Whole eligible pool through the benchmark selector; unrestricted budget; captain doubled |
 | Team analysis endpoints | Shared planner formula below | Actual upcoming gameweeks; single-week figures use that week rather than a five-week average |
 | Season finishing points / rank | Team scoring pace | Separate extrapolation; not a sum of player fixture predictions |
 
@@ -157,6 +157,15 @@ lineup totals to two, so displayed rows may not add up exactly.
 A saved planned XI overrides optimisation for the first forecast gameweek.
 Transfers inherit the outgoing player's starting/bench place and armband. Later
 weeks still optimise independently. Rival forecasts use their own optimised XI.
+
+The planner shows a Best XI score and the points gap beside your forecast for each
+gameweek. Both include captaincy and exclude bench points and chips. Best XI uses
+the whole eligible player pool with legal formations and a maximum of three per
+club, but no budget cap. It provides a projected ceiling, not an FPL average or an
+affordable transfer plan. The planner preview and chip advice share this benchmark;
+cached results are keyed by gameweek, player identities, selection constraints and
+unrounded projections so changed forecasts cannot reuse an old score. Draft lineup
+edits hide the saved score comparison until the lineup is saved and recalculated.
 
 “Optimised” means best under this formula and these constraints. It is not a
 claim to have identified the XI that will score most in the actual matches.

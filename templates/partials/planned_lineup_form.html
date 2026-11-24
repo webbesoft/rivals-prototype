@@ -1,10 +1,9 @@
 {% if lineup_form %}
 <div class="planner-lineup-editor">
-  <div class="planner-editor-heading"><div><p class="lineup-eyebrow">Your next gameweek</p><h3>Edit XI and captain · GW{{ report.gameweek }}</h3></div><span class="planner-lineup-count" data-lineup-count>11 / 11 starters</span></div>
   <form id="planned-lineup-form" method="POST" action="{% url 'rivals:decisions.lineup' %}" hx-post="{% url 'rivals:decisions.lineup' %}" hx-target="#decision-workspace" hx-request='{"timeout":120000}' hx-sync="#decision-workspace:replace" hx-disabled-elt="#lineup-save" data-remote-panel data-loading-message="Saving your lineup and recalculating…" data-error-message="We couldn't save your lineup. Your changes haven't been saved. Please try again.">
     {% csrf_token %}{{ lineup_form.season }}{{ lineup_form.gameweek }}
     <div data-lineup-inputs>{{ lineup_form.starters.as_hidden }}{{ lineup_form.captain.as_hidden }}{{ lineup_form.vice.as_hidden }}</div>
-    <label class="planner-lineup-mode">{{ lineup_form.mode.label }} {{ lineup_form.mode }}</label>
+    <div class="planner-editor-controls"><label class="planner-lineup-mode">{{ lineup_form.mode.label }} {{ lineup_form.mode }}</label><span class="planner-lineup-count" data-lineup-count>11 / 11 starters</span></div>
     <p data-panel-status role="status" hidden></p>
     <div class="planner-lineup-error" data-lineup-error role="alert" tabindex="-1" {% if not lineup_form.errors and not lineup_error %}hidden{% endif %}>
       <strong><span aria-hidden="true">!</span> Lineup not saved</strong>
@@ -12,7 +11,7 @@
       <p>Your saved lineup is unchanged. The pitch below shows that lineup.</p>
     </div>
   </form>
-  <div class="planner-selection-status" data-lineup-feedback role="status" aria-live="polite">Select a player on the pitch, then a highlighted substitute to swap them.</div>
+  <div class="planner-selection-status" data-lineup-feedback role="status" aria-live="polite"></div>
   <div class="planner-selection-actions" data-lineup-actions hidden>
     <button type="button" data-lineup-captain>Make captain</button><button type="button" data-lineup-vice>Make vice-captain</button><button type="button" data-lineup-cancel>Cancel selection</button>
   </div>

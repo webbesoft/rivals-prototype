@@ -234,7 +234,7 @@ def test_preview_places_pitch_before_transfer_comparison(
     assert html.index('id="planner-pitch-heading"') < html.index(
         'id="decision-results"'
     )
-    assert "Edit XI and captain" in html
+    assert "Tap a player to edit" in html
     assert "can differ from your FPL selection" in html
 
 

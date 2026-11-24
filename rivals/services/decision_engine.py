@@ -21,6 +21,7 @@ from rivals.services.price_change_service import (
     price_warning,
     transfer_timing,
 )
+from rivals.services.xi_benchmark import best_projected_xi
 
 POSITIONS = {1: "GKP", 2: "DEF", 3: "MID", 4: "FWD"}
 SQUAD_SHAPE = {1: 2, 2: 5, 3: 5, 4: 3}
@@ -291,6 +292,26 @@ class DecisionEngine:
                 )
             schedule.append({"gameweek": week, "matches": matches})
         return schedule
+
+    def best_xi(self, week):
+        """Share a captain-inclusive ceiling across managers and planner requests."""
+        players = [
+            {
+                "id": pid,
+                "team": player["team"],
+                "element_type": player["element_type"],
+                "expected_points": self.projections[pid][week],
+            }
+            for pid, player in sorted(self.players.items())
+            if not player.get("removed", False)
+        ]
+        cache_key = f"planner_best_xi_v1_{digest([week, players])}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return cached or None
+        benchmark = best_projected_xi(players, captaincy=True)
+        cache.set(cache_key, benchmark or False, 900)
+        return benchmark
 
     def evaluate(self, ids, *, lineup=None):
         # Never apply the manager's XI to a rival, even if they share all 15 players.
@@ -871,6 +892,7 @@ class DecisionEngine:
             "gameweek": self.weeks[0],
             "deadline": self.context["next_deadline"].isoformat(),
             "baseline": self.evaluate(self.ids),
+            "benchmarks": {week: self.best_xi(week) for week in self.weeks},
             "players": self.player_forecasts(),
             "lineup_mode": "planned" if self.planned_lineup else "optimised",
             "lineup_warning": self.lineup_warning,
@@ -910,7 +932,7 @@ class DecisionEngine:
                 manual,
             ]
         )
-        cache_key = f"decision_{self.user.pk}_{self.team.pk}_{fingerprint}_pitch1"
+        cache_key = f"decision_{self.user.pk}_{self.team.pk}_{fingerprint}_pitch2"
         cached = cache.get(cache_key)
         if cached:
             return cached
@@ -1053,6 +1075,7 @@ class DecisionEngine:
             "created_at": timezone.now().isoformat(),
             "strategy": data["strategy"],
             "baseline": hold,
+            "benchmarks": {week: self.best_xi(week) for week in self.weeks},
             "best": best,
             "short_term": short_term,
             "short_term_is_separate": all(

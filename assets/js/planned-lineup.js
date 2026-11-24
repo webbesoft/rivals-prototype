@@ -45,6 +45,7 @@
     const pointsNote = pitch.querySelector('[data-lineup-points-note]');
     const originalPoints = points.textContent;
     const originalNote = pointsNote.textContent;
+    const comparisons = [...pitch.querySelectorAll('[data-lineup-comparison]')];
     const title = pitch.querySelector('[data-lineup-title]');
     const originalTitle = title.textContent;
     const saveState = section.querySelector('[data-lineup-save-state]');
@@ -136,12 +137,17 @@
       syncInputs();
     }
 
+    function invalidateForecast() {
+      points.textContent = '—';
+      pointsNote.textContent = 'Save to recalculate your draft XI';
+      comparisons.forEach(node => { node.hidden = true; });
+      title.textContent = 'Your draft XI';
+    }
+
     function markChanged(message) {
       dirty = true;
       form.elements.mode.value = 'planned';
-      points.textContent = '—';
-      pointsNote.textContent = 'Save to recalculate your draft XI';
-      title.textContent = 'Your draft XI';
+      invalidateForecast();
       saveState.textContent = 'Unsaved changes';
       saveState.classList.add('is-unsaved');
       error.hidden = true;
@@ -192,6 +198,7 @@
         captain = original.captain; vice = original.vice; selected = null; dirty = false;
         form.elements.mode.value = original.mode;
         points.textContent = originalPoints; pointsNote.textContent = originalNote; title.textContent = originalTitle;
+        comparisons.forEach(node => { node.hidden = false; });
         saveState.textContent = originalSaveState; saveState.classList.remove('is-unsaved');
         error.hidden = true; feedback.textContent = 'Changes undone. Your original lineup is restored.'; render();
       }
@@ -210,6 +217,7 @@
     form.addEventListener('change', () => {
       if (pending) return;
       dirty = true; saveState.textContent = 'Unsaved changes'; saveState.classList.add('is-unsaved');
+      invalidateForecast();
       feedback.textContent = form.elements.mode.value === 'optimised' ? 'Save to restore the best projected XI and captain.' : 'Save to compare transfers against the XI shown on the pitch.';
       render();
     });

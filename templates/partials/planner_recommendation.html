@@ -1,0 +1,15 @@
+<section class="app-panel planner-next mb-6" aria-labelledby="planner-next-heading">
+  <header class="planner-next-heading">
+    <div><p class="rv-eyebrow">Suggested move · {{ report.horizon }} GW outlook</p><h2 id="planner-next-heading">{% if report.best.moves %}{% for move in report.best.moves %}<span>{{ move.out_name }} <span aria-label="to">→</span> {{ move.in_name }}</span>{% endfor %}{% else %}Hold your squad{% endif %}</h2></div>
+    <span class="planner-hit">{% if report.best.hits %}{{ report.best.hits }}-point hit{% else %}No hit{% endif %}</span>
+  </header>
+  <dl class="planner-next-metrics">
+    <div><dt>GW{{ report.gameweek }} gain</dt><dd class="{% if report.best.immediate.net_gain > 0 %}planner-gain-positive{% endif %}">{% if report.best.immediate.net_gain > 0 %}+{% endif %}{{ report.best.immediate.net_gain|floatformat:1 }} <small>pts</small></dd></div>
+    {% if report.horizon > 1 %}<div><dt>{{ report.horizon }} GW gain</dt><dd class="{% if report.best.net_gain > 0 %}planner-gain-positive{% endif %}">{% if report.best.net_gain > 0 %}+{% endif %}{{ report.best.net_gain|floatformat:1 }} <small>pts</small></dd></div>{% endif %}
+    <div class="planner-next-captain"><dt>Captain · if holding</dt><dd><span class="planner-captain-icon" aria-hidden="true">C</span>{{ report.captain|default:"Undecided" }}</dd></div>
+  </dl>
+  {% if report.best.moves and report.best.immediate.net_gain <= 0 %}<p class="planner-next-note">A longer-term move. Holding projects {% if report.best.immediate.net_gain < 0 %}more{% else %}the same{% endif %} points this week.</p>{% endif %}
+  {% include "partials/price_timing.html" with option=report.best %}
+  <div class="planner-next-footer"><span>Gain vs hold · After hits</span><form method="POST" action="{% url 'rivals:decisions.save' %}">{% csrf_token %}<input type="hidden" name="choice" value="{{ report.best.save_token }}"><button class="app-primary-button" type="submit">Save plan</button></form></div>
+  <details class="planner-disclosure planner-recommendation-details"><summary><span>Why this move?</span><span>Fixtures &amp; forecast details</span></summary><div class="planner-disclosure-body">{% include "partials/decision_summary.html" %}</div></details>
+</section>
