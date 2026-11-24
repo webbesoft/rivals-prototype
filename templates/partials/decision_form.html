@@ -21,8 +21,10 @@
     </div>
   </details>
   </details>
-  <details class="mb-4"><summary class="cursor-pointer font-bold">Try your own transfer route</summary>
-    <p class="my-3 text-sm text-gray-600">Compare up to two moves at this deadline. Leave both moves empty for automatic suggestions. This comparison assumes no chip.</p>
+  <details class="mb-4" data-transfer-route data-start-gameweek="{{ form.transfer_start_week }}"><summary class="cursor-pointer font-bold">Try your own transfer route</summary>
+    <p class="my-3 text-sm text-gray-600">Compare up to two moves at this deadline. Choose a player to sell to see buys in the same position. Leave both moves empty for automatic suggestions. This comparison assumes no chip.</p>
+    <p class="my-3 text-sm text-gray-600">Buy options show the club and expected player points difference versus Sell over <span data-transfer-window>GW{{ form.transfer_start_week }}{% if form.transfer_end_week != form.transfer_start_week %}–{{ form.transfer_end_week }}{% endif %}</span>, before captaincy and transfer hits.</p>
+    {{ form.transfer_players|json_script:"transfer-route-players" }}
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4"><label>{{ form.out_1.label }} {{ form.out_1 }}</label><label>{{ form.in_1.label }} {{ form.in_1 }}</label><label>{{ form.out_2.label }} {{ form.out_2 }}</label><label>{{ form.in_2.label }} {{ form.in_2 }}</label></div>
   </details>
   <button class="app-primary-button" type="submit">Compare options</button>

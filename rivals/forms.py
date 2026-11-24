@@ -124,6 +124,7 @@ class DecisionInputForm(PlanningInputForm):
         from decimal import Decimal
 
         from rivals.models import MiniLeague, Team
+        from rivals.services.active_player_forecast import build_player_forecast
 
         super().__init__(*args, **kwargs)
         self.engine = engine
@@ -239,30 +240,81 @@ class DecisionInputForm(PlanningInputForm):
                 if str(self.data.get(f"owned_{index}", "")).isdigit()
                 and int(self.data[f"owned_{index}"]) in engine.players
             ]
+        selected_horizon = str(self["horizon"].value())
+        horizon = (
+            int(selected_horizon)
+            if selected_horizon in {"3", "4", "5", "6"}
+            else data["horizon"]
+        )
+        self.transfer_start_week = engine.context["decision_gameweek"]
+        self.transfer_end_week = min(38, self.transfer_start_week + horizon - 1)
+        weeks = list(
+            range(self.transfer_start_week, min(39, self.transfer_start_week + 6))
+        )
+        forecasts = build_player_forecast(
+            engine.players.values(),
+            engine.fixtures,
+            engine.context["scoring_gameweek"],
+            teams=engine.bootstrap.get("teams", []),
+            season=engine.context["season"],
+        ).project(weeks)
+        self.transfer_players = sorted(
+            [
+                {
+                    "id": pid,
+                    "name": engine.name(pid),
+                    "position": player["element_type"],
+                    "club": engine.club_names.get(player.get("team")) or "—",
+                    "points": [forecasts[pid][week] for week in weeks],
+                }
+                for pid, player in engine.players.items()
+            ],
+            key=lambda player: player["name"],
+        )
+        players_by_id = {player["id"]: player for player in self.transfer_players}
         for index in (1, 2):
-            self.fields[f"out_{index}"] = forms.TypedChoiceField(
-                label=f"Move {index}: sell",
-                required=False,
-                choices=[("", "No move")]
-                + [(pid, engine.name(pid)) for pid in outgoing_ids],
-                coerce=int,
-                empty_value=None,
-            )
-            self.fields[f"in_{index}"] = forms.TypedChoiceField(
-                label="Buy",
-                required=False,
-                choices=[("", "No move")]
-                + sorted(
-                    [(pid, engine.name(pid)) for pid in engine.players],
-                    key=lambda item: item[1],
-                ),
-                coerce=int,
-                empty_value=None,
-            )
             if len(data["manual"]) >= index:
                 self.initial[f"out_{index}"], self.initial[f"in_{index}"] = data[
                     "manual"
                 ][index - 1]
+            self.fields[f"out_{index}"] = forms.TypedChoiceField(
+                label=f"Move {index}: sell",
+                required=False,
+                choices=[("", "No move")]
+                + [
+                    (
+                        pid,
+                        f"{players_by_id[pid]['name']} · {players_by_id[pid]['club']}",
+                    )
+                    for pid in outgoing_ids
+                ],
+                coerce=int,
+                empty_value=None,
+            )
+            selected = str(self[f"out_{index}"].value() or "")
+            outgoing = players_by_id.get(int(selected)) if selected.isdigit() else None
+            position = outgoing["position"] if outgoing else None
+            outgoing_points = sum(outgoing["points"][:horizon]) if outgoing else 0
+            choices = [("", "No move")]
+            for player in self.transfer_players:
+                if player["position"] != position:
+                    continue
+                difference = round(sum(player["points"][:horizon]) - outgoing_points, 1)
+                if difference == 0:
+                    difference = 0.0
+                choices.append(
+                    (
+                        player["id"],
+                        f"{player['name']} · {player['club']} · {difference:+.1f} xPts",
+                    )
+                )
+            self.fields[f"in_{index}"] = forms.TypedChoiceField(
+                label="Buy",
+                required=False,
+                choices=choices,
+                coerce=int,
+                empty_value=None,
+            )
         for field in self.fields.values():
             if not isinstance(field.widget, (forms.HiddenInput, forms.CheckboxInput)):
                 field.widget.attrs.setdefault(
