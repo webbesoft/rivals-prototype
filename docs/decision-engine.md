@@ -1,10 +1,20 @@
 # Decision engine and forecast evaluation
 
-Updated 22 November 2026. The app continues to use `heuristic-v1` player forecasts
+Updated 24 November 2026. The app continues to use `heuristic-v1` player forecasts
 inside planner `decision-v10-planned-lineup`. The default formula is documented in
-[How gameweek predicted scores work](gameweek-predictions.md). The component challenger runs as `decision-v11` in shadow mode.
-The offline fitted variant is `decision-v11-ridge-standardized-v1`. Neither replaces
-the default. Ridge is not included in live shadow capture.
+[How gameweek predicted scores work](gameweek-predictions.md). The component
+revision runs as `decision-v12-calibrated` in shadow mode, alongside original
+`decision-v11` and a fixture-only control. The offline ridge variant remains
+`decision-v11-ridge-standardized-v1`; it is not included in live shadow capture.
+
+The [24 November component validation](component-validation-results.md) adds a
+fixed-model evaluation on 35 usable GWs of 2025/26 and isolates team strengths,
+xG/xA, recent rates, minutes and missing histories. The full challenger reduces
+common-candidate RMSE by 9.2%, but the historical strength proxy worsens errors,
+attacker calibration needs work and higher realised XI returns remain unproven.
+The [fixture calibration and history follow-up](component-calibration-results.md)
+fits changes on 2022/23–2023/24 and starts a separate v4 prospective experiment.
+The planner default and numerical promotion thresholds are unchanged.
 
 ## One calculation, several selection problems
 
@@ -32,14 +42,16 @@ The independent `forecasts` refresh job computes an experiment from the bootstra
 and fixture pair published by the context worker. Its preparation and publication
 failures have their own retry/error state; they cannot roll back core snapshots.
 It stores one `GameweekForecast` per season,
-gameweek and experiment version (`forecast-experiment-v3`), independent of whether
+gameweek and experiment version (`forecast-experiment-v4`), independent of whether
 any manager saves a transfer plan.
 
 The record contains the complete raw bootstrap snapshot (including events,
 availability and `ep_next`), fixtures, teams, recent histories, source capture time,
 actual deadline, model-version identities, predictions and exact selected XI/captain
-for each model. `decision-v11` is explicitly separate from the default planner's
-`decision-v10-planned-lineup` identity; it cannot alter the manager's active plan. It also retains the component breakdown, minutes-source
+for each model. Shadow player-model identities are separate from the default
+planner's `decision-v10-planned-lineup` identity; they cannot alter the manager's
+active plan. The record retains per-model component breakdowns, the full fitted
+v12 artifact, minutes-source
 fallback and variance proxy. Each capture also freezes per-player usable-history
 flags, full-pool/top-40/shared-candidate fallback coverage, explicit model parameters,
 a model source/config fingerprint, and the registered promotion-policy hash.
@@ -89,8 +101,9 @@ component score. Across later weeks, recent minutes regress toward season usage
 with weight 0.85^offset. A double has a provisional 0.90 rotation factor per fixture.
 These are explicit experimental assumptions, not fitted rotation probabilities.
 
-A bounded `forecast_histories` worker refreshes up to 20 oldest/missing player
-summaries every two minutes. Histories become refreshable after three hours and
+A bounded `forecast_histories` worker refreshes up to 20 player summaries every
+two minutes. It prioritises up to 15 current candidates while reserving five
+places for the rest of the oldest/missing pool. Histories become refreshable after three hours and
 expire after six. This avoids making hundreds of HTTP calls from a page or blocking
 the context refresh on every player. The initial population takes multiple worker
 cycles. Bootstrap and context seasons must match before player IDs are requested.
@@ -209,6 +222,11 @@ player estimates, rather than comparing lineups from unequal player pools.
 
 ## Running it
 
+For controlled component ablations and missing-history stress tests, use
+`validate_components`; its [protocol and results](component-validation-results.md)
+include the command and same-candidate comparison rules. `backtest_forecasts`
+continues to handle the broader baseline and optional ridge evaluation below.
+
 Apply migration `0024`, then run the existing `fpl_worker`. No extra daemon is
 required. Normal context/decision jobs capture and score future experiments.
 
@@ -220,8 +238,11 @@ uv run python manage.py report_forecasts --season 2026/27 --summary
 uv run python manage.py report_forecasts --season 2026/27 --export /tmp/forecasts.json
 ```
 
-The report/export defaults to experiment v3. Use `--experiment-version forecast-experiment-v1`
-to inspect old records separately; versions are not merged into duplicate GW frames.
+The report/export defaults to experiment v4. Use `--experiment-version forecast-experiment-v3`
+or `forecast-experiment-v1` to inspect old records separately; versions are not
+merged into duplicate GW frames. `check_forecast_history` reports current usable
+candidate history coverage; see the [follow-up operations](component-calibration-results.md)
+for bounded warmup and capture commands.
 `--summary` scores the frozen forecasts, reports candidate calibration and paired
 bootstrap intervals, and shows progress toward at least ten completed **live** GWs.
 Its primary summary includes only records with the current live provenance, model
@@ -316,8 +337,10 @@ unavailable in this adapter. Weekly updates also stopped after 2024/25. See the
 
 ## Registered promotion policy
 
-[Policy v1](forecast-promotion-policy.json) is registered on 22 November 2026,
-before the new v3 live cohort. Its hash is frozen in each capture. These thresholds
+[Policy v1](forecast-promotion-policy.json) was registered on 22 November 2026 for
+v3. [Policy v2](forecast-promotion-v2.json), registered on 24 November, applies the
+same numerical thresholds to the separate v4/v12 cohort. The policy hash is frozen
+in each capture. These thresholds
 are prospective, not selected from the historical results. All checks are required
 for a manual promotion review; the app never activates a challenger automatically.
 

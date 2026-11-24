@@ -1,0 +1,50 @@
+{
+  "id": "promotion-v2-2026-11-24",
+  "registered_on": "2026-11-24",
+  "experiment_version": "forecast-experiment-v4",
+  "challenger": "decision-v12-calibrated",
+  "reference": "heuristic-v1",
+  "minimum_completed_live_gameweeks": 10,
+  "primary_top_k": 40,
+  "sensitivity_top_k": [
+    30,
+    50
+  ],
+  "bootstrap": {
+    "resampling_unit": "gameweek",
+    "samples": 5000,
+    "seed": 1729,
+    "interval": 0.95
+  },
+  "primary_pool": "union of both models' top 40 from shared pre-deadline coverage",
+  "primary_metrics": [
+    "rmse",
+    "poisson_deviance"
+  ],
+  "primary_mean_weekly_difference_upper_bound_exclusive": 0.0,
+  "primary_interval_upper_bound_exclusive": 0.0,
+  "require_lower_pooled_errors": true,
+  "minimum_player_gameweeks_per_position_or_fixture_group": 50,
+  "minimum_gameweeks_per_position_or_fixture_group": 10,
+  "calibration_slope_range_inclusive": [
+    0.8,
+    1.2
+  ],
+  "calibration_positions": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "calibration_fixture_bands": [
+    "easy",
+    "neutral",
+    "hard"
+  ],
+  "position_rmse_difference_interval_upper_bound_inclusive": 0.0,
+  "maximum_common_candidate_fallback_share": 0.1,
+  "xi_and_captain_sanity_mean_difference_minimum_exclusive": 0.0,
+  "xi_and_captain_interval_must_exclude_zero": false,
+  "require_single_model_and_policy_fingerprint": true,
+  "automatic_promotion": false
+}

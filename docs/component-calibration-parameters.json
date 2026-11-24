@@ -1,0 +1,36 @@
+{
+  "version": "decision-v12-calibrated",
+  "strength_power": 0.25,
+  "calibration": {
+    "3": {
+      "slope": 0.9936111889016371,
+      "offset": 0.34588710722416294
+    },
+    "4": {
+      "slope": 0.9798791589991126,
+      "offset": 0.614051265207709
+    }
+  },
+  "penalty": 100.0,
+  "training_samples": {
+    "3": 1540,
+    "4": 476
+  },
+  "training_seasons": [
+    "2022-23",
+    "2023-24"
+  ],
+  "fitting": "RMS-scaled residual ridge toward identity; no free points for non-appearances",
+  "protocol_id": "component-calibration-v1-2026-11-24",
+  "sources": [
+    {
+      "season": "2022-23",
+      "sha256": "b78a6d0456141f9033c32fc4122931baae780ac4a4938683451b1fce7a4fdd15"
+    },
+    {
+      "season": "2023-24",
+      "sha256": "e9c09c8856f1c86b4f920f46ddd5033af83409439dfda53be925df2a3e7c8a9e"
+    }
+  ],
+  "protocol_sha256": "a57b740b683a7fd162a9348e410a96a890de2fc3d601357ba349930b4ef9c5cb"
+}

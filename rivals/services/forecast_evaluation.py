@@ -334,19 +334,43 @@ def evaluate_models(
                     "total_actual": xi_delta + captain_delta,
                 }
 
-    if frame and "decision-v11" in predictions:
-        from .component_forecast import ComponentForecast
-
-        model = ComponentForecast(
-            players,
-            fixtures,
-            frame["scoring_gameweek"],
-            teams=frame.get("teams", []),
-            histories={int(k): v for k, v in frame.get("histories", {}).items()},
-            season=frame["season"],
+    for model_name in (
+        name
+        for name in (
+            "decision-v11",
+            "decision-v12-calibrated",
+            "decision-v12-fixture-only",
         )
+        if frame and name in predictions
+    ):
+        details = frame.get("challenger_details_by_model", {}).get(model_name)
+        if details is None and model_name == "decision-v11":
+            details = frame.get("challenger_details")
+        if details is None:
+            from .component_forecast import ComponentForecast
+            from .calibrated_component_forecast import (
+                CalibratedComponentForecast,
+                identity_parameters,
+            )
+
+            kwargs = dict(
+                teams=frame.get("teams", []),
+                histories={int(k): v for k, v in frame.get("histories", {}).items()},
+                season=frame["season"],
+            )
+            cls = ComponentForecast
+            if model_name != "decision-v11":
+                cls = CalibratedComponentForecast
+                parameters = frame.get("revised_parameters")
+                if model_name == "decision-v12-fixture-only":
+                    if parameters is None:
+                        raise ValueError(
+                            "Fixture control requires frozen calibration parameters"
+                        )
+                    parameters = identity_parameters(parameters["strength_power"])
+                kwargs["parameters"] = parameters
+            model = cls(players, fixtures, frame["scoring_gameweek"], **kwargs)
         labels = {int(k): v for k, v in frame.get("actual_clean_sheets", {}).items()}
-        details = frame.get("challenger_details")
         cs_predictions = {
             p["id"]: (
                 (
@@ -370,8 +394,8 @@ def evaluate_models(
                 )
                 for name, ids in partition.items()
             }
-        metrics["decision-v11"]["clean_sheet_calibration"] = clean
-        for name, group in metrics["decision-v11"]["history_strata"].items():
+        metrics[model_name]["clean_sheet_calibration"] = clean
+        for name, group in metrics[model_name]["history_strata"].items():
             ids = groups["history"][name]
             group["clean_sheet_calibration"] = {
                 kind: {

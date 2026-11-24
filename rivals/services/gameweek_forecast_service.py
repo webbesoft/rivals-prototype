@@ -1,6 +1,7 @@
 """Prospective experiments: capture before deadlines, score only final results."""
 
 import math
+from copy import deepcopy
 
 from django.db import transaction
 from django.utils import timezone
@@ -8,6 +9,12 @@ from django.utils.dateparse import parse_datetime
 
 from rivals.models import GameweekForecast
 from .component_forecast import ComponentForecast
+from .calibrated_component_forecast import (
+    CalibratedComponentForecast,
+    identity_parameters,
+    load_parameters,
+    shadow_fingerprint,
+)
 from .forecast_evaluation import evaluate_models, select_xi, top_projected
 from .gameweek_context_service import GameweekContextService
 from .player_forecast import PlayerForecast, number
@@ -15,7 +22,8 @@ from .forecast_parameters import COMPONENT_CONFIG, model_fingerprint
 from .forecast_promotion_policy import promotion_policy
 from .forecast_diagnostics import groups_for_frame, coverage
 
-EXPERIMENT_VERSION = "forecast-experiment-v3"
+EXPERIMENT_VERSION = "forecast-experiment-v4"
+FIXTURE_CONTROL = "decision-v12-fixture-only"
 
 
 def forecasts(frame):
@@ -43,6 +51,27 @@ def forecasts(frame):
     ep = {pid: value for pid, value in ep.items() if math.isfinite(value)}
     if ep:
         result["ep_next"] = ep
+    if frame.get("revised_parameters") is not None:
+        parameters = frame["revised_parameters"]
+        if any(
+            int(s[:4]) >= int(frame["season"][:4])
+            for s in parameters.get("training_seasons", [])
+        ):
+            raise ValueError("Shadow calibration must be fitted on earlier seasons")
+        for name, config in (
+            (CalibratedComponentForecast.version, parameters),
+            (FIXTURE_CONTROL, identity_parameters(parameters["strength_power"])),
+        ):
+            revised = CalibratedComponentForecast(
+                players,
+                fixtures,
+                scoring,
+                teams=frame.get("teams", []),
+                histories=histories,
+                season=frame["season"],
+                parameters=config,
+            )
+            result[name] = {p["id"]: revised.points(p["id"], week) for p in players}
     return result
 
 
@@ -71,9 +100,12 @@ def prepare_forecast(bootstrap, fixtures, *, captured_at=None, histories=None):
         "players": players,
         "bootstrap": bootstrap,
         "model_versions": {
-            "default": "decision-v10-planned-lineup",
-            "shadow": "decision-v11",
+            "default_player_model": PlayerForecast.version,
+            "shadow": CalibratedComponentForecast.version,
+            "comparison": ComponentForecast.version,
+            "fixture_control": FIXTURE_CONTROL,
         },
+        "revised_parameters": deepcopy(load_parameters()),
         "fixtures": fixtures,
         "teams": bootstrap.get("teams", []),
         "histories": histories or {},
@@ -97,9 +129,32 @@ def prepare_forecast(bootstrap, fixtures, *, captured_at=None, histories=None):
     frame["challenger_details"] = {
         p["id"]: challenger.components(p["id"], week) for p in players
     }
+    frame["challenger_details_by_model"] = {
+        ComponentForecast.version: frame["challenger_details"]
+    }
+    for name, parameters in (
+        (CalibratedComponentForecast.version, frame["revised_parameters"]),
+        (
+            FIXTURE_CONTROL,
+            identity_parameters(frame["revised_parameters"]["strength_power"]),
+        ),
+    ):
+        revised = CalibratedComponentForecast(
+            players,
+            fixtures,
+            frame["scoring_gameweek"],
+            teams=frame["teams"],
+            histories={int(k): v for k, v in frame["histories"].items()},
+            season=frame["season"],
+            parameters=parameters,
+        )
+        frame["challenger_details_by_model"][name] = {
+            p["id"]: revised.components(p["id"], week) for p in players
+        }
     frame["model_config"] = dict(COMPONENT_CONFIG)
-    frame["model_fingerprint"] = model_fingerprint()
-    frame["promotion_policy"] = promotion_policy()
+    frame["model_fingerprint"] = shadow_fingerprint(frame["revised_parameters"])
+    frame["comparison_fingerprint"] = model_fingerprint()
+    frame["promotion_policy"] = promotion_policy(EXPERIMENT_VERSION)
     frame["history_usage"] = {
         pid: {
             "has_usable_history": bool(challenger.histories.get(pid)),
@@ -116,7 +171,7 @@ def prepare_forecast(bootstrap, fixtures, *, captured_at=None, histories=None):
     }
     baseline, shadow = (
         predictions[PlayerForecast.version],
-        predictions[ComponentForecast.version],
+        predictions[CalibratedComponentForecast.version],
     )
     common = set(baseline) & set(shadow)
     union = top_projected({i: baseline[i] for i in common}, k) | top_projected(

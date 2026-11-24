@@ -215,8 +215,11 @@ available `ep_next` estimates. These records are independent of a manager saving
 transfer decision. Final results score the frozen selections and a hindsight XI
 under identical selection rules.
 
-The component model runs in shadow mode as `decision-v11`, with ridge fitting
-available offline as `decision-v11-ridge-standardized-v1`; neither changes the
+The revised component model runs in shadow mode as `decision-v12-calibrated`,
+alongside original `decision-v11` and a fixture-only control. Its fitted parameters
+and history-coverage changes are documented in the
+[calibration follow-up](component-calibration-results.md). Ridge fitting remains
+offline as `decision-v11-ridge-standardized-v1`; these experiments do not change the
 planner default. See [the evaluation guide](decision-engine.md) for assumptions,
 known archive limitations and the conditions for promoting a new model. There is
 still no evidence here of an advantage over the Scouts.

@@ -74,3 +74,14 @@ and a hindsight benchmark. Apply migrations through `0024` before starting it.
 See [the current formula](docs/gameweek-predictions.md) and
 [model evaluation and experimental challengers](docs/decision-engine.md) for
 assumptions, historical backtesting and reporting commands.
+
+The [component validation results](docs/component-validation-results.md) compare
+the challenger on a fresh historical season and isolate the effects of fixtures,
+underlying stats, minutes and missing histories. Run `validate_components` to
+repeat the study; the challenger remains in shadow mode.
+
+The [calibration and history follow-up](docs/component-calibration-results.md)
+adds a versioned shadow revision and candidate-prioritised history refreshes.
+`check_forecast_history` reports input coverage without writing; optional bounded
+warmup and capture flags are documented there. Restart the FPL worker after deploying
+the revision so future captures use experiment v4.

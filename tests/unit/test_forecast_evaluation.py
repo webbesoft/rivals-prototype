@@ -482,13 +482,15 @@ def test_v11_shadow_freezes_raw_bootstrap_and_preserves_default():
     with patch("django.utils.timezone.now", return_value=NOW):
         prepared = prepare_forecast(b, f["fixtures"])
         assert prepared["frame"]["bootstrap"] == b
-        assert prepared["frame"]["model_versions"]["shadow"] == "decision-v11"
+        assert (
+            prepared["frame"]["model_versions"]["shadow"] == "decision-v12-calibrated"
+        )
         assert "decision-v11" in prepared["predictions"]
         assert "decision-v11" in prepared["selections"]
         assert prepared["predictions"]["heuristic-v1"] == forecasts(f)["heuristic-v1"]
         publish_forecast(prepared)
     record = GameweekForecast.objects.get()
-    assert record.version == "forecast-experiment-v3"
+    assert record.version == "forecast-experiment-v4"
     assert (
         record.inputs["bootstrap"]["elements"][0]["ep_next"]
         == b["elements"][0]["ep_next"]

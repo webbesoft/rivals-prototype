@@ -8,6 +8,7 @@ from rivals.services.forecast_evaluation import evaluate_models, summarise_exper
 from rivals.services.gameweek_forecast_service import EXPERIMENT_VERSION
 from rivals.services.forecast_promotion_policy import promotion_policy
 from rivals.services.forecast_parameters import model_fingerprint
+from rivals.services.calibrated_component_forecast import shadow_fingerprint
 
 
 class Command(BaseCommand):
@@ -27,8 +28,12 @@ class Command(BaseCommand):
             records = records.filter(season=options["season"])
         if options["summary"]:
             weeks = []
-            policy = promotion_policy()
-            fingerprint = model_fingerprint()
+            policy = promotion_policy(options["experiment_version"])
+            fingerprint = (
+                shadow_fingerprint()
+                if options["experiment_version"] == "forecast-experiment-v4"
+                else model_fingerprint()
+            )
             excluded = []
             for r in records.exclude(outcomes={}):
                 if (

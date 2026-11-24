@@ -1,0 +1,17 @@
+{
+  "id": "component-calibration-v1-2026-11-24",
+  "model": "decision-v12-calibrated",
+  "fit_seasons": ["2022-23"],
+  "selection_seasons": ["2023-24"],
+  "final_fit_seasons": ["2022-23", "2023-24"],
+  "diagnostic_seasons": ["2024-25"],
+  "excluded_from_fitting_and_selection": ["2025-26"],
+  "strength_power_grid": [0.0, 0.25, 0.5, 0.75, 1.0],
+  "strength_transform": "Raise the v11 normalized, bounded attack/defence strengths to the chosen power; retain venue baselines and all player components",
+  "attacker_calibration": "For MID/FWD only, raw_points*slope + expected_appearance_count*offset. Fit residuals toward identity with L2 penalty 100 on RMS-scaled raw-points and appearance-count features; floor final GW score at zero. GK/DEF retain identity calibration.",
+  "penalty": 100.0,
+  "candidate_pool": "Fixed union of heuristic-v1 and original decision-v11 top 40, using pre-deadline features alone",
+  "selection_objective": "Lowest mean weekly candidate RMSE on 2023/24; Poisson deviance breaks ties; retain strength power closest to the original value 1 on exact ties",
+  "evaluation": "Paired whole-GW bootstrap, 5000 draws, seed 1729; 2024/25 is an inspected diagnostic, not a new holdout",
+  "rollout": "Separate prospective model and experiment identity; keep heuristic-v1 live and decision-v11 as a frozen comparison. Existing promotion thresholds remain unchanged."
+}

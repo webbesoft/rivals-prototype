@@ -1,0 +1,26 @@
+{
+  "season": "2026/27",
+  "gameweek": 12,
+  "experiment": "forecast-experiment-v4",
+  "captured_at": "2026-11-24T08:25:51.748534+00:00",
+  "candidate_players": 52,
+  "usable_candidate_histories": 52,
+  "fallback_share_now": 0.0,
+  "missing_candidate_ids": [],
+  "candidates_in_retry_backoff": 0,
+  "maximum_fallback_share": 0.1,
+  "coverage_ready": true,
+  "priority_players": 53,
+  "priority_missing_candidate_ids": [],
+  "capture_coverage": {
+    "players": 52,
+    "fallback_players": 0,
+    "fallback_share": 0.0
+  },
+  "note": "Fresh usable history coverage only; not a model promotion verdict.",
+  "model_fingerprint": "8ca57e4e4224a7b62d30908412a2518bce826cc2855aa6749afd57ffc93bc32c",
+  "comparison_fingerprint": "cc0a5dd574edd7f3cae024a23ce336c283dcac299617743f53eca3a4f6816396",
+  "policy_sha256": "b1d0c25c697d6a3d05564fc7022c97d39375263b3ad3a2de7723771e763f4d4d",
+  "completed_gameweeks": 0,
+  "default_player_model": "heuristic-v1"
+}

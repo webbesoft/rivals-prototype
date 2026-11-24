@@ -1,0 +1,24 @@
+{
+  "id": "component-validation-v1-2026-11-24",
+  "development_seasons": ["2024-25"],
+  "evaluation_seasons": ["2025-26"],
+  "evaluation_note": "2024/25 was previously inspected. The fixed 2025/26 study was declared before inspecting its model results; it becomes inspected after this run.",
+  "top_k": [30, 40, 50],
+  "primary_top_k": 40,
+  "candidate_pool": "Fixed union of heuristic-v1 and full decision-v11 top K, selected without labels; identical for every ablation",
+  "bootstrap": {"samples": 5000, "seed": 1729, "unit": "whole paired gameweeks"},
+  "variants": {
+    "heuristic-v1": "Unchanged deployed player formula",
+    "decision-v11": "Unchanged full component challenger",
+    "without-team-strengths": "Neutral team attack and defence; retain venue baselines, player rates and minutes",
+    "without-xg-xa": "Remove season and recent xG/xA fields; retain positional priors and all other components",
+    "season-attacking-rates": "Remove recent xG/xA only; retain shrunk season rates and recent minutes",
+    "season-minutes": "Use season-usage minutes fallback; retain recent attacking and event histories and common availability inputs",
+    "half-history-fallback": "Withhold histories for a deterministic season/player hash cohort of approximately half the pool; retain season inputs and availability",
+    "all-history-fallback": "Withhold all recent histories; retain season xG/xA, season usage and availability"
+  },
+  "metrics": ["common-candidate RMSE", "Poisson deviance", "calibration", "position and fixture strata", "frozen XI and captain outcomes", "history coverage"],
+  "comparisons": "Paired differences against both heuristic-v1 and full decision-v11. Positive error differences mean worse; positive realised decision differences mean better. Ablations are exploratory with marginal intervals, not multiple-testing-adjusted claims.",
+  "fitting": "None: no coefficients or thresholds fitted, selected or promoted using these results",
+  "limitations": ["Historical reconstructions use deadline, fixture and availability proxies", "Conditional missing-history stress tests retain shared availability information", "Single-next-GW validation cannot validate horizon decay or transfer-route value", "Historical evidence cannot satisfy the existing live promotion policy"]
+}
