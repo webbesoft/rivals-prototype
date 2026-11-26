@@ -2,6 +2,7 @@ import uuid
 from decimal import Decimal
 
 from django.conf import settings
+from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 
 
@@ -990,7 +991,7 @@ class DecisionRecord(models.Model):
         ],
     )
     fingerprint = models.CharField(max_length=64)
-    snapshot = models.JSONField(default=dict)
+    snapshot = models.JSONField(default=dict, encoder=DjangoJSONEncoder)
     outcomes = models.JSONField(default=dict)
     created_at = models.DateTimeField(auto_now_add=True)
 

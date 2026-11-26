@@ -12,6 +12,7 @@ from django.core.cache import cache
 from django.test import Client
 from django.template.loader import render_to_string
 from django.urls import reverse
+from django.utils.dateparse import parse_datetime
 
 from rivals.forms import DecisionInputForm
 from rivals.models import (
@@ -785,6 +786,60 @@ def test_journal_handles_empty_and_unconfirmed_costs_without_showing_zero(manage
     assert "Keep your squad" in html and "Cost unconfirmed" in html
     assert "Full window reviewed" in html
     assert response.context["journal_stats"]["complete"] == 1
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("updated_at", [None, NOW.isoformat(), NOW])
+def test_save_gw12_with_rival_timestamp_keeps_gw11_and_displays_both(
+    manager, updated_at
+):
+    previous = DecisionRecord.objects.create(
+        user=manager,
+        team=manager.team,
+        season="2026/27",
+        gameweek=11,
+        fingerprint="previous-gameweek",
+    )
+    option = {"key": "hold", "moves": []}
+    report = {
+        "fingerprint": "current-gameweek",
+        "season": "2026/27",
+        "gameweek": 12,
+        "weeks": [12],
+        "horizon": 1,
+        "options": [option],
+        "short_term": option,
+        "rival": {"updated_at": updated_at},
+    }
+    token = signing.dumps(
+        {
+            "user": manager.pk,
+            "team": manager.team_id,
+            "fingerprint": report["fingerprint"],
+            "option": option["key"],
+        },
+        salt="decision",
+    )
+    client = Client()
+    client.force_login(manager)
+    with patch.object(DecisionEngine, "report", return_value=report):
+        response = client.post(
+            reverse("rivals:decisions.save"), {"choice": token}, follow=True
+        )
+        client.post(reverse("rivals:decisions.save"), {"choice": token})
+    assert response.redirect_chain == [(reverse("rivals:decisions.journal"), 302)]
+    assert DecisionRecord.objects.filter(user=manager).count() == 2
+    current = DecisionRecord.objects.get(user=manager, gameweek=12)
+    saved_timestamp = current.snapshot["report"]["rival"]["updated_at"]
+    assert (parse_datetime(saved_timestamp) if saved_timestamp else None) == (
+        NOW if updated_at else None
+    )
+    assert current.snapshot["chosen"] == option
+    assert list(response.context["decisions"]) == [current, previous]
+    assert "GW12" in response.content.decode()
+    assert "GW11" in response.content.decode()
+    assert "Plan saved to your decision journal." in response.content.decode()
+    assert report["rival"]["updated_at"] == updated_at
 
 
 @pytest.mark.django_db
