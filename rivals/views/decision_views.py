@@ -261,12 +261,13 @@ def workspace(request):
         engine = DecisionEngine(request.user).load()
         results_only = request.method == "GET" and request.GET.get("results") == "1"
         if request.method == "GET" and request.GET.get("editor") == "1":
+            form = DecisionInputForm(engine=engine)
+            if request.headers.get("HX-Request") != "true":
+                return render(request, "pages/decisions.html", {"editor_form": form})
             return render(
                 request,
                 "partials/decision_form.html",
-                {
-                    "form": DecisionInputForm(engine=engine),
-                },
+                {"form": form},
             )
         form = (
             None

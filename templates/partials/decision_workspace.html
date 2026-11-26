@@ -18,10 +18,10 @@
 {% endif %}
 {% if results_only %}
 <details class="app-panel planner-disclosure mb-6" data-remote-panel data-loading-message="Loading planner controls…" data-error-message="We couldn't load the controls. Use the link below to try again."
-  hx-get="{% url 'rivals:decisions.workspace' %}?editor=1" hx-trigger="toggle once" hx-target="find [data-planner-editor]" hx-request='{"timeout":120000}'>
+  hx-get="{% url 'rivals:decisions.workspace' %}?editor=1" hx-trigger="toggle once" hx-target="find [data-planner-editor]" hx-sync="this:drop" hx-request='{"timeout":120000}'>
   <summary><span>Build your own move</span><span>Budget, transfers &amp; strategy</span></summary>
   <p data-panel-status role="status" hidden class="my-4 text-sm"></p>
-  <div data-planner-editor class="planner-disclosure-body"><a class="app-secondary-button" href="{% url 'rivals:decisions.workspace' %}?editor=1">Open planner controls</a></div>
+  <div data-planner-editor class="planner-disclosure-body"><a class="app-secondary-button" href="{% url 'rivals:decisions.workspace' %}?editor=1" hx-get="{% url 'rivals:decisions.workspace' %}?editor=1" hx-trigger="click" hx-target="closest [data-planner-editor]" hx-sync="closest details:drop">Open planner controls</a></div>
 </details>
 {% else %}
 {% include "partials/decision_form.html" %}

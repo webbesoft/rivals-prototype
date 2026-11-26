@@ -1016,6 +1016,38 @@ def test_progressive_comparison_defers_controls_and_can_be_compressed(manager, a
 
 
 @pytest.mark.django_db
+def test_planner_controls_link_loads_inline_with_a_styled_navigation_fallback(manager, api):
+    from html.parser import HTMLParser
+
+    class ControlsLinkParser(HTMLParser):
+        attrs = None
+
+        def handle_starttag(self, tag, attrs):
+            attrs = dict(attrs)
+            if tag == "a" and "editor=1" in attrs.get("href", ""):
+                self.attrs = attrs
+
+    client = Client()
+    client.force_login(manager)
+    with patch("rivals.services.decision_engine.FplApiService", return_value=api):
+        response = client.get(reverse("rivals:decisions.workspace"), {"results": "1"})
+        assert response.status_code == 200
+        parser = ControlsLinkParser()
+        parser.feed(response.content.decode())
+        assert parser.attrs is not None
+        fallback = client.get(parser.attrs["href"])
+    assert fallback.status_code == 200
+    html = fallback.content.decode()
+    assert (
+        "<!DOCTYPE html>" in html
+    ), "Opening controls must not navigate to an unstyled fragment"
+    assert "css/matchday.css" in html and 'name="owned_14"' in html
+    assert parser.attrs.get("hx-get") == parser.attrs["href"]
+    assert parser.attrs.get("hx-target") == "closest [data-planner-editor]"
+    assert parser.attrs.get("hx-trigger") == "click"
+
+
+@pytest.mark.django_db
 def test_editor_load_does_not_recompute_transfer_report(manager, api):
     client = Client()
     client.force_login(manager)
@@ -1027,10 +1059,15 @@ def test_editor_load_does_not_recompute_transfer_report(manager, api):
             side_effect=AssertionError("Editor must not search transfers"),
         ),
     ):
-        response = client.get(reverse("rivals:decisions.workspace"), {"editor": "1"})
+        response = client.get(
+            reverse("rivals:decisions.workspace"),
+            {"editor": "1"},
+            HTTP_HX_REQUEST="true",
+        )
     html = response.content.decode()
     assert "Compare options" in html and 'name="owned_14"' in html
     assert "Transfer versus hold" not in html
+    assert "<!DOCTYPE html>" not in html
 
 
 @pytest.mark.django_db

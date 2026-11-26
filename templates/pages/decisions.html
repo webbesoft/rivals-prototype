@@ -3,8 +3,12 @@
 <div class="rv-wrap rv-planner" data-remote-panel data-loading-message="Loading your squad forecast…" data-error-message="We couldn't load your plan. Please try again." data-timeout-message="Loading your forecast took too long. Reload this page to try again.">
   <header class="rv-page-heading"><div><p class="rv-eyebrow">Transfer planner</p><h1>Your next move.</h1></div><a class="app-secondary-button" href="{% url 'rivals:decisions.journal' %}">Saved plans</a></header>
   <p data-panel-status role="status" hidden class="my-4 text-sm"></p>
-  <div id="decision-workspace" class="mt-5" hx-get="{% url 'rivals:decisions.preview' %}" hx-trigger="load" hx-request='{"timeout":120000}' hx-sync="closest [data-remote-panel]:replace">
+  <div id="decision-workspace" class="mt-5"{% if not editor_form %} hx-get="{% url 'rivals:decisions.preview' %}" hx-trigger="load" hx-request='{"timeout":120000}' hx-sync="closest [data-remote-panel]:replace"{% endif %}>
+    {% if editor_form %}
+    {% include "partials/decision_form.html" with form=editor_form %}
+    {% else %}
     {% include "partials/loading_skeleton.html" with kind="planner" label="Loading transfer planner" %}
+    {% endif %}
   </div>
 </div>
 <script src="{% static 'js/team-panels.js' %}"></script>
