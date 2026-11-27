@@ -99,6 +99,24 @@ def refresh_resource(key, generation):
             lease_until=None,
             payload=payload,
         )
+        team_kinds = ("profile", "history", "transfers")
+        if state.kind in team_kinds:
+            # Team syncs are split across jobs; keep the shared timestamp at
+            # the oldest successful resource once the whole team is current.
+            success_times = list(
+                SyncState.objects.filter(
+                    key__in=[f"{kind}:{state.object_id}" for kind in team_kinds],
+                    status="ok",
+                    payload__stamp=payload["stamp"],
+                    last_success_at__isnull=False,
+                ).values_list("last_success_at", flat=True)
+            )
+            if len(success_times) == len(team_kinds):
+                synced_at = min(success_times)
+                Team.objects.filter(
+                    Q(last_synced_at__isnull=True) | Q(last_synced_at__lt=synced_at),
+                    pk=state.object_id,
+                ).update(last_synced_at=synced_at)
         if state.kind in ("profile", "history", "squad", "league", "league_page"):
             from rivals.services.achievement_service import queue_achievement_followups
 

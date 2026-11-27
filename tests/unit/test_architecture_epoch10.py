@@ -47,6 +47,8 @@ pytestmark = pytest.mark.django_db
 
 @pytest.mark.parametrize("route", ["rivals:teams.sync", "api:team_sync"])
 def test_manual_sync_refreshes_lineup_even_when_recently_synced(client, manager, route):
+    manager.fpl_id = manager.team.fpl_team_id
+    manager.save(update_fields=["fpl_id"])
     authenticate(client, manager)
     target = SquadRefresh.objects.create(
         team=manager.team, season="2026/27", gameweek=10
