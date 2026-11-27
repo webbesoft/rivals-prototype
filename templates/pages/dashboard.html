@@ -76,8 +76,8 @@
     </div>
 
     {% if user_team %}
-    {% include "partials/score_panel.html" with score_team=user_team %}
-    {% include "partials/achievements_dashboard.html" %}
+    {% if brief %}{% include "partials/weekly_briefing.html" %}{% endif %}
+    {% if not brief or brief.week == brief.latest %}{% include "partials/score_panel.html" with score_team=user_team %}{% endif %}
     {% endif %}
 
     {% if user_team %}
@@ -318,6 +318,7 @@
 
     </div>
 
+    {% if user_team %}{% include "partials/achievements_dashboard.html" %}{% endif %}
     {% if user_projection and user_team %}<details class="rv-details rv-season-outlook"><summary>Your season outlook · Rank, pace and projections</summary>
     <!-- Manager Season Ledger (Analytical Forecast Strip) -->
     {% if user_projection and user_team %}

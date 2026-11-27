@@ -13,7 +13,18 @@ from .views import (
 app_name = "rivals"
 
 urlpatterns = [
+    path(
+        "decisions/players/<int:outgoing>/",
+        decision_views.player_comparison,
+        name="decisions.player",
+    ),
+    path(
+        "decisions/players/<int:outgoing>/<int:incoming>/",
+        decision_views.player_comparison,
+        name="decisions.players",
+    ),
     path("decisions/ai/", ai_views.briefing, name="decisions.ai"),
+    path("season-goal/", dashboard_views.rank_goal, name="rank-goal"),
     path("", dashboard_views.dashboard, name="dashboard"),
     path("decisions/", decision_views.planner, name="decisions"),
     path("decisions/summary/", decision_views.summary, name="decisions.summary"),
@@ -22,6 +33,11 @@ urlpatterns = [
     path("decisions/lineup/", decision_views.update_lineup, name="decisions.lineup"),
     path("decisions/rivals/", decision_views.rival_search, name="decisions.rivals"),
     path("decisions/save/", decision_views.save_decision, name="decisions.save"),
+    path(
+        "decisions/journal/<int:decision_id>/select/",
+        decision_views.select_decision,
+        name="decisions.select",
+    ),
     path("decisions/journal/", decision_views.journal, name="decisions.journal"),
     path(
         "decisions/journal/<int:decision_id>/",
@@ -104,6 +120,12 @@ urlpatterns = [
         "mini-leagues/<int:mini_league_id>/sync/",
         minileague_views.mini_league_sync,
         name="minileagues.sync",
+    ),
+    path(
+        "mini-leagues/<int:mini_league_id>/pages/<int:page_number>/compare/<int:entry_id>/",
+        minileague_views.mini_league_track,
+        {"compare": True},
+        name="minileagues.compare",
     ),
     path(
         "mini-leagues/<int:mini_league_id>/pages/<int:page_number>/track/<int:entry_id>/",

@@ -549,7 +549,22 @@ def team_compare(request, team_id):
         include_models=(my_team, rival_team),
     )
 
-    if result.get("error"):
+    from rivals.services.weekly_briefing import briefing
+
+    leagues = [
+        item.mini_league
+        for item in request.user.customminileagues.filter(
+            active=True, mini_league__active=True
+        ).select_related("mini_league")
+    ]
+    week_review = briefing(
+        request.user,
+        GameweekContextService.cached(),
+        request.GET.get("week"),
+        [rival_team],
+        leagues,
+    )
+    if result.get("error") and not week_review:
         messages.error(request, f"Comparison failed: {result['error']}")
         return redirect("rivals:teams.show", team_id=team_id)
 
@@ -558,6 +573,7 @@ def team_compare(request, team_id):
         "pages/teams/compare.html",
         {
             "comparison": result,
+            "brief": week_review,
             "my_team": my_team,
             "rival_team": rival_team,
         },

@@ -166,7 +166,7 @@ def mini_league_sync(request, mini_league_id):
 
 @login_required
 @require_POST
-def mini_league_track(request, mini_league_id, page_number, entry_id):
+def mini_league_track(request, mini_league_id, page_number, entry_id, *, compare=False):
     from django.db import transaction
 
     from rivals.models import LeagueStandingsPage, Team
@@ -193,10 +193,16 @@ def mini_league_track(request, mini_league_id, page_number, entry_id):
                     "manager_name": row["player_name"],
                 },
             )
-            track_team(request.user, team)
+            if not compare:
+                track_team(request.user, team)
     except TrackingLimitReached as error:
         messages.error(request, str(error))
         return redirect("rivals:minileagues.show", mini_league_id=league.pk)
     enqueue_team(team.pk)
+    if compare:
+        from rivals.services.fpl_snapshot_service import enqueue_squad
+
+        enqueue_squad(team, context["season"], context["scoring_gameweek"])
+        return redirect("rivals:teams.compare", team_id=team.pk)
     messages.success(request, "Team is now being tracked.")
     return redirect("rivals:teams.show", team_id=team.pk)

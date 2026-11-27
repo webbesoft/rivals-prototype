@@ -8,7 +8,9 @@
     <a class="app-secondary-button" href="{% url 'rivals:decisions' %}">Plan transfers <span aria-hidden="true">↗</span></a>
   </header>
   {% if decision_error %}<p role="status" class="text-sm text-gray-600">{{ decision_error }}</p>
+  {% elif outlook_route %}{% include "partials/route_verdict.html" %}
   {% elif report %}
+    {% if route_warning %}<p role="status">{{ route_warning }}</p>{% endif %}
     <div class="decision-brief-main">
       <div class="decision-recommendation">
         <div class="decision-route-heading">

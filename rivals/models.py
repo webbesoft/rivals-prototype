@@ -913,7 +913,24 @@ class SyncState(models.Model):
     payload = models.JSONField(default=dict)
 
 
+class SeasonRankGoal(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    team = models.ForeignKey(Team, on_delete=models.CASCADE)
+    season = models.CharField(max_length=20)
+    rank = models.PositiveIntegerField()
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "team", "season"], name="unique_season_rank_goal"
+            )
+        ]
+
+
 class TeamPlanningInput(models.Model):
+    active_decision = models.ForeignKey(
+        "DecisionRecord", null=True, blank=True, on_delete=models.SET_NULL
+    )
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     team = models.ForeignKey(Team, on_delete=models.CASCADE)
     season = models.CharField(max_length=20)

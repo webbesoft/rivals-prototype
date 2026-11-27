@@ -781,7 +781,7 @@ class DecisionEngine:
         )
         return [league_ids, scores, squad]
 
-    def player_forecasts(self):
+    def player_forecasts(self, ids=None):
         return [
             {
                 "id": pid,
@@ -804,7 +804,7 @@ class DecisionEngine:
                 "minutes_risk": round(self.risk[pid], 2),
                 "price": self.players[pid].get("now_cost", 0) / 10,
             }
-            for pid in self.ids
+            for pid in (self.ids if ids is None else ids)
         ]
 
     def player_outlooks(self):
@@ -937,11 +937,14 @@ class DecisionEngine:
             .values_list("chip_name", "gameweek")
         )
 
-    def report(self, inputs=None, manual=None):
+    def report(self, inputs=None, manual=None, *, lineup=None):
         if not hasattr(self, "players"):
             self.load()
         data = inputs or self.inputs()
+        if lineup is not None:
+            data = {**data, "lineup": lineup}
         self.prepare(data)
+        stored_draft = inputs is None and manual is None
         manual = manual if manual is not None else data.get("manual", [])
         if len(manual) > 2:
             raise ValueError("Compare at most two transfers at this deadline.")
@@ -975,7 +978,8 @@ class DecisionEngine:
             )
         choices = self.options(baseline)
         manual_option = self.candidate(manual, baseline) if manual else None
-        if manual and manual_option is None:
+        draft_invalid = bool(manual and manual_option is None)
+        if draft_invalid and not stored_draft:
             raise ValueError(
                 "That plan breaks a squad rule or exceeds your budget. Review the players and prices."
             )
@@ -1109,6 +1113,7 @@ class DecisionEngine:
             ),
             "options": scenarios,
             "manual": manual_option,
+            "draft_invalid": draft_invalid,
             "alternatives": alternatives[:5],
             "risks": risks[:5],
             "lineup_mode": "planned" if self.planned_lineup else "optimised",
@@ -1141,5 +1146,6 @@ class DecisionEngine:
             "weeks": self.weeks,
             "model": self.model_info(),
         }
-        cache.set(cache_key, result, 120)
+        if not draft_invalid:
+            cache.set(cache_key, result, 120)
         return result

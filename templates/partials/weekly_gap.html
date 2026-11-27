@@ -1,0 +1,4 @@
+<h3 class="font-bold">Where did the gap come from?</h3>
+{% if gap.hits != None %}
+<ul>{% for name, points, mine, theirs in gap.diffs %}<li>{{ name }} · {% if points > 0 %}+{% endif %}{{ points }} pts{% if mine > 1 or theirs > 1 %} · Your {{ mine }}× / Rival {{ theirs }}×{% endif %}</li>{% endfor %}</ul><p>Hits {% if gap.hits > 0 %}+{% endif %}{{ gap.hits }} = {{ gap.swing }} points for you relative to your rival.</p>
+{% else %}<p>Waiting for player contributions and hits to reconcile with the published scores.</p>{% endif %}

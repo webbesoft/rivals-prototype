@@ -1,0 +1,14 @@
+<section class="app-panel p-5 mb-4" aria-label="Route versus hold">
+  <h2 class="app-section-title">{% if saved_outlook %}Saved plan{% else %}Your route{% endif %} vs hold</h2>
+  <h3 class="font-bold">{% for move in outlook_route.moves %}{{ move.out_name }} → {{ move.in_name }}{% if not forloop.last %} · {% endif %}{% empty %}Roll the transfer{% endfor %}</h3>
+  <dl class="journal-metrics">
+    <div><dt>Gain this GW after hits</dt><dd>{{ outlook_route.immediate.net_gain|floatformat:1|default:"Unconfirmed" }}</dd></div>
+    <div><dt>Gain over {{ route_weeks|length }} GW{{ route_weeks|length|pluralize }} after hits</dt><dd>{{ outlook_route.net_gain|floatformat:1|default:"Unconfirmed" }}</dd></div>
+    <div><dt>Transfer hit</dt><dd>{{ outlook_route.hits|default_if_none:"Unknown" }} pts</dd></div>
+    <div><dt>Bank after moves</dt><dd>{% if outlook_route.bank_after != None %}£{{ outlook_route.bank_after|floatformat:1 }}m{% else %}Unknown{% endif %}</dd></div>
+  </dl>
+{% for move in outlook_route.moves %}<a class="journal-planner-link" href="{% url 'rivals:decisions.players' move.out move.in %}">Compare {{ move.out_name }} and {{ move.in_name }} →</a>{% endfor %}
+  {% if outlook_route.moves %}<div class="gain-weeks" aria-label="Weekly projected gain over holding after hits">{% for week in gain_weeks %}<div><small>GW{{ week.gameweek }}</small><span class="weekly-bar"><i style="width:{{ week.width }}%" {% if week.net_gain < 0 %}class="loss"{% endif %}></i></span><strong>{% if week.net_gain > 0 %}+{% endif %}{{ week.net_gain|floatformat:1|default:"—" }}</strong></div>{% endfor %}</div>{% endif %}
+  {% if outlook_route.unknown %}<p>{{ outlook_route.unknown|join:" · " }}{% if "Confirm selling prices" in outlook_route.unknown %} · Bank is an upper bound{% endif %}</p>{% endif %}
+  {% if outlook_route.save_token and not saved_outlook %}<form method="post" action="{% url 'rivals:decisions.save' %}">{% csrf_token %}<input type="hidden" name="choice" value="{{ outlook_route.save_token }}"><button class="app-primary-button">Save this plan</button></form>{% endif %}
+</section>

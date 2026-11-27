@@ -1,6 +1,9 @@
 <c-layouts.base title="Head-to-Head: {{ my_team.team_name }} vs {{ rival_team.team_name }} - RivalSpy">
 {% load humanize math_filters static date_filters %}
 <div class="rv-wrap rv-comparison">
+  {% if brief.rivals %}<section class="app-panel weekly-panel"><h2 class="app-section-title">GW{{ brief.week }} · {{ my_team.team_name }} vs {{ rival_team.team_name }}{% if not brief.final %} · Provisional{% endif %}</h2>
+  {% include "partials/weekly_gap.html" with gap=brief.rivals.0.gap %}
+  {% for rival in brief.rivals %}{% include "partials/weekly_team.html" with review=rival %}{% endfor %}</section>{% endif %}
   {% if comparison.error %}
   <div class="rv-empty" role="status"><h1>Comparison unavailable</h1><p>{{ comparison.error }}</p><a class="app-secondary-button" href="{% url 'rivals:teams.show' rival_team.id %}">Back to rival squad</a></div>
   {% else %}

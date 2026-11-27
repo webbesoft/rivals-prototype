@@ -1,0 +1,13 @@
+{% if route_warning %}<p role="status" class="app-notice">{{ route_warning }}</p>{% endif %}
+{% if outlook_route %}
+  {% include "partials/route_verdict.html" %}
+  {% if preview_editor and form %}{% include "partials/decision_form.html" %}{% endif %}
+  <fieldset class="outlook-switch"><legend class="rv-sr-only">Choose squad outlook</legend>
+    <input type="radio" id="outlook-route" name="outlook" checked><label for="outlook-route">Your route</label>
+    <input type="radio" id="outlook-hold" name="outlook"><label for="outlook-hold">Hold</label>
+    <div class="route-pitch">{% include "partials/planner_pitch.html" with planner_weeks=route_weeks route_pitch=True namespace="route-" lineup_form=route_lineup_form %}</div>
+    <div class="hold-pitch">{% include "partials/planner_pitch.html" %}</div>
+  </fieldset>
+{% else %}
+  {% include "partials/planner_pitch.html" %}
+{% endif %}

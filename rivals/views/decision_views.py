@@ -6,6 +6,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core import signing
 from django.core.paginator import Paginator
+from django.db import transaction
 from django.db.models import Count, Q
 from django.http import HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
@@ -21,7 +22,11 @@ from rivals.services.planner_presentation import planner_pitch_weeks
 from rivals.services.ai_credentials import configured
 from rivals.models import DecisionRecord, Team, TeamPlanningInput
 from rivals.services.decision_engine import DecisionEngine, DecisionUnavailable, digest
-from rivals.services.planned_lineup import remap_squad_lineup, validate_lineup
+from rivals.services.planned_lineup import (
+    remap_squad_lineup,
+    replace_lineup,
+    validate_lineup,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +61,40 @@ def report_context(report, user):
         "planner_weeks": planner_pitch_weeks(report),
         "decision_deadline": parse_datetime(report["deadline"]),
         "decision_prepared": parse_datetime(report["created_at"]),
+    }
+
+
+def outlook_context(engine, report, manual=None):
+    saved = engine.saved.active_decision if engine.saved else None
+    if not manual and not saved:
+        return {}
+    option = manual
+    if not option:
+        chosen = saved.snapshot.get("chosen", {})
+        moves = [(move["out"], move["in"]) for move in chosen.get("moves", [])]
+        option = engine.candidate(moves, engine.evaluate(engine.ids))
+        if not option:
+            return {
+                "route_warning": "Your saved route no longer fits the current squad or budget. Revise it in the planner."
+            }
+    weekly = engine.weekly_comparison(option, engine.evaluate(engine.ids))
+    scale = max((abs(w["net_gain"] or 0) for w in weekly), default=0) or 1
+    for week in weekly:
+        week["width"] = round(100 * abs(week["net_gain"] or 0) / scale)
+    return {
+        "route_lineup_form": LineupInputForm(
+            engine=engine,
+            auto_id="route_lineup_%s",
+            initial_lineup=replace_lineup(
+                option["lineups"][0], [(m["in"], m["out"]) for m in option["moves"]]
+            ),
+        ),
+        "gain_weeks": weekly,
+        "outlook_route": option,
+        "saved_outlook": not manual,
+        "route_weeks": planner_pitch_weeks(
+            report, option, engine.player_forecasts(option["ids"])
+        ),
     }
 
 
@@ -160,11 +199,12 @@ def planner(request):
 @rate_limit("analysis", methods=("GET",))
 def summary(request):
     try:
-        report = DecisionEngine(request.user).report()
+        engine = DecisionEngine(request.user)
+        report = engine.report()
         return render(
             request,
             "partials/decision_summary.html",
-            report_context(report, request.user),
+            {**report_context(report, request.user), **outlook_context(engine, report)},
         )
     except (DecisionUnavailable, ValueError) as error:
         return render(
@@ -199,6 +239,7 @@ def preview(request):
                 "planner_weeks": planner_pitch_weeks(report),
                 "decision_deadline": parse_datetime(report["deadline"]),
                 **lineup_context(engine, report),
+                **outlook_context(engine, report),
             },
         )
     except DecisionUnavailable as error:
@@ -340,6 +381,12 @@ def workspace(request):
         if report:
             context.update(report_context(report, request.user))
             context.update(lineup_context(engine, report))
+            manual = None
+            if request.method == "POST" and report["manual"]:
+                manual = next(
+                    o for o in report["options"] if o["key"] == report["manual"]["key"]
+                )
+            context.update(outlook_context(engine, report, manual))
         return render(request, "partials/decision_workspace.html", context)
     except DecisionUnavailable as error:
         return render(
@@ -370,9 +417,8 @@ def update_lineup(request):
         )
         if not form.is_valid():
             return lineup_preview_response(request, engine, form=form)
-        inputs = engine.inputs()
-        inputs["lineup"] = form.cleaned_data["lineup"]
-        report = engine.report(inputs)
+        report = engine.report(lineup=form.cleaned_data["lineup"])
+        inputs = report["inputs"]
         record = planning_record(engine, inputs)
         if set(record.squad_ids or engine.public_ids) != set(inputs["ids"]):
             return planning_conflict_response(request, engine)
@@ -395,6 +441,19 @@ def update_lineup(request):
             "ai_enabled": configured(),
         }
         engine.saved = record
+        manual = report.get("manual")
+        preview = (
+            manual
+            if manual and request.POST.get("preview_route") == manual["key"]
+            else None
+        )
+        if preview:
+            preview = next(
+                option
+                for option in report["options"]
+                if option["key"] == preview["key"]
+            )
+        context.update(outlook_context(engine, report, preview))
         context.update(lineup_context(engine, report))
         return render(request, "partials/decision_workspace.html", context)
     except (DecisionUnavailable, ValueError) as error:
@@ -428,17 +487,23 @@ def save_decision(request):
         )
         if not option:
             raise ValueError("Review your latest options before saving.")
-        DecisionRecord.objects.get_or_create(
-            user=request.user,
-            fingerprint=digest([report["fingerprint"], option["key"]]),
-            defaults={
-                "team": request.user.team,
-                "season": report["season"],
-                "gameweek": report["gameweek"],
-                "snapshot": {"report": report, "chosen": option},
-            },
+        with transaction.atomic():
+            record, _ = DecisionRecord.objects.get_or_create(
+                user=request.user,
+                fingerprint=digest([report["fingerprint"], option["key"]]),
+                defaults={
+                    "team": request.user.team,
+                    "season": report["season"],
+                    "gameweek": report["gameweek"],
+                    "snapshot": {"report": report, "chosen": option},
+                },
+            )
+            activate_record(record)
+        messages.success(
+            request,
+            "Plan saved to your decision journal. Your outlook now uses this route.",
         )
-        messages.success(request, "Plan saved to your decision journal.")
+        return redirect("rivals:decisions")
     except (signing.BadSignature, ValueError, KeyError) as error:
         messages.error(
             request,
@@ -455,9 +520,53 @@ def save_decision(request):
     return redirect("rivals:decisions.journal")
 
 
+def activate_record(record):
+    inputs = record.snapshot.get("report", {}).get("inputs", {})
+    planning, _ = TeamPlanningInput.objects.get_or_create(
+        user_id=record.user_id,
+        team_id=record.team_id,
+        season=record.season,
+        gameweek=record.gameweek,
+        defaults={
+            "horizon": inputs.get("horizon", 5),
+            "strategy": inputs.get("strategy", "protect"),
+            "target_league_id": inputs.get("league_id"),
+            "target_rival_id": inputs.get("rival_id"),
+        },
+    )
+    TeamPlanningInput.objects.filter(pk=planning.pk).update(active_decision=record)
+
+
+@login_required
+@require_POST
+def select_decision(request, decision_id):
+    record = get_object_or_404(
+        DecisionRecord, pk=decision_id, user=request.user, team=request.user.team
+    )
+    try:
+        engine = DecisionEngine(request.user).load()
+        if (record.season, record.gameweek) != (
+            engine.context["season"],
+            engine.context["decision_gameweek"],
+        ):
+            raise ValueError("Choose a plan for the upcoming deadline.")
+        engine.prepare(engine.inputs())
+        moves = [(m["out"], m["in"]) for m in record.snapshot["chosen"]["moves"]]
+        if not engine.candidate(moves, engine.evaluate(engine.ids)):
+            raise ValueError("This route no longer fits your squad or budget.")
+        activate_record(record)
+        messages.success(request, "Your outlook now uses this saved plan.")
+        return redirect("rivals:decisions")
+    except (DecisionUnavailable, ValueError, KeyError) as error:
+        messages.error(request, str(error))
+        return redirect("rivals:decisions.journal")
+
+
 @login_required
 @never_cache
 def journal(request):
+    from rivals.services.gameweek_context_service import GameweekContextService
+
     records = DecisionRecord.objects.filter(user=request.user)
     rows = Paginator(records, 10).get_page(request.GET.get("page"))
     for record in rows:
@@ -471,7 +580,11 @@ def journal(request):
     return render(
         request,
         "pages/decision_journal.html",
-        {"decisions": rows, "journal_stats": stats},
+        {
+            "decisions": rows,
+            "journal_stats": stats,
+            "upcoming": GameweekContextService.cached(),
+        },
     )
 
 
@@ -506,3 +619,37 @@ def journal_status(request, decision_id):
         record.status = status
         record.save(update_fields=["status"])
     return redirect("rivals:decisions.journal")
+
+
+@login_required
+@require_GET
+@never_cache
+@rate_limit("analysis", methods=("GET",))
+def player_comparison(request, outgoing, incoming=None):
+    from rivals.services.transfer_evidence import comparison
+
+    try:
+        engine = DecisionEngine(request.user).load()
+        if outgoing not in engine.players or (
+            incoming is not None
+            and (
+                incoming not in engine.players
+                or engine.players[outgoing]["element_type"]
+                != engine.players[incoming]["element_type"]
+            )
+        ):
+            return HttpResponseBadRequest("Choose two players in the same position.")
+        engine.prepare(engine.inputs())
+        profiles = comparison(engine, outgoing, incoming)
+        return render(
+            request,
+            "pages/player_comparison.html",
+            {
+                "profiles": profiles,
+                "axis_rows": list(
+                    zip(*(profile["axes"] for profile in profiles), strict=True)
+                ),
+            },
+        )
+    except DecisionUnavailable as error:
+        return render(request, "pages/player_comparison.html", {"error": str(error)})

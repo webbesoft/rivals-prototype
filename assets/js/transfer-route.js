@@ -49,6 +49,14 @@
     if (root.matches?.('[data-transfer-route]')) initialise(root);
     root.querySelectorAll?.('[data-transfer-route]').forEach(initialise);
   }
+  document.addEventListener('change', event => {
+    const week = event.target;
+    const outlook = week.closest('.outlook-switch');
+    if (!outlook || !week.matches('.planner-week-toggle')) return;
+    const otherId = week.id.startsWith('route-') ? week.id.slice(6) : 'route-' + week.id;
+    const otherWeek = outlook.querySelector('#' + otherId);
+    if (otherWeek) otherWeek.checked = true;
+  });
   document.addEventListener('DOMContentLoaded', () => scan(document));
   document.addEventListener('htmx:load', event => scan(event.detail?.elt || event.target));
   scan(document);

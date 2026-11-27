@@ -11,5 +11,5 @@
   {% if report.best.moves and report.best.immediate.net_gain <= 0 %}<p class="planner-next-note">A longer-term move. Holding projects {% if report.best.immediate.net_gain < 0 %}more{% else %}the same{% endif %} points this week.</p>{% endif %}
   {% include "partials/price_timing.html" with option=report.best %}
   <div class="planner-next-footer"><span>Gain vs hold · After hits</span><form method="POST" action="{% url 'rivals:decisions.save' %}">{% csrf_token %}<input type="hidden" name="choice" value="{{ report.best.save_token }}"><button class="app-primary-button" type="submit">Save plan</button></form></div>
-  <details class="planner-disclosure planner-recommendation-details"><summary><span>Why this move?</span><span>Fixtures &amp; forecast details</span></summary><div class="planner-disclosure-body">{% include "partials/decision_summary.html" %}</div></details>
+  <details class="planner-disclosure planner-recommendation-details"><summary><span>Why this move?</span><span>Fixtures &amp; forecast details</span></summary><div class="planner-disclosure-body">{% include "partials/decision_summary.html" with outlook_route=None %}</div></details>
 </section>

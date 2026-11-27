@@ -1,0 +1,29 @@
+<c-layouts.base title="Player comparison">
+<div class="rv-wrap"><header class="rv-page-heading"><div><p class="rv-eyebrow">Transfer evidence</p><h1>{{ profiles.0.name|default:"Player outlook" }}{% if profiles.1 %} vs {{ profiles.1.name }}{% endif %}</h1></div><a href="{% url 'rivals:decisions' %}">Transfer planner →</a></header>
+{% if error %}<p role="status">{{ error }}</p>{% endif %}
+{% if profiles %}
+<section class="app-panel weekly-panel">
+  <h2 class="app-section-title">Season profile</h2>
+  <div class="player-profile">
+    {% if profiles.0.polygon or profiles.1.polygon %}<figure><svg viewBox="0 0 200 140" role="img" aria-label="Player profiles by position percentile. Values are listed in the table.">
+      <path d="M100 15L155 70L100 125L45 70Z M100 15V125 M45 70H155" fill="none" stroke="#adbdb6"/>
+      {% for player in profiles %}{% if player.polygon %}<polygon points="{{ player.polygon }}" stroke-width="2" {% if forloop.first %}fill="#167250" fill-opacity=".18" stroke="#167250"{% else %}fill="#b27627" fill-opacity=".12" stroke="#94581b" stroke-dasharray="4 2"{% endif %}/>{% endif %}{% endfor %}
+      <g font-size="9" fill="currentColor"><text x="100" y="11" text-anchor="middle">Minutes</text><text x="159" y="73">xGI</text><text x="100" y="138" text-anchor="middle">Points</text><text x="40" y="73" text-anchor="end">Starts</text></g>
+    </svg><figcaption>Solid · {{ profiles.0.name }}{% if profiles.1 %} / Dashed · {{ profiles.1.name }}{% endif %}</figcaption></figure>{% endif %}
+    <table class="rv-table"><caption>Season totals · percentile among same-position players</caption>
+      <thead><tr><th>Metric</th>{% for player in profiles %}<th>{{ player.name }}</th>{% endfor %}</tr></thead>
+      <tbody>{% for row in axis_rows %}
+        <tr><th>{{ row.0.0 }}</th>{% for label, raw, percentile in row %}<td>{{ raw|floatformat:"-2"|default:"—" }} · {{ percentile|default_if_none:"—" }}</td>{% endfor %}</tr>
+      {% endfor %}</tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+<div class="player-evidence">{% for player in profiles %}<section class="app-panel weekly-panel">
+<h2 class="app-section-title">{% if profiles.1 %}{% if forloop.first %}Keep{% else %}Buy{% endif %} {% endif %}{{ player.name }}</h2>
+<h3 class="font-bold">Recent matches</h3>
+<table class="rv-table"><thead><tr><th>GW</th><th>Starts</th><th>Min</th><th>xGI</th><th>G + A</th><th>Pts</th></tr></thead><tbody>{% for match in player.history %}<tr><th>{{ match.round }}</th><td>{{ match.starts|default_if_none:"—" }}</td><td>{{ match.minutes }}</td><td>{{ match.expected_goal_involvements|default:"—" }}</td><td>{{ match.goals_scored }} + {{ match.assists }}</td><td>{{ match.total_points }}</td></tr>{% empty %}<tr><td colspan="6">Recent match history unavailable.</td></tr>{% endfor %}</tbody></table>
+<h3 class="font-bold">Set-piece order</h3>{% for label,order in player.duties %}<p>{{ label }} · {{ order|default:"Unreported" }}</p>{% endfor %}
+<h3 class="font-bold">Upcoming fixtures</h3>{% for week in player.fixtures %}<section id="fixture-{{ player.id }}-{{ week.week }}"><strong>GW{{ week.week }}{% if week.points != None %} · {{ week.points }} projected pts{% endif %}</strong>{% for match in week.matches %}<details id="fixture-{{ player.id }}-{{ week.week }}-{{ forloop.counter }}" open><summary>{{ match.venue }} vs {{ match.opponent }} · FDR {{ match.fdr|default_if_none:"—" }}</summary>{% if match.form %}<p>Recent results · {{ match.form }} (latest on right)</p>{% endif %}<p>Opponent goals conceded per match · last {{ match.sample }}: {{ match.recent|floatformat:1|default:"—" }} · season ({{ match.games }}): {{ match.season|floatformat:1|default:"—" }}</p><p>{% if match.appearances %}Available meetings this season · {{ match.appearances }} appearance{{ match.appearances|pluralize }}, {{ match.minutes }} min, {{ match.returns }} FPL pts{% else %}No published appearances against this opponent in the available history.{% endif %}</p></details>{% empty %}<p>Blank gameweek</p>{% endfor %}</section>{% endfor %}
+</section>{% endfor %}</div></div>
+</c-layouts.base>

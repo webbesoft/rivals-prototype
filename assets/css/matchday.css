@@ -978,3 +978,42 @@
   .lineup-skeleton-row { gap: 10px; }
   .lineup-skeleton-row > span { height: 122px; }
 }
+
+.outlook-switch { min-width: 0; }
+.outlook-switch > label { display: inline-block; padding: .5rem .9rem .7rem .35rem; cursor: pointer; }
+.outlook-switch > input:checked + label { font-weight: 700; }
+#outlook-route:checked ~ .hold-pitch, #outlook-hold:checked ~ .route-pitch { display: none; }
+.weekly-panel { padding: clamp(1rem, 3vw, 1.6rem); margin-bottom: 1rem; }
+.weekly-panel > * + *, .weekly-panel details > * + * { margin-top: .65rem; }
+.weekly-panel header, .weekly-metrics { display: flex; flex-wrap: wrap; align-items: baseline; gap: .75rem 2rem; }
+.weekly-metrics small, .weekly-metrics strong { display: block; }
+.weekly-metrics strong { font-size: 1.25rem; }
+.rank-trend { width: min(100%, 25rem); }
+.weekly-panel input { padding: .35rem; border: 1px solid #809489; max-width: 10rem; }
+.weekly-panel summary { cursor: pointer; }
+.player-evidence { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr)); gap: 1rem; }
+.player-evidence section { min-width: 0; }
+.player-evidence svg { margin-inline: auto; }
+.gain-weeks { display: flex; flex-wrap: wrap; gap: .7rem; margin-block: .8rem; }
+.gain-weeks > div { width: 4rem; }
+.weekly-bar, .weekly-bar i { display: block; height: .4rem; border-radius: .2rem; background: #d9e3db; }
+.weekly-bar i { background: #167250; }
+.weekly-bar i.loss { background: #ae5244; }
+.player-profile { display: flex; align-items: center; flex-wrap: wrap; gap: 1rem 2rem; }
+.player-profile figure { width: min(100%, 19rem); }
+.player-profile svg { width: 100%; }
+.player-profile table { width: auto; flex: 1 1 17rem; }
+.pitch-fixture-link { position: relative; z-index: 3; text-decoration: underline; text-underline-offset: 2px; }
+.season-goal { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; }
+.season-goal h3 { font-size: clamp(1.5rem, 3vw, 2.25rem); font-weight: 750; }
+.season-goal figure { width: min(100%, 24rem); }
+.season-goal figcaption, .season-goal summary, .weekly-position small, .rival-week-row small { font-size: .78rem; color: #52635c; }
+.weekly-rival, .weekly-position { border-top: 1px solid #d6ded9; padding-top: .7rem; }
+.weekly-position { display: flex; align-items: baseline; flex-wrap: wrap; gap: .3rem 1rem; }
+.weekly-position strong { margin-right: auto; }
+.rival-week-row { display: inline-grid; width: calc(100% - 1.8rem); vertical-align: middle; align-items: center; gap: .5rem; grid-template-columns: 2fr repeat(4, 1fr); }
+.rival-week-row small { display: block; }
+@media (max-width: 600px) {
+  .rival-week-row { grid-template-columns: repeat(4, 1fr); }
+  .rival-week-row strong { grid-column: 1 / -1; }
+}

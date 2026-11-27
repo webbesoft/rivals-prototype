@@ -1,6 +1,7 @@
 {% if lineup_form %}
 <div class="planner-lineup-editor">
-  <form id="planned-lineup-form" method="POST" action="{% url 'rivals:decisions.lineup' %}" hx-post="{% url 'rivals:decisions.lineup' %}" hx-target="#decision-workspace" hx-request='{"timeout":120000}' hx-sync="#decision-workspace:replace" hx-disabled-elt="#lineup-save" data-remote-panel data-loading-message="Saving your lineup and recalculating…" data-error-message="We couldn't save your lineup. Your changes haven't been saved. Please try again.">
+  <form id="{{ namespace }}planned-lineup-form" data-lineup-form method="POST" action="{% url 'rivals:decisions.lineup' %}" hx-post="{% url 'rivals:decisions.lineup' %}" hx-target="#decision-workspace" hx-request='{"timeout":120000}' hx-sync="#decision-workspace:replace" hx-disabled-elt="#{{ namespace }}lineup-save" data-remote-panel data-loading-message="Saving your lineup and recalculating…" data-error-message="We couldn't save your lineup. Your changes haven't been saved. Please try again.">
+    {% if route_pitch and not saved_outlook %}<input type="hidden" name="preview_route" value="{{ outlook_route.key }}">{% endif %}
     {% csrf_token %}{{ lineup_form.season }}{{ lineup_form.gameweek }}
     <div data-lineup-inputs>{{ lineup_form.starters.as_hidden }}{{ lineup_form.captain.as_hidden }}{{ lineup_form.vice.as_hidden }}</div>
     <div class="planner-editor-controls"><label class="planner-lineup-mode">{{ lineup_form.mode.label }} {{ lineup_form.mode }}</label><span class="planner-lineup-count" data-lineup-count>11 / 11 starters</span></div>

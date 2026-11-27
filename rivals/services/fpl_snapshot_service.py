@@ -39,12 +39,12 @@ def publish_snapshots(snapshots):
     FplSnapshot.objects.filter(pk__in=expired).delete()
 
 
-def enqueue_squad(team, season, gameweek, *, force=False):
+def enqueue_squad(team, season, gameweek, *, force=False, context=None):
     from .gameweek_context_service import GameweekContextService
     from .refresh_service import enqueue_refresh
 
-    context = GameweekContextService.cached()
-    if context["stale"]:
+    context = context if context is not None else GameweekContextService.cached()
+    if context.get("stale"):
         enqueue_refresh("context", context=context)
     if (
         not season

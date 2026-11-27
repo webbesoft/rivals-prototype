@@ -8,7 +8,14 @@ from django.shortcuts import redirect, render
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 
-from rivals.models import FplSnapshot, GameweekData, LeagueRankSnapshot, Transfer
+from rivals.services.weekly_briefing import briefing
+from rivals.models import (
+    SeasonRankGoal,
+    FplSnapshot,
+    GameweekData,
+    LeagueRankSnapshot,
+    Transfer,
+)
 from core.rate_limits import rate_limit
 from rivals.services.gameweek_context_service import GameweekContextService
 from rivals.services.refresh_service import (
@@ -85,8 +92,9 @@ def dashboard(request):
     tracked_teams_qs = request.user.tracked_teams.filter(active=True).select_related(
         "team"
     )
-    tracked_teams_count = tracked_teams_qs.count()
-    tracked_teams = list(tracked_teams_qs[:5])
+    watchlist = list(tracked_teams_qs)
+    tracked_teams_count = len(watchlist)
+    tracked_teams = watchlist[:5]
     watch_teams = [tracked.team for tracked in tracked_teams]
     if user_team:
         watch_teams.append(user_team)
@@ -154,6 +162,13 @@ def dashboard(request):
         {
             **refresh_status(request.user),
             **achievement_context(request.user, gameweek_context["season"]),
+            "brief": briefing(
+                request.user,
+                gameweek_context,
+                request.GET.get("week"),
+                [row.team for row in watchlist],
+                [row.mini_league for row in filtered_leagues],
+            ),
             "mini_leagues": mini_leagues,
             "user_team": user_team,
             "user_projection": user_projection,
@@ -255,3 +270,37 @@ def fetch_recent_activity(user, params=None, context=None):
         "selected_season": season,
         "selected_gameweek": gameweek,
     }
+
+
+@login_required
+@require_POST
+def rank_goal(request):
+    season = GameweekContextService.cached()["season"]
+    if not season or not request.user.team_id or request.POST.get("season") != season:
+        messages.error(
+            request, "Refresh your dashboard to set a goal for the current season."
+        )
+    else:
+        goals = SeasonRankGoal.objects.filter(
+            user=request.user, team=request.user.team, season=season
+        )
+        raw = request.POST.get("rank", "").strip()
+        if not raw:
+            goals.delete()
+        elif (
+            raw.isascii()
+            and raw.isdigit()
+            and len(raw) <= 10
+            and 1 <= int(raw) <= 2147483647
+        ):
+            SeasonRankGoal.objects.update_or_create(
+                user=request.user,
+                team=request.user.team,
+                season=season,
+                defaults={"rank": int(raw)},
+            )
+        else:
+            messages.error(
+                request, "Enter a positive whole number for your target rank."
+            )
+    return redirect("rivals:dashboard")

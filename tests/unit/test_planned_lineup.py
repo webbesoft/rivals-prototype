@@ -544,3 +544,25 @@ def test_results_get_omits_pitch_while_preview_contains_one(
     assert preview.count("data-lineup-pitch-editor") == 1
     assert "data-lineup-pitch-editor" not in results
     assert 'id="planner-gw-' not in results
+
+
+def test_lineup_save_with_invalid_stored_transfer_draft(manager, api, client, settings):
+    settings.PASSWORDLESS_AUTH_ENABLED = False
+    client.force_login(manager)
+    draft = [[8, 9]]  # The incoming player is already owned.
+    row = TeamPlanningInput.objects.create(
+        user=manager,
+        team=manager.team,
+        season="2026/27",
+        gameweek=11,
+        manual_moves=draft,
+    )
+    with patch("rivals.services.decision_engine.FplApiService", return_value=api):
+        response = client.post(reverse("rivals:decisions.lineup"), lineup_post())
+    row.refresh_from_db()
+    assert row.planned_lineup == planned()
+    assert row.manual_moves == draft
+    assert response.context["report"]["draft_invalid"]
+    engine = DecisionEngine(manager, api).load()
+    with pytest.raises(ValueError, match="breaks a squad rule"):
+        engine.report(engine.inputs())

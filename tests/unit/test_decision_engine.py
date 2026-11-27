@@ -827,7 +827,7 @@ def test_save_gw12_with_rival_timestamp_keeps_gw11_and_displays_both(
             reverse("rivals:decisions.save"), {"choice": token}, follow=True
         )
         client.post(reverse("rivals:decisions.save"), {"choice": token})
-    assert response.redirect_chain == [(reverse("rivals:decisions.journal"), 302)]
+    assert response.redirect_chain == [(reverse("rivals:decisions"), 302)]
     assert DecisionRecord.objects.filter(user=manager).count() == 2
     current = DecisionRecord.objects.get(user=manager, gameweek=12)
     saved_timestamp = current.snapshot["report"]["rival"]["updated_at"]
@@ -835,9 +835,11 @@ def test_save_gw12_with_rival_timestamp_keeps_gw11_and_displays_both(
         NOW if updated_at else None
     )
     assert current.snapshot["chosen"] == option
-    assert list(response.context["decisions"]) == [current, previous]
-    assert "GW12" in response.content.decode()
-    assert "GW11" in response.content.decode()
+    assert TeamPlanningInput.objects.get(user=manager, gameweek=12).active_decision == current
+    journal = client.get(reverse("rivals:decisions.journal"))
+    assert list(journal.context["decisions"]) == [current, previous]
+    assert "GW12" in journal.content.decode()
+    assert "GW11" in journal.content.decode()
     assert "Plan saved to your decision journal." in response.content.decode()
     assert report["rival"]["updated_at"] == updated_at
 

@@ -1,0 +1,11 @@
+{% load humanize math_filters %}
+<div class="weekly-metrics">
+  <div><small>GW{{ review.week }} score</small><strong>{% if review.net != None %}{{ review.net }} pts net{% elif review.score != None %}{{ review.score }} pts gross{% else %}Pending{% endif %}</strong><small>{% if review.hits != None %}{{ review.score }} scored · {{ review.hits }} hit{% else %}Hit cost pending{% endif %}</small></div>
+  <div><small>Overall rank</small><strong>{{ review.rank|intcomma|default:"—" }}</strong><small>{% if review.movement > 0 %}↑ {{ review.movement|intcomma }}{% elif review.movement < 0 %}↓ {{ review.movement|abs|intcomma }}{% elif review.movement == 0 %}Level{% else %}Change unavailable{% endif %}</small></div>
+  <div><small>Effective captain</small><strong>{{ review.captain.0|default:"Awaiting picks" }}</strong>{% if review.captain %}<small>{{ review.captain.1 }} pts including armband</small>{% endif %}</div>
+</div>
+{% if review.score_at or review.rank_at %}<p class="rv-footnote">Score updated {{ review.score_at|date:"j M, H:i T"|default:"—" }} · Rank updated {{ review.rank_at|date:"j M, H:i T"|default:"—" }}</p>{% endif %}
+{% if review.contributors %}<p><strong>Top contributors</strong> · {% for name, points in review.contributors %}{{ name }} {{ points }}{% if not forloop.last %} · {% endif %}{% endfor %}</p>{% endif %}
+{% if review.armband_gain != None %}<p>{% if review.armband_gain %}Giving {{ review.best_captain }} the armband would have gained {{ review.armband_gain }} pts.{% else %}Your captain matched the highest scoring starter.{% endif %}</p>{% endif %}
+{% if review.swap %}<p><strong>Bench opportunity</strong> · {{ review.swap.0 }} for {{ review.swap.1 }} would have gained {{ review.swap.2 }} pts{% if review.swap.3 > 1 %} with the armband transferred{% endif %}.</p>{% elif review.bench_note %}<p>{{ review.bench_note }}</p>{% endif %}
+{% if review.picks_at %}<p class="rv-footnote">{% if review.picks_final %}Final picks{% else %}Provisional picks{% endif %} · {{ review.picks_at|date:"j M, H:i T" }}</p>{% else %}<p>Player scores and selections are pending.</p>{% endif %}

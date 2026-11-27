@@ -1,9 +1,10 @@
 """Shared forecast presentation for the planner and deadline emails."""
 
 
-def planner_pitch_weeks(report):
+def planner_pitch_weeks(report, route=None, forecasts=None):
     weeks = []
-    for lineup in report["baseline"]["lineups"]:
+    slots = {move["in"]: move["out"] for move in route["moves"]} if route else {}
+    for lineup in (route or report["baseline"])["lineups"]:
         points = round(lineup["points"], 1)
         benchmark = report.get("benchmarks", {}).get(lineup["gameweek"])
         comparison = None
@@ -14,7 +15,7 @@ def planner_pitch_weeks(report):
                 "gap": round(max(0, benchmark_points - points), 1),
             }
         players = []
-        for player in report["players"]:
+        for player in (forecasts if forecasts is not None else report["players"]):
             fixture = next(
                 f for f in player["schedule"] if f["gameweek"] == lineup["gameweek"]
             )
@@ -22,6 +23,8 @@ def planner_pitch_weeks(report):
                 {
                     **player,
                     "player_name": player["name"],
+                    "incoming": player["id"] in slots,
+                    "lineup_slot": slots.get(player["id"], player["id"]),
                     "fixture": fixture,
                     "is_captain": player["id"] == lineup["captain"]
                     and (lineup.get("selection") == "planned" or fixture["points"] > 0),

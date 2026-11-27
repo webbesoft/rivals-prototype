@@ -1,3 +1,3 @@
 {% for match in week.matches %}
-<span class="decision-fdr decision-fdr--{{ match.difficulty|default_if_none:'unknown' }}"><span>{{ match.opponent }} ({{ match.venue }})</span><strong aria-label="FPL difficulty {{ match.difficulty|default_if_none:'unavailable' }}">{{ match.difficulty|default_if_none:'—' }}</strong></span>
+{% if move.out and move.in %}<a href="{% url 'rivals:decisions.players' move.out move.in %}#fixture-{{ pid }}-{{ week.gameweek }}-{{ forloop.counter }}">{% endif %}<span class="decision-fdr decision-fdr--{{ match.difficulty|default_if_none:'unknown' }}"><span>{{ match.opponent }} ({{ match.venue }})</span><strong aria-label="FPL difficulty {{ match.difficulty|default_if_none:'unavailable' }}">{{ match.difficulty|default_if_none:'—' }}</strong></span>{% if move.out and move.in %}</a>{% endif %}
 {% empty %}<span class="decision-fdr decision-fdr--blank">Blank</span>{% endfor %}

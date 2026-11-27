@@ -1,0 +1,9 @@
+{% load humanize math_filters %}
+<div class="weekly-position">
+  <strong>{{ name }}</strong>
+  {% if row %}
+    <span>#{{ row.current_rank|intcomma }}</span>
+    <span>{% if row.gameweek != week %}GW{{ week }} pending{% elif row.rank_change > 0 %}↑ {{ row.rank_change|intcomma }}{% elif row.rank_change < 0 %}↓ {{ row.rank_change|abs|intcomma }}{% elif row.rank_change == 0 %}Level{% else %}Change pending{% endif %}</span>
+    <small>GW{{ row.gameweek }} · {{ row.updated_at|date:"j M, H:i T" }}</small>
+  {% else %}<span>Standings pending</span>{% endif %}
+</div>

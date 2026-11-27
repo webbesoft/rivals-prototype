@@ -29,11 +29,11 @@
 
   function initialise(section) {
     if (editors.has(section)) return;
-    const form = section.querySelector('#planned-lineup-form');
+    const form = section.querySelector('[data-lineup-form]');
     const pitch = section.querySelector('[data-lineup-pitch-editor]');
     if (!form || !pitch) return;
     const players = [...pitch.querySelectorAll('[data-lineup-player]')].map(node => ({
-      id: Number(node.dataset.lineupPlayer), name: node.dataset.name,
+      id: Number(node.dataset.lineupSlot || node.dataset.lineupPlayer), name: node.dataset.name,
       position: Number(node.dataset.position), points: Number(node.dataset.points.replace(',', '.')),
       starting: node.dataset.starting === 'true', node,
     }));
@@ -69,7 +69,7 @@
       pending = value;
       form.setAttribute('aria-busy', String(value));
       if (value) {
-        lockedControls = [...section.querySelectorAll('[data-lineup-select], [data-lineup-actions] button, [data-lineup-undo], select, [name="planner-gameweek"]')].map(control => [control, control.disabled]);
+        lockedControls = [...section.querySelectorAll('[data-lineup-select], [data-lineup-actions] button, [data-lineup-undo], select, .planner-week-toggle')].map(control => [control, control.disabled]);
         for (const [control] of lockedControls) control.disabled = true;
         feedback.textContent = 'Saving your XI. Editing is paused until the request finishes.';
       } else {
@@ -207,9 +207,7 @@
       if (!pending && event.key === 'Escape') { selected?.node.querySelector('button').focus({ preventScroll: true }); selected = null; render(); feedback.textContent = 'Selection cancelled.'; }
     });
     section.addEventListener('change', event => {
-      if (!event.target.matches('[name="planner-gameweek"]')) return;
-      const editingNextWeek = event.target.nextElementSibling?.nextElementSibling === pitch;
-      section.querySelector('.planner-lineup-editor').hidden = !editingNextWeek;
+      if (!event.target.matches('.planner-week-toggle')) return;
       selected = null;
       feedback.textContent = 'Select a player on the pitch, then a highlighted substitute to swap them.';
       render();
