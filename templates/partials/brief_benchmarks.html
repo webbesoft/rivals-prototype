@@ -1,0 +1,8 @@
+{% load humanize %}
+{% if score_summary.updated_at and score_summary.gameweek|stringformat:"s" == brief_week|stringformat:"s" %}
+  <span>GW average <strong>{{ score_summary.average|default_if_none:"—" }}</strong>{% if score_summary.difference != None %} ({{ score_summary.difference|stringformat:"+d" }} vs average before hits){% endif %}</span>
+  <span>Season points <strong>{{ score_summary.total_points|default_if_none:"—"|intcomma }}</strong></span>
+  {% if score_summary.stale %}<small>Last checked {{ score_summary.updated_at|timesince }} ago</small>{% endif %}
+{% else %}
+  <span>Awaiting GW{{ brief_week }} benchmarks</span>
+{% endif %}

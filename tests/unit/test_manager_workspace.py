@@ -62,6 +62,14 @@ def test_preview_save_roll_and_reselect(client, manager, api):
         )
         summary = client.get(reverse("rivals:decisions.summary"))
         assert summary.context["outlook_route"]["key"] == route["key"]
+        assert "Compare transfer paths" in summary.content.decode()
+        recommended = summary.context["report"]["best"]
+        if recommended["key"] == route["key"]:
+            assert "Your plan matches the RivalSpy recommendation" in summary.content.decode()
+        else:
+            assert "RivalSpy recommendation</strong>" in summary.content.decode()
+            for move in recommended["moves"]:
+                assert f'{move["out_name"]} → {move["in_name"]}' in summary.content.decode()
         hold = preview.context["report"]["baseline"]
         client.post(reverse("rivals:decisions.save"), {"choice": hold["save_token"]})
         assert (

@@ -1,0 +1,10 @@
+<tr>
+  <th scope="row"><strong>{{ label }}</strong>
+    {% for move in option.moves %}<span>{{ move.out_name }} → {{ move.in_name }}</span>{% empty %}<span>Hold squad</span>{% endfor %}
+    {% if show_assumptions and option.unknown %}<small>{{ option.unknown|join:" · " }}</small>{% endif %}
+  </th>
+  <td>{% if option.immediate.net_gain > 0 %}+{% endif %}{{ option.immediate.net_gain|floatformat:1|default:"Unconfirmed" }}</td>
+  {% if report.horizon > 1 %}<td>{% if option.net_gain > 0 %}+{% endif %}{{ option.net_gain|floatformat:1|default:"Unconfirmed" }}</td>{% endif %}
+  <td>{% if option.hits != None %}{{ option.hits }} pts{% else %}Unknown{% endif %}</td>
+  <td>{% if option.bank_after != None %}£{{ option.bank_after|floatformat:1 }}m{% else %}Unknown{% endif %}</td>
+</tr>

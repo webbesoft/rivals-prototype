@@ -1,11 +1,34 @@
 {% load humanize math_filters %}
 <div class="weekly-metrics">
-  <div><small>GW{{ review.week }} score</small><strong>{% if review.net != None %}{{ review.net }} pts net{% elif review.score != None %}{{ review.score }} pts gross{% else %}Pending{% endif %}</strong><small>{% if review.hits != None %}{{ review.score }} scored · {{ review.hits }} hit{% else %}Hit cost pending{% endif %}</small></div>
-  <div><small>Overall rank</small><strong>{{ review.rank|intcomma|default:"—" }}</strong><small>{% if review.movement > 0 %}↑ {{ review.movement|intcomma }}{% elif review.movement < 0 %}↓ {{ review.movement|abs|intcomma }}{% elif review.movement == 0 %}Level{% else %}Change unavailable{% endif %}</small></div>
-  <div><small>Effective captain</small><strong>{{ review.captain.0|default:"Awaiting picks" }}</strong>{% if review.captain %}<small>{{ review.captain.1 }} pts including armband</small>{% endif %}</div>
+  <div><small>{% if review.net != None %}Net points{% else %}Gameweek points{% endif %}</small><strong>{% if review.net != None %}{{ review.net }}{% elif review.score != None %}{{ review.score }}{% else %}—{% endif %}</strong><small>{% if review.hits != None %}{{ review.score }} scored · {{ review.hits }} hit{% else %}Hit cost pending{% endif %}</small></div>
+  {% if headline %}
+  <div><small>Rank movement</small><strong>{% if review.movement > 0 %}↑ {{ review.movement|intcomma }}{% elif review.movement < 0 %}↓ {{ review.movement|abs|intcomma }}{% elif review.movement == 0 %}Level{% else %}—{% endif %}</strong><small>{% if review.movement != None %}vs previous gameweek{% else %}Awaiting comparison{% endif %}</small></div>
+  {% else %}
+  <div><small>Overall rank</small><strong>{{ review.rank|intcomma|default:"—" }}</strong><small>{% if review.movement > 0 %}↑ {{ review.movement|intcomma }} places{% elif review.movement < 0 %}↓ {{ review.movement|abs|intcomma }} places{% elif review.movement == 0 %}Level{% else %}Change unavailable{% endif %}</small></div>
+  {% endif %}
+  <div><small>Effective captain</small><strong>{{ review.captain.0|default:"Awaiting picks" }}</strong>{% if review.captain %}<small>{{ review.captain.1 }} pts with armband</small>{% endif %}</div>
 </div>
-{% if review.score_at or review.rank_at %}<p class="rv-footnote">Score updated {{ review.score_at|date:"j M, H:i T"|default:"—" }} · Rank updated {{ review.rank_at|date:"j M, H:i T"|default:"—" }}</p>{% endif %}
-{% if review.contributors %}<p><strong>Top contributors</strong> · {% for name, points in review.contributors %}{{ name }} {{ points }}{% if not forloop.last %} · {% endif %}{% endfor %}</p>{% endif %}
-{% if review.armband_gain != None %}<p>{% if review.armband_gain %}Giving {{ review.best_captain }} the armband would have gained {{ review.armband_gain }} pts.{% else %}Your captain matched the highest scoring starter.{% endif %}</p>{% endif %}
-{% if review.swap %}<p><strong>Bench opportunity</strong> · {{ review.swap.0 }} for {{ review.swap.1 }} would have gained {{ review.swap.2 }} pts{% if review.swap.3 > 1 %} with the armband transferred{% endif %}.</p>{% elif review.bench_note %}<p>{{ review.bench_note }}</p>{% endif %}
-{% if review.picks_at %}<p class="rv-footnote">{% if review.picks_final %}Final picks{% else %}Provisional picks{% endif %} · {{ review.picks_at|date:"j M, H:i T" }}</p>{% else %}<p>Player scores and selections are pending.</p>{% endif %}
+{% if headline and brief.week == brief.latest %}
+<div class="brief-benchmarks" hx-get="{% url 'rivals:teams.score' user_team.id %}?brief_week={{ brief.week }}"
+     hx-trigger="load, every 120s" hx-request='{"timeout":12000}'>
+  {% include "partials/brief_benchmarks.html" with brief_week=brief.week %}
+</div>
+{% endif %}
+<div class="brief-analysis">
+  {% if review.contributors %}
+  <section><h3>Top contributors</h3><ul class="brief-contributors">
+    {% for name, points in review.contributors %}<li><span>{{ name }}</span><strong>{{ points }} <small>pts</small></strong></li>{% endfor %}
+  </ul></section>
+  {% endif %}
+  <section>
+    <h3>Selection review</h3>
+    {% if review.armband_gain != None %}<p><strong>Captaincy</strong>{% if review.armband_gain %}{{ review.best_captain }} would have gained {{ review.armband_gain }} pts with the armband.{% else %}Your captain matched the highest-scoring starter.{% endif %}</p>{% endif %}
+    {% if review.swap %}<p><strong>Bench opportunity</strong>{{ review.swap.0 }} for {{ review.swap.1 }} would have gained {{ review.swap.2 }} pts{% if review.swap.3 > 1 %} with the armband transferred{% endif %}.</p>{% elif review.bench_note %}<p><strong>Bench</strong>{{ review.bench_note }}</p>{% endif %}
+    {% if review.armband_gain == None and not review.swap and not review.bench_note %}<p>Awaiting complete player scores.</p>{% endif %}
+  </section>
+</div>
+<footer class="brief-times">
+  {% if review.score_at %}<span>Score · {{ review.score_at|date:"j M, H:i T" }}</span>{% endif %}
+  {% if review.rank_at %}<span>Rank · {{ review.rank_at|date:"j M, H:i T" }}</span>{% endif %}
+  <span>{% if review.picks_at %}{{ review.picks_final|yesno:"Final picks,Provisional picks" }} · {{ review.picks_at|date:"j M, H:i T" }}{% else %}Picks pending{% endif %}</span>
+</footer>

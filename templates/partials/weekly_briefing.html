@@ -1,10 +1,25 @@
 {% load humanize math_filters %}
-<section class="app-panel weekly-panel">
+<div class="brief-grid">
+{% if brief.week %}
+  <section class="brief-review" aria-labelledby="brief-week">
+    <header class="brief-match-heading">
+      <h2 id="brief-week">Gameweek {{ brief.week }}</h2>
+      <span>{{ brief.final|yesno:"Final,Provisional" }}</span>
+      {% if brief.previous %}
+        {% if brief.week == brief.latest %}<a href="?week={{ brief.previous }}">← GW{{ brief.previous }}</a>
+        {% else %}<a href="?week={{ brief.latest }}">Current GW{{ brief.latest }} →</a>{% endif %}
+      {% endif %}
+    </header>
+    {% include "partials/weekly_team.html" with review=brief.mine headline=True %}
+  </section>
+{% endif %}
+  <section class="brief-season">
   <div class="season-goal">
     <div>
-      <h2 class="app-section-title">Season goal</h2>
+      <h2 class="brief-label">Season progress</h2>
+      {% if brief.rank %}<p class="season-rank">#{{ brief.rank|intcomma }}</p><p class="season-rank-label">Overall rank · GW{{ brief.rank_week }}</p>{% endif %}
       {% if brief.goal %}
-        <h3>Top {{ brief.goal.rank|intcomma }}</h3>
+        <h3>Target · Top {{ brief.goal.rank|intcomma }}</h3>
         <p>{% if brief.goal_gap > 0 %}{{ brief.goal_gap|intcomma }} places to gain{% elif brief.goal_gap < 0 %}{{ brief.goal_gap|abs|intcomma }} places inside target{% elif brief.goal_gap == 0 %}On target{% else %}Awaiting overall rank{% endif %}</p>
       {% endif %}
     </div>
@@ -12,56 +27,33 @@
       <figure>
         <svg viewBox="0 0 300 60" class="rank-trend" role="img" aria-label="Overall rank through GW{{ brief.rank_week }}. Latest rank {{ brief.rank }}. Higher is better.">
           {% if brief.goal %}<line x1="0" x2="300" y1="{{ brief.chart.target_y }}" y2="{{ brief.chart.target_y }}" stroke="currentColor" stroke-dasharray="4 3"/>{% endif %}
+          <path d="M0 4H300 M0 30H300 M0 56H300" stroke="#dfe5da" fill="none"/>
+          <polygon points="4,60 {{ brief.chart.line }} 296,60" fill="#36765a" opacity=".09"/>
           <polyline points="{{ brief.chart.line }}" fill="none" stroke="#167250" stroke-width="3"/>
         </svg>
-        <figcaption>GW{{ brief.rank_week }} · #{{ brief.rank|intcomma }}{% if brief.goal %} · Dashed line is your target{% endif %}</figcaption>
+        <figcaption>GW1 <span>GW{{ brief.rank_week }}</span></figcaption>
+        {% if brief.goal %}<small>Dashed line · Target rank</small>{% endif %}
         <details><summary>Rank by gameweek</summary>
-          {% for gw, rank in brief.chart.values %}<span>GW{{ gw }} · #{{ rank|intcomma }}{% if not forloop.last %} / {% endif %}</span>{% endfor %}
+          <div class="rank-history-scroll" role="region" aria-label="Rank history" tabindex="0">
+            <table class="rank-history">
+              <thead><tr><th scope="col">Gameweek</th><th scope="col">Overall rank</th></tr></thead>
+              <tbody>
+                {% for gw, rank in brief.chart.values reversed %}
+                <tr><th scope="row">GW{{ gw }}</th><td>#{{ rank|intcomma }}</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
         </details>
       </figure>
     {% endif %}
   </div>
   <form method="post" action="{% url 'rivals:rank-goal' %}">
     {% csrf_token %}<input type="hidden" name="season" value="{{ brief.season }}">
-    <label>Target overall rank <input name="rank" type="number" min="1" max="2147483647" list="rank-targets" value="{{ brief.goal.rank }}" placeholder="e.g. 250000"></label>
+    <label for="season-target">Target overall rank</label>
+    <div class="goal-controls"><input id="season-target" name="rank" type="number" min="1" max="2147483647" list="rank-targets" value="{{ brief.goal.rank }}" placeholder="e.g. 250000">
     <datalist id="rank-targets"><option value="250000">Top 250k</option><option value="1000000">Top 1M</option></datalist>
-    <button class="app-secondary-button">Save goal</button>
+    <button class="app-secondary-button">Save goal</button></div>
   </form>
-</section>
-
-{% if brief.week %}
-<section class="app-panel weekly-panel">
-  <header>
-    <h2 class="app-section-title">GW{{ brief.week }} review · {% if brief.final %}Final{% else %}Provisional{% endif %}</h2>
-    {% if brief.previous %}
-      {% if brief.week == brief.latest %}<a href="?week={{ brief.previous }}">Review GW{{ brief.previous }} →</a>
-      {% else %}<a href="?week={{ brief.latest }}">Current GW{{ brief.latest }} →</a>{% endif %}
-    {% endif %}
-  </header>
-  {% include "partials/weekly_team.html" with review=brief.mine %}
-  {% for league, row in brief.leagues %}
-    {% include "partials/weekly_position.html" with name=league.name week=brief.week %}
-  {% endfor %}
-</section>
-{% endif %}
-
-{% if brief.rivals %}
-<section class="app-panel weekly-panel">
-  <h2 class="app-section-title">Tracked rivals · GW{{ brief.week }}</h2>
-  {% for rival in brief.rivals %}
-    <details class="weekly-rival">
-      <summary><span class="rival-week-row">
-        <strong>{{ rival.team.team_name }}</strong>
-        <span><small>GW score</small>{{ rival.net|default_if_none:"—" }} pts</span>
-        <span><small>Your swing</small>{% if rival.gap.swing != None %}{{ rival.gap.swing|stringformat:"+d" }}{% else %}—{% endif %}</span>
-        <span><small>Rank change</small>{{ rival.movement|default_if_none:"—" }}</span>
-        <span><small>Captain points</small>{% if rival.captain %}{{ rival.captain.1 }}{% else %}—{% endif %}</span>
-      </span></summary>
-      {% include "partials/weekly_team.html" with review=rival %}
-      {% include "partials/weekly_gap.html" with gap=rival.gap %}
-      {% for row in rival.ranks %}{% include "partials/weekly_position.html" with name=row.mini_league.name week=brief.week %}{% endfor %}
-      <a href="{% url 'rivals:teams.compare' rival.team.pk %}?week={{ brief.week }}">Compare teams →</a>
-    </details>
-  {% endfor %}
-</section>
-{% endif %}
+  </section>
+</div>

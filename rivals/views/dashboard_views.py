@@ -156,19 +156,27 @@ def dashboard(request):
             and live_season != user_team.current_season
         )
 
+    brief = briefing(
+        request.user,
+        gameweek_context,
+        request.GET.get("week"),
+        [row.team for row in watchlist],
+        [row.mini_league for row in filtered_leagues],
+    )
+    historical_week = brief.get("week") != brief.get("latest") and bool(brief.get("week"))
+    if brief.get("week"):
+        ranks = {league.pk: row for league, row in brief["leagues"]}
+        for membership in mini_leagues:
+            membership.rank_snapshot = ranks.get(membership.mini_league_id)
+
     return render(
         request,
         "pages/dashboard.html",
         {
             **refresh_status(request.user),
             **achievement_context(request.user, gameweek_context["season"]),
-            "brief": briefing(
-                request.user,
-                gameweek_context,
-                request.GET.get("week"),
-                [row.team for row in watchlist],
-                [row.mini_league for row in filtered_leagues],
-            ),
+            "brief": brief,
+            "historical_week": historical_week,
             "mini_leagues": mini_leagues,
             "user_team": user_team,
             "user_projection": user_projection,

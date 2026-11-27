@@ -331,7 +331,11 @@ def test_dashboard_displays_published_rank_and_no_large_league_projection(manage
     membership = list(response.context["mini_leagues"])[0]
     assert membership.total_teams == 40000
     assert membership.rank_snapshot.current_rank == 7500
-    assert "▲ +500" in response.content.decode()
+    html = response.content.decode()
+    assert html.count(league.name) == 1
+    assert "#7,500" in html
+    assert 'class="league-change gain"' in html
+    assert "Up </span>500" in html
 
 
 def test_migration_marks_previously_imported_large_leagues_without_deleting_history(

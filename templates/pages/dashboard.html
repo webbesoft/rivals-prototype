@@ -77,7 +77,7 @@
 
     {% if user_team %}
     {% if brief %}{% include "partials/weekly_briefing.html" %}{% endif %}
-    {% if not brief or brief.week == brief.latest %}{% include "partials/score_panel.html" with score_team=user_team %}{% endif %}
+    {% if not brief.week %}{% include "partials/score_panel.html" with score_team=user_team %}{% endif %}
     {% endif %}
 
     {% if user_team %}
@@ -90,6 +90,10 @@
     {% endif %}
 
     <nav class="rv-briefing-nav" aria-label="Gameweek briefing sections"><a href="#watchlist">The rivals ↓</a><a href="#rival-activity">Recent activity ↓</a><a href="#your-leagues">Your leagues ↓</a></nav>
+    {% include "partials/dashboard_leagues.html" %}
+    {% if user_team and brief %}{% include "partials/weekly_competition.html" %}{% endif %}
+
+
     <!-- Operational Dual-Column Grid -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
@@ -152,133 +156,6 @@
         </div>
 
 
-        <!-- Mini-Leagues Section -->
-        <span id="your-leagues" class="rv-anchor" aria-hidden="true"></span>
-        <div class="app-panel bg-white border border-gray-200 shadow-sm">
-          <div class="px-5 py-3 border-b border-gray-200 flex items-center justify-between bg-gray-50/50">
-            <div class="flex items-center gap-3">
-              <h2 class="app-section-title text-xs font-black uppercase tracking-wider text-text-main tabular-nums">Your mini-leagues</h2>
-              <span class="text-xs tabular-nums text-gray-500">
-                {{ mini_leagues.paginator.count }} total
-              </span>
-            </div>
-            <a href="{% url 'rivals:minileagues.create' %}" class="text-xs tabular-nums font-bold uppercase tracking-wide text-pitch hover:underline">
-              + New League
-            </a>
-          </div>
-
-          {% if not mini_leagues %}
-          <div class="p-8 text-center">
-            <p class="text-xs tabular-nums text-gray-500 mb-3">The race starts with your mini-league.</p>
-            <a href="{% url 'rivals:minileagues.create' %}" class="inline-flex px-4 py-2 bg-pitch text-white tabular-nums text-xs font-bold uppercase tracking-wider hover:bg-pitch/90 transition-colors">
-              Add Your First League →
-            </a>
-          </div>
-          {% else %}
-          <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
-              <thead>
-                <tr class="border-b border-gray-200 bg-gray-50/25 text-[11px] tabular-nums uppercase tracking-wider text-gray-500">
-                  <th class="py-2.5 px-4 font-semibold">League Name</th>
-                  <th class="py-2.5 px-3 font-semibold text-right">Teams</th>
-                  <th class="py-2.5 px-3 font-semibold text-right">Current</th>
-                  <th class="py-2.5 px-3 font-semibold text-right">Projected</th>
-                  <th class="py-2.5 px-3 font-semibold text-right">Trend</th>
-                  <th class="py-2.5 px-4 font-semibold text-right">Last Sync</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-gray-100 text-xs">
-                {% for league in mini_leagues %}
-                {% url 'rivals:minileagues.show' league.mini_league.id as league_url %}
-                <tr class="hover:bg-gray-50/75 transition-colors group">
-                  <!-- League name -->
-                  <td class="py-3 px-4 font-medium">
-                    <a href="{{ league_url }}" class="text-text-main font-semibold group-hover:text-pitch transition-colors block truncate max-w-[200px] sm:max-w-xs">
-                      {{ league.mini_league.name }}
-                    </a>
-                  </td>
-
-                  <!-- Total Teams -->
-                  <td class="py-3 px-3 text-right tabular-nums text-gray-600">
-                    {{ league.total_teams|default_if_none:"—" }}
-                  </td>
-
-                  <!-- Current Rank -->
-                  <td class="py-3 px-3 text-right tabular-nums font-bold">
-                    {% if league.rank_snapshot %}
-                      #{{ league.rank_snapshot.current_rank }}
-                    {% elif league.projection and league.projection.current_rank %}
-                      #{{ league.projection.current_rank }}
-                    {% else %}
-                      —
-                    {% endif %}
-                  </td>
-
-                  <!-- Projected Rank -->
-                  <td class="py-3 px-3 text-right tabular-nums font-bold text-pitch">
-                    {% if league.projection and league.projection.projected_rank %}
-                      #{{ league.projection.projected_rank }}
-                    {% else %}
-                      —
-                    {% endif %}
-                  </td>
-
-                  <!-- Trend -->
-                  <td class="py-3 px-3 text-right tabular-nums text-[11px]">
-                    {% if league.rank_snapshot %}
-                      {% if league.rank_snapshot.rank_change > 0 %}<span class="text-success font-bold">▲ +{{ league.rank_snapshot.rank_change }}</span>
-                      {% elif league.rank_snapshot.rank_change < 0 %}<span class="text-danger font-bold">▼ {{ league.rank_snapshot.rank_change|abs }}</span>
-                      {% elif league.rank_snapshot.rank_change == 0 %}<span class="text-gray-400">—</span>
-                      {% else %}<span class="text-gray-400">Pending</span>{% endif %}
-                    {% elif league.projection %}
-                      {% if league.projection.rank_change > 0 %}
-                        <span class="text-success font-bold">▲ +{{ league.projection.rank_change }}</span>
-                      {% elif league.projection.rank_change < 0 %}
-                        <span class="text-danger font-bold">▼ {{ league.projection.rank_change|abs }}</span>
-                      {% else %}
-                        <span class="text-gray-400">—</span>
-                      {% endif %}
-                    {% else %}
-                      <span class="text-gray-400">—</span>
-                    {% endif %}
-                  </td>
-
-                  <!-- Last Sync -->
-                  <td class="py-3 px-4 text-right tabular-nums text-[11px] text-gray-500 whitespace-nowrap">
-                    {% if league.mini_league.last_synced_at %}
-                      {{ league.mini_league.last_synced_at|timesince }} ago
-                    {% else %}
-                      Pending
-                    {% endif %}
-                  </td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-
-          <!-- Pagination Bar -->
-          {% if mini_leagues.has_other_pages %}
-          <div class="px-5 py-3 border-t border-gray-200 bg-gray-50/50 flex items-center justify-between text-xs tabular-nums">
-            <span class="text-gray-500">
-              Page {{ mini_leagues.number }} of {{ mini_leagues.paginator.num_pages }}
-            </span>
-            <div class="flex items-center gap-2">
-              {% if mini_leagues.has_previous %}
-              <a href="?page={{ mini_leagues.previous_page_number }}" class="px-2.5 py-1 border border-gray-300 text-text-main hover:border-pitch hover:text-pitch transition-colors font-bold uppercase">
-                ‹ Prev
-              </a>
-              {% endif %}
-              {% if mini_leagues.has_next %}
-              <a href="?page={{ mini_leagues.next_page_number }}" class="px-2.5 py-1 border border-gray-300 text-text-main hover:border-pitch hover:text-pitch transition-colors font-bold uppercase">
-                Next ›
-              </a>
-              {% endif %}
-            </div>
-          </div>
-          {% endif %}
-          {% endif %}
-        </div>
 
       </div>
 

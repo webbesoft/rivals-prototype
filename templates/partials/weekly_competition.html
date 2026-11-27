@@ -1,0 +1,20 @@
+{% if brief.rivals %}
+<section class="app-panel weekly-panel">
+  <h2 class="app-section-title">Tracked rivals · GW{{ brief.week }}</h2>
+  {% for rival in brief.rivals %}
+    <details class="weekly-rival">
+      <summary><span class="rival-week-row">
+        <strong>{{ rival.team.team_name }}</strong>
+        <span><small>GW score</small>{{ rival.net|default_if_none:"—" }} pts</span>
+        <span><small>Your swing</small>{% if rival.gap.swing != None %}{{ rival.gap.swing|stringformat:"+d" }}{% else %}—{% endif %}</span>
+        <span><small>Rank change</small>{{ rival.movement|default_if_none:"—" }}</span>
+        <span><small>Captain points</small>{% if rival.captain %}{{ rival.captain.1 }}{% else %}—{% endif %}</span>
+      </span></summary>
+      {% include "partials/weekly_team.html" with review=rival %}
+      {% include "partials/weekly_gap.html" with gap=rival.gap %}
+      {% if rival.ranks %}{% include "partials/weekly_positions.html" with ranks=rival.ranks week=brief.week only %}{% endif %}
+      <a href="{% url 'rivals:teams.compare' rival.team.pk %}?week={{ brief.week }}">Compare teams →</a>
+    </details>
+  {% endfor %}
+</section>
+{% endif %}

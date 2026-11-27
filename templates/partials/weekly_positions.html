@@ -1,0 +1,8 @@
+<table class="league-positions" aria-label="Mini-league positions for gameweek {{ week }}">
+  <thead><tr><th scope="col">League</th><th scope="col">Rank</th><th scope="col">GW change</th></tr></thead>
+  <tbody>
+    {% for row in ranks %}
+      {% include "partials/weekly_position.html" with name=row.mini_league.name %}
+    {% endfor %}
+  </tbody>
+</table>

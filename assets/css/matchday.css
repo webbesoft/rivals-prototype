@@ -1007,13 +1007,96 @@
 .season-goal { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; }
 .season-goal h3 { font-size: clamp(1.5rem, 3vw, 2.25rem); font-weight: 750; }
 .season-goal figure { width: min(100%, 24rem); }
-.season-goal figcaption, .season-goal summary, .weekly-position small, .rival-week-row small { font-size: .78rem; color: #52635c; }
-.weekly-rival, .weekly-position { border-top: 1px solid #d6ded9; padding-top: .7rem; }
-.weekly-position { display: flex; align-items: baseline; flex-wrap: wrap; gap: .3rem 1rem; }
-.weekly-position strong { margin-right: auto; }
+.season-goal figcaption, .season-goal summary, .rival-week-row small { font-size: .78rem; color: #52635c; }
+.weekly-rival { border-top: 1px solid #d6ded9; padding-top: .7rem; }
+.league-positions { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.league-positions th, .league-positions td { padding: .55rem .6rem; text-align: right; }
+.league-positions th:first-child { width: 100%; padding-left: 0; text-align: left; overflow-wrap: anywhere; }
+.league-positions th:last-child, .league-positions td:last-child { padding-right: 0; }
+.league-positions thead th { color: var(--soft-ink); font-size: .75rem; white-space: nowrap; }
+.league-positions tbody tr { border-top: 1px solid var(--rule); }
+.league-positions tbody small { display: block; color: var(--soft-ink); font-size: .72rem; font-weight: 400; }
+.league-rank { font-weight: 700; white-space: nowrap; }
+.league-change { display: inline-flex; align-items: center; gap: .35em; padding: .18rem .55rem; border-radius: .35rem; background: #edf0eb; color: #53605a; font-size: .82rem; font-weight: 600; white-space: nowrap; }
+.league-change.gain { background: #e3f2e8; color: #17603c; }
+.league-change.loss { background: #f9e9e6; color: #903d34; }
 .rival-week-row { display: inline-grid; width: calc(100% - 1.8rem); vertical-align: middle; align-items: center; gap: .5rem; grid-template-columns: 2fr repeat(4, 1fr); }
 .rival-week-row small { display: block; }
 @media (max-width: 600px) {
   .rival-week-row { grid-template-columns: repeat(4, 1fr); }
   .rival-week-row strong { grid-column: 1 / -1; }
 }
+
+.brief-grid { display: grid; grid-template-columns: minmax(0, 1.9fr) minmax(17rem, 1fr); gap: 1rem; align-items: start; margin-bottom: 1rem; }
+.brief-review, .brief-season { min-width: 0; background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; overflow: hidden; }
+.brief-season:only-child { grid-column: 1 / -1; max-width: 32rem; }
+.brief-match-heading, .brief-review .weekly-metrics { color: #fafbf4; background: #183e34; padding: 1.35rem clamp(1rem, 2vw, 1.65rem); }
+.brief-match-heading { display: flex; align-items: center; gap: .65rem; padding-bottom: .75rem; }
+.brief-match-heading h2 { font-size: 1.45rem; font-weight: 750; letter-spacing: -.04em; }
+.brief-match-heading span { font-size: .73rem; border: 1px solid #648277; border-radius: 1rem; padding: .15rem .65rem; }
+.brief-match-heading a { margin-left: auto; font-size: .82rem; color: #e2edce; }
+.brief-review .weekly-metrics { display: grid; grid-template-columns: .85fr 1.25fr 1fr; align-items: start; gap: 0; padding-top: .65rem; padding-bottom: 1.6rem; }
+.brief-review .weekly-metrics > div + div { border-left: 1px solid #416255; padding-left: clamp(.65rem, 1.75vw, 1.4rem); }
+.brief-review .weekly-metrics small { font-size: .76rem; color: #d2e1d4; }
+.brief-review .weekly-metrics strong { font-weight: 700; letter-spacing: -.045em; font-size: clamp(1.35rem, 2.4vw, 2.25rem); line-height: 1.3; margin: .4rem 0; overflow-wrap: anywhere; }
+.brief-review .weekly-metrics > div:first-child strong { color: #dbed9e; }
+.brief-analysis { display: grid; grid-template-columns: 1fr 1.2fr; gap: 1.5rem; }
+.brief-review .brief-analysis { padding: 1.3rem clamp(1rem, 2vw, 1.65rem); }
+.brief-analysis h3, .brief-label { font-size: .72rem; font-weight: 750; letter-spacing: .09em; text-transform: uppercase; color: var(--soft-ink); margin-bottom: .65rem; }
+.brief-analysis p { font-size: .87rem; line-height: 1.45; margin-top: .55rem; }
+.brief-analysis p strong { display: block; }
+.brief-contributors li { display: flex; justify-content: space-between; align-items: baseline; padding: .42rem 0; border-bottom: 1px solid var(--rule); font-size: .95rem; }
+.brief-contributors li:last-child { border-bottom: 0; }
+.brief-contributors small { font-weight: 450; color: var(--soft-ink); }
+.brief-times { display: flex; flex-wrap: wrap; gap: .3rem 1rem; font-size: .71rem; color: var(--soft-ink); }
+.brief-review .brief-times { padding: .75rem clamp(1rem, 2vw, 1.65rem); border-top: 1px solid var(--rule); }
+.brief-season { padding: 1.3rem clamp(1rem, 2vw, 1.65rem); }
+.brief-season .season-goal { display: block; }
+.season-goal .season-rank { font-size: clamp(1.7rem, 2.6vw, 2.5rem); line-height: 1.1; font-weight: 700; letter-spacing: -.055em; }
+.season-goal .season-rank-label { color: var(--soft-ink); font-size: .82rem; }
+.brief-season .season-goal h3 { font-size: 1rem; margin-top: .65rem; }
+.brief-season figure { width: 100%; margin-top: 1rem; }
+.brief-season .rank-trend { display: block; width: 100%; }
+.brief-season figcaption { display: flex; justify-content: space-between; }
+.brief-season summary { cursor: pointer; margin-top: .3rem; }
+.rank-history-scroll { margin-top: .5rem; max-height: 16rem; overflow: auto; }
+.rank-history { width: 100%; border-collapse: separate; border-spacing: 0; font-size: .85rem; font-variant-numeric: tabular-nums; }
+.rank-history th, .rank-history td { padding: .35rem .5rem; text-align: left; border-bottom: 1px solid var(--rule); }
+.rank-history th:last-child, .rank-history td { text-align: right; }
+.rank-history thead th { position: sticky; top: 0; background: var(--surface); color: var(--soft-ink); font-size: .75rem; }
+.rank-history tbody th { font-weight: 500; }
+.rank-history tbody tr:first-child { background: #edf2e8; }
+.rank-history tbody tr:first-child > * { font-weight: 700; }
+.brief-season form { border-top: 1px solid var(--rule); padding-top: .85rem; margin-top: .85rem; }
+.brief-season form label { display: block; font-size: .82rem; font-weight: 650; margin-bottom: .35rem; }
+.goal-controls { display: flex; gap: .5rem; }
+.goal-controls input { flex: 1; min-width: 0; border: 1px solid var(--rule); border-radius: 6px; padding: .5rem .7rem; }
+@media (max-width: 820px) { .brief-grid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 520px) {
+  .brief-analysis { grid-template-columns: 1fr; gap: .9rem; }
+  .brief-review .weekly-metrics { grid-template-columns: .85fr 1.15fr 1fr; }
+  .brief-review .weekly-metrics strong { font-size: 1.2rem; }
+  .brief-review .weekly-metrics small { font-size: .71rem; }
+}
+
+.brief-benchmarks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: .3rem 1.25rem;
+  padding: .7rem clamp(1rem, 2vw, 1.65rem);
+  border-bottom: 1px solid var(--rule);
+  font-size: .82rem;
+  color: var(--soft-ink);
+}
+.brief-benchmarks strong { color: var(--ink); }
+
+.route-comparison-scroll { overflow-x: auto; margin-block: .75rem; }
+.route-comparison { width: 100%; font-variant-numeric: tabular-nums; font-size: .88rem; }
+.route-comparison th, .route-comparison td { padding: .55rem .65rem; text-align: right; border-bottom: 1px solid var(--rule); }
+.route-comparison thead th { color: var(--soft-ink); font-size: .75rem; white-space: nowrap; }
+.route-comparison th:first-child { padding-left: 0; text-align: left; }
+.route-comparison tbody th { min-width: 8rem; font-weight: 400; }
+.route-comparison tbody th span, .route-comparison tbody th small { display: block; }
+.route-comparison td { font-weight: 650; white-space: nowrap; }
+.route-comparison-result { font-size: .9rem; }

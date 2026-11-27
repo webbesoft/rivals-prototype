@@ -1,0 +1,5 @@
+{% load humanize math_filters %}
+{% if change > 0 %}<span class="league-change gain"><span aria-hidden="true">↑</span><span class="sr-only">Up </span>{{ change|intcomma }}</span>
+{% elif change < 0 %}<span class="league-change loss"><span aria-hidden="true">↓</span><span class="sr-only">Down </span>{{ change|abs|intcomma }}</span>
+{% elif change == 0 %}<span class="league-change">Level</span>
+{% else %}<span class="league-change">Pending</span>{% endif %}

@@ -26,10 +26,11 @@ from rivals.services.team_sync_service import TeamSyncService
 @rate_limit("analysis", methods=("GET",))
 def team_score(request, team_id):
     team = get_object_or_404(Team, id=team_id)
+    brief_week = request.GET.get("brief_week", "")
     return render(
         request,
-        "partials/score_summary.html",
-        {"score_summary": ScoreSummaryService(team).refresh()},
+        "partials/brief_benchmarks.html" if brief_week else "partials/score_summary.html",
+        {"score_summary": ScoreSummaryService(team).refresh(), "brief_week": brief_week},
     )
 
 

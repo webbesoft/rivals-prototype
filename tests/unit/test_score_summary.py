@@ -214,6 +214,13 @@ def test_endpoint_requires_login_and_refresh_does_not_mark_full_sync(api):
     assert "62" in response.content.decode()
     assert "35" in response.content.decode()
     assert "no-store" in response.headers["Cache-Control"]
+    benchmarks = client.get(url, {"brief_week": 10}).content.decode()
+    assert "GW average <strong>35" in benchmarks
+    assert "Season points <strong>600" in benchmarks
+    assert "Overall rank" not in benchmarks
+    rollover = client.get(url, {"brief_week": 9}).content.decode()
+    assert "Awaiting GW9 benchmarks" in rollover
+    assert "600" not in rollover
     team.refresh_from_db()
     assert team.last_synced_at is None
     assert team.current_total_points == 0
